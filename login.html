@@ -345,7 +345,8 @@
         // Initialize Supabase client
         const SUPABASE_URL = 'https://zwrunupvlkhnwbylzizj.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3cnVudXB2bGtobndieWx6aXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTIxNzEsImV4cCI6MjA3NjY4ODE3MX0.WBTLcTNWgGZ-I6o_Dd7ObfS2avmJc_iiIEpDp8-VuQ4';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // DOM elements
         const loginForm = document.getElementById('loginForm');
@@ -402,7 +403,7 @@
                 const email = document.getElementById('loginEmail').value;
                 const password = document.getElementById('loginPassword').value;
 
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email,
                     password
                 });
@@ -448,7 +449,7 @@
                     throw new Error('Passwords do not match');
                 }
 
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await supabaseClient.auth.signUp({
                     email,
                     password,
                     options: {
@@ -478,13 +479,13 @@
         // Google Sign In
         document.getElementById('googleBtn').addEventListener('click', async () => {
             try {
-                const { data, error } = await supabase.auth.signInWithOAuth({
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
                         redirectTo: window.location.origin + '/index.html'
                     }
                 });
-                
+
                 if (error) throw error;
             } catch (error) {
                 showMessage(error.message, 'error');
@@ -494,13 +495,13 @@
         // GitHub Sign In
         document.getElementById('githubBtn').addEventListener('click', async () => {
             try {
-                const { data, error } = await supabase.auth.signInWithOAuth({
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'github',
                     options: {
                         redirectTo: window.location.origin + '/index.html'
                     }
                 });
-                
+
                 if (error) throw error;
             } catch (error) {
                 showMessage(error.message, 'error');
@@ -508,7 +509,7 @@
         });
 
         // Check if already logged in
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 window.location.href = 'index.html';
             }
