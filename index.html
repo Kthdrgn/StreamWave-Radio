@@ -2783,7 +2783,19 @@
                 settingsModal.classList.remove('active');
             }
         });
-        
+
+        // Auth button (Sign In / Sign Out)
+        const authBtn = document.getElementById('authBtn');
+        authBtn.addEventListener('click', () => {
+            if (window.isAuthenticated && window.currentUser) {
+                // User is logged in - sign out
+                window.signOut();
+            } else {
+                // User is not logged in - redirect to login page
+                window.location.href = 'login.html';
+            }
+        });
+
         // Auto-fallback toggle
         const autoFallbackCheckbox = document.getElementById('autoFallback');
         autoFallbackCheckbox.addEventListener('change', (e) => {
