@@ -295,7 +295,105 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- STEP 6: Create indexes for better query performance
+-- STEP 6: Add missing columns to radio_stations table (if needed)
+-- ============================================================================
+
+-- Add any missing columns to radio_stations table
+DO $$
+BEGIN
+    -- Add genre column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'genre'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN genre TEXT;
+        RAISE NOTICE 'Added genre column to radio_stations';
+    END IF;
+
+    -- Add country column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'country'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN country TEXT;
+        RAISE NOTICE 'Added country column to radio_stations';
+    END IF;
+
+    -- Add language column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'language'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN language TEXT;
+        RAISE NOTICE 'Added language column to radio_stations';
+    END IF;
+
+    -- Add logo_url column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'logo_url'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN logo_url TEXT;
+        RAISE NOTICE 'Added logo_url column to radio_stations';
+    END IF;
+
+    -- Add homepage_url column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'homepage_url'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN homepage_url TEXT;
+        RAISE NOTICE 'Added homepage_url column to radio_stations';
+    END IF;
+
+    -- Add description column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'description'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN description TEXT;
+        RAISE NOTICE 'Added description column to radio_stations';
+    END IF;
+
+    -- Add bitrate column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'bitrate'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN bitrate INTEGER;
+        RAISE NOTICE 'Added bitrate column to radio_stations';
+    END IF;
+
+    -- Add codec column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'codec'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN codec TEXT;
+        RAISE NOTICE 'Added codec column to radio_stations';
+    END IF;
+
+    -- Add created_at column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'created_at'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
+        RAISE NOTICE 'Added created_at column to radio_stations';
+    END IF;
+
+    -- Add updated_at column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_stations' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE radio_stations ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+        RAISE NOTICE 'Added updated_at column to radio_stations';
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 7: Create indexes for better query performance
 -- ============================================================================
 
 CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists(user_id);
@@ -313,7 +411,7 @@ CREATE INDEX IF NOT EXISTS idx_radio_stations_genre ON radio_stations(genre);
 CREATE INDEX IF NOT EXISTS idx_radio_stations_name ON radio_stations(name);
 
 -- ============================================================================
--- STEP 7: Enable Row Level Security (RLS) on all user-data tables
+-- STEP 8: Enable Row Level Security (RLS) on all user-data tables
 -- ============================================================================
 
 ALTER TABLE playlists ENABLE ROW LEVEL SECURITY;
@@ -324,7 +422,7 @@ ALTER TABLE station_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE radio_stations ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- STEP 8: Drop existing policies (if any) to avoid conflicts
+-- STEP 9: Drop existing policies (if any) to avoid conflicts
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Users can view their own playlists" ON playlists;
@@ -356,7 +454,7 @@ DROP POLICY IF EXISTS "Users can delete radio stations" ON radio_stations;
 DROP POLICY IF EXISTS "Anon users can view all radio stations" ON radio_stations;
 
 -- ============================================================================
--- STEP 9: Create RLS Policies for PLAYLISTS
+-- STEP 10: Create RLS Policies for PLAYLISTS
 -- ============================================================================
 
 -- Users can only view their own playlists
@@ -385,7 +483,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 10: Create RLS Policies for PLAYLIST_ITEMS
+-- STEP 11: Create RLS Policies for PLAYLIST_ITEMS
 -- ============================================================================
 
 -- Users can only view playlist items from their own playlists
@@ -425,7 +523,7 @@ USING (
 );
 
 -- ============================================================================
--- STEP 11: Create RLS Policies for LIKED_TRACKS
+-- STEP 12: Create RLS Policies for LIKED_TRACKS
 -- ============================================================================
 
 -- Users can only view their own liked tracks
@@ -447,7 +545,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 12: Create RLS Policies for RECENT_TRACKS
+-- STEP 13: Create RLS Policies for RECENT_TRACKS
 -- ============================================================================
 
 -- Users can only view their own recent tracks
@@ -469,7 +567,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 13: Create RLS Policies for STATION_HISTORY
+-- STEP 14: Create RLS Policies for STATION_HISTORY
 -- ============================================================================
 
 -- Users can only view their own station history
@@ -492,7 +590,7 @@ USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 14: Create RLS Policies for RADIO_STATIONS (Shared Resource)
+-- STEP 15: Create RLS Policies for RADIO_STATIONS (Shared Resource)
 -- ============================================================================
 
 -- All authenticated users can view all radio stations
@@ -527,7 +625,7 @@ TO anon
 USING (true);
 
 -- ============================================================================
--- STEP 15: Grant necessary permissions
+-- STEP 16: Grant necessary permissions
 -- ============================================================================
 
 -- Grant usage on public schema
@@ -548,7 +646,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 
 -- ============================================================================
--- STEP 16: Create updated_at trigger function (optional but recommended)
+-- STEP 17: Create updated_at trigger function (optional but recommended)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
