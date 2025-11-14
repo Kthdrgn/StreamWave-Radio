@@ -4762,14 +4762,17 @@
             if (checkbox) checkbox.checked = autoFallbackEnabled;
         }
 
-        // Check authentication status on startup
-        checkAuth();
+        // Initialize app with authentication check
+        (async function initializeApp() {
+            // Check authentication status on startup
+            await checkAuth();
 
-        // Load stations from Supabase on startup
-        loadStations();
-        loadPlaylists();
+            // Load stations from Supabase on startup
+            loadStations();
+            loadPlaylists();
 
-        console.log('loadStations() and loadPlaylists() called');
+            console.log('Authentication initialized and loadStations() and loadPlaylists() called');
+        })();
         
         // Setup Media Session handlers
         setupMediaSessionHandlers();
