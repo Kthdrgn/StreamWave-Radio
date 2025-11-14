@@ -1250,37 +1250,30 @@
         // ======================
         
         // Generate a simple anonymous user ID for tracking
-        function getOrCreateUserId() {
-            let userId = localStorage.getItem('radio_user_id');
-            if (!userId) {
-                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('radio_user_id', userId);
-            }
-            return userId;
-        }
-        
-        // Track station click in Supabase
+        // Track station click in Supabase (authenticated users only)
         async function trackStationClick(stationId) {
             try {
-                const userId = getOrCreateUserId();
-                const { error} = await supabase
-                    .from('station_history')
-                    .insert({
-                        station_id: stationId,
-                        user_id: userId,
-                        clicked_at: new Date().toISOString()
-                    });
-                
-                if (error) {
-                    console.error('Error tracking station click:', error);
-                    trackStationClickLocal(stationId);
-                } else {
-                    console.log('Station click tracked successfully');
-                    trackStationClickLocal(stationId);
+                // Always track locally as backup
+                trackStationClickLocal(stationId);
+
+                // If authenticated, also track in Supabase
+                if (window.isAuthenticated && window.currentUser) {
+                    const { error } = await supabase
+                        .from('station_history')
+                        .insert({
+                            station_id: stationId,
+                            user_id: window.currentUser.id,
+                            clicked_at: new Date().toISOString()
+                        });
+
+                    if (error) {
+                        console.error('Error tracking station click in Supabase:', error);
+                    } else {
+                        console.log('Station click tracked in Supabase');
+                    }
                 }
             } catch (error) {
                 console.error('Error tracking station click:', error);
-                trackStationClickLocal(stationId);
             }
         }
         
@@ -1304,15 +1297,18 @@
         // Get most recent stations
         async function getMostRecentStations(limit = 10) {
             try {
-                const userId = getOrCreateUserId();
-                
+                // Use localStorage for guest mode
+                if (!window.isAuthenticated || !window.currentUser) {
+                    return getMostRecentStationsLocal(limit);
+                }
+
                 const { data, error } = await supabase
                     .from('station_history')
                     .select('station_id, clicked_at')
-                    .eq('user_id', userId)
+                    .eq('user_id', window.currentUser.id)
                     .order('clicked_at', { ascending: false })
                     .limit(limit * 3);
-                
+
                 if (error) throw error;
                 
                 const uniqueStationIds = [];
@@ -1364,13 +1360,16 @@
         // Get most played stations
         async function getMostPlayedStations(limit = 10) {
             try {
-                const userId = getOrCreateUserId();
-                
+                // Use localStorage for guest mode
+                if (!window.isAuthenticated || !window.currentUser) {
+                    return getMostPlayedStationsLocal(limit);
+                }
+
                 const { data, error } = await supabase
                     .from('station_history')
                     .select('station_id')
-                    .eq('user_id', userId);
-                
+                    .eq('user_id', window.currentUser.id);
+
                 if (error) throw error;
                 
                 const counts = {};
@@ -1462,14 +1461,22 @@
         // Load playlists from Supabase
         async function loadPlaylists(forceRefresh = false) {
             try {
+                // Only load playlists for authenticated users
+                if (!window.isAuthenticated || !window.currentUser) {
+                    playlists = [];
+                    renderPlaylistsList();
+                    return;
+                }
+
                 const { data, error } = await supabase
                     .from('playlists')
                     .select('*, playlist_items(count)')
+                    .eq('user_id', window.currentUser.id)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at', { ascending: false });
-                
+
                 if (error) throw error;
-                
+
                 playlists = data || [];
                 renderPlaylistsList();
                 
@@ -1507,16 +1514,27 @@
         // Create playlist
         async function createPlaylist(name, description) {
             try {
+                // Only authenticated users can create playlists
+                if (!window.isAuthenticated || !window.currentUser) {
+                    alert('Please sign in to create playlists');
+                    return null;
+                }
+
                 console.log('Creating playlist with:', { name, description });
-                
+
                 // Get the max sort_order to add new playlist at the end
-                const maxSortOrder = playlists.length > 0 
+                const maxSortOrder = playlists.length > 0
                     ? Math.max(...playlists.map(p => p.sort_order || 0))
                     : -1;
-                
+
                 const { data, error } = await supabase
                     .from('playlists')
-                    .insert([{ name, description, sort_order: maxSortOrder + 1 }])
+                    .insert([{
+                        name,
+                        description,
+                        sort_order: maxSortOrder + 1,
+                        user_id: window.currentUser.id
+                    }])
                     .select();
                 
                 if (error) {

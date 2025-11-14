@@ -157,10 +157,27 @@ async function migrateGuestData() {
             }
             console.log(`✅ Migrated ${tracks.length} recent tracks`);
         }
-        
+
+        // Migrate station history
+        const guestStationHistory = localStorage.getItem('station_history');
+        if (guestStationHistory) {
+            const history = JSON.parse(guestStationHistory);
+            for (const record of history) {
+                await supabaseClient
+                    .from('station_history')
+                    .insert([{
+                        user_id: window.currentUser.id,
+                        station_id: record.station_id,
+                        clicked_at: record.clicked_at
+                    }]);
+            }
+            console.log(`✅ Migrated ${history.length} station history records`);
+        }
+
         // Clear localStorage after successful migration
         localStorage.removeItem('likedTracks');
         localStorage.removeItem('recentTracks');
+        localStorage.removeItem('station_history');
         
         if (migratedCount > 0) {
             alert(`✨ Successfully migrated ${migratedCount} liked tracks to your account!`);
