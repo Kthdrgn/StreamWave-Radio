@@ -4767,11 +4767,14 @@
             const checkbox = document.getElementById('autoFallback');
             if (checkbox) checkbox.checked = autoFallbackEnabled;
         }
-        
+
+        // Check authentication status on startup
+        checkAuth();
+
         // Load stations from Supabase on startup
         loadStations();
         loadPlaylists();
-        
+
         console.log('loadStations() and loadPlaylists() called');
         
         // Setup Media Session handlers

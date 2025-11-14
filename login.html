@@ -509,9 +509,17 @@
         });
 
         // Check if already logged in
-        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+        supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
             if (session) {
-                window.location.href = 'index.html';
+                // Verify the session is still valid by checking the user
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                if (user && !error) {
+                    // Valid session, redirect to app
+                    window.location.href = 'index.html';
+                } else {
+                    // Session expired or invalid, clear it
+                    await supabaseClient.auth.signOut();
+                }
             }
         });
     </script>
