@@ -1,8 +1,10 @@
 -- ============================================================================
 -- StreamWave Radio - Complete Database Setup & User Authentication Migration
 -- ============================================================================
--- This migration creates all necessary tables and sets up Row Level Security
--- to ensure each user has their own isolated playlists and data.
+-- This migration works with both NEW and EXISTING databases:
+-- - Creates tables if they don't exist
+-- - Adds user_id columns to existing tables
+-- - Sets up Row Level Security for user data isolation
 --
 -- INSTRUCTIONS:
 -- 1. Go to your Supabase Dashboard: https://zwrunupvlkhnwbylzizj.supabase.co
@@ -12,7 +14,7 @@
 -- ============================================================================
 
 -- ============================================================================
--- STEP 1: Create all necessary tables
+-- STEP 1: Create tables if they don't exist
 -- ============================================================================
 
 -- Create radio_stations table (shared across all users)
@@ -35,7 +37,6 @@ CREATE TABLE IF NOT EXISTS radio_stations (
 -- Create playlists table (user-specific)
 CREATE TABLE IF NOT EXISTS playlists (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     sort_order INTEGER DEFAULT 0,
@@ -46,16 +47,14 @@ CREATE TABLE IF NOT EXISTS playlists (
 -- Create playlist_items junction table
 CREATE TABLE IF NOT EXISTS playlist_items (
     id BIGSERIAL PRIMARY KEY,
-    playlist_id BIGINT REFERENCES playlists(id) ON DELETE CASCADE NOT NULL,
-    station_id BIGINT REFERENCES radio_stations(id) ON DELETE CASCADE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(playlist_id, station_id)
+    playlist_id BIGINT NOT NULL,
+    station_id BIGINT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create liked_tracks table (user-specific)
 CREATE TABLE IF NOT EXISTS liked_tracks (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
     artist TEXT NOT NULL,
     album TEXT,
@@ -67,7 +66,6 @@ CREATE TABLE IF NOT EXISTS liked_tracks (
 -- Create recent_tracks table (user-specific)
 CREATE TABLE IF NOT EXISTS recent_tracks (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
     artist TEXT NOT NULL,
     album TEXT,
@@ -80,14 +78,173 @@ CREATE TABLE IF NOT EXISTS recent_tracks (
 -- Create station_history table (user-specific)
 CREATE TABLE IF NOT EXISTS station_history (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    station_id BIGINT REFERENCES radio_stations(id) ON DELETE CASCADE NOT NULL,
+    station_id BIGINT NOT NULL,
     clicked_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================================
--- STEP 2: Create indexes for better query performance
+-- STEP 2: Add user_id columns to existing tables (if not already present)
+-- ============================================================================
+
+-- Add user_id to playlists (make nullable first for existing data)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'playlists' AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE playlists ADD COLUMN user_id UUID;
+    END IF;
+END $$;
+
+-- Add user_id to liked_tracks
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'liked_tracks' AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE liked_tracks ADD COLUMN user_id UUID;
+    END IF;
+END $$;
+
+-- Add user_id to recent_tracks
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'recent_tracks' AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE recent_tracks ADD COLUMN user_id UUID;
+    END IF;
+END $$;
+
+-- Add user_id to station_history
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'station_history' AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE station_history ADD COLUMN user_id UUID;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 3: Add foreign key constraints to user_id columns
+-- ============================================================================
+
+-- Add foreign key constraint to playlists.user_id
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'playlists_user_id_fkey'
+    ) THEN
+        ALTER TABLE playlists
+        ADD CONSTRAINT playlists_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Add foreign key constraint to liked_tracks.user_id
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'liked_tracks_user_id_fkey'
+    ) THEN
+        ALTER TABLE liked_tracks
+        ADD CONSTRAINT liked_tracks_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Add foreign key constraint to recent_tracks.user_id
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'recent_tracks_user_id_fkey'
+    ) THEN
+        ALTER TABLE recent_tracks
+        ADD CONSTRAINT recent_tracks_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Add foreign key constraint to station_history.user_id
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'station_history_user_id_fkey'
+    ) THEN
+        ALTER TABLE station_history
+        ADD CONSTRAINT station_history_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 4: Add foreign key constraints for playlist_items (if not exists)
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'playlist_items_playlist_id_fkey'
+    ) THEN
+        ALTER TABLE playlist_items
+        ADD CONSTRAINT playlist_items_playlist_id_fkey
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'playlist_items_station_id_fkey'
+    ) THEN
+        ALTER TABLE playlist_items
+        ADD CONSTRAINT playlist_items_station_id_fkey
+        FOREIGN KEY (station_id) REFERENCES radio_stations(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'station_history_station_id_fkey'
+    ) THEN
+        ALTER TABLE station_history
+        ADD CONSTRAINT station_history_station_id_fkey
+        FOREIGN KEY (station_id) REFERENCES radio_stations(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 5: Add unique constraint to playlist_items
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'playlist_items_playlist_id_station_id_key'
+    ) THEN
+        ALTER TABLE playlist_items
+        ADD CONSTRAINT playlist_items_playlist_id_station_id_key
+        UNIQUE(playlist_id, station_id);
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 6: Create indexes for better query performance
 -- ============================================================================
 
 CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists(user_id);
@@ -105,7 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_radio_stations_genre ON radio_stations(genre);
 CREATE INDEX IF NOT EXISTS idx_radio_stations_name ON radio_stations(name);
 
 -- ============================================================================
--- STEP 3: Enable Row Level Security (RLS) on all user-data tables
+-- STEP 7: Enable Row Level Security (RLS) on all user-data tables
 -- ============================================================================
 
 ALTER TABLE playlists ENABLE ROW LEVEL SECURITY;
@@ -116,7 +273,7 @@ ALTER TABLE station_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE radio_stations ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- STEP 4: Drop existing policies (if any) to avoid conflicts
+-- STEP 8: Drop existing policies (if any) to avoid conflicts
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Users can view their own playlists" ON playlists;
@@ -148,7 +305,7 @@ DROP POLICY IF EXISTS "Users can delete radio stations" ON radio_stations;
 DROP POLICY IF EXISTS "Anon users can view all radio stations" ON radio_stations;
 
 -- ============================================================================
--- STEP 5: Create RLS Policies for PLAYLISTS
+-- STEP 9: Create RLS Policies for PLAYLISTS
 -- ============================================================================
 
 -- Users can only view their own playlists
@@ -177,7 +334,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 6: Create RLS Policies for PLAYLIST_ITEMS
+-- STEP 10: Create RLS Policies for PLAYLIST_ITEMS
 -- ============================================================================
 
 -- Users can only view playlist items from their own playlists
@@ -217,7 +374,7 @@ USING (
 );
 
 -- ============================================================================
--- STEP 7: Create RLS Policies for LIKED_TRACKS
+-- STEP 11: Create RLS Policies for LIKED_TRACKS
 -- ============================================================================
 
 -- Users can only view their own liked tracks
@@ -239,7 +396,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 8: Create RLS Policies for RECENT_TRACKS
+-- STEP 12: Create RLS Policies for RECENT_TRACKS
 -- ============================================================================
 
 -- Users can only view their own recent tracks
@@ -261,7 +418,7 @@ TO authenticated
 USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 9: Create RLS Policies for STATION_HISTORY
+-- STEP 13: Create RLS Policies for STATION_HISTORY
 -- ============================================================================
 
 -- Users can only view their own station history
@@ -284,7 +441,7 @@ USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================================
--- STEP 10: Create RLS Policies for RADIO_STATIONS (Shared Resource)
+-- STEP 14: Create RLS Policies for RADIO_STATIONS (Shared Resource)
 -- ============================================================================
 
 -- All authenticated users can view all radio stations
@@ -319,7 +476,7 @@ TO anon
 USING (true);
 
 -- ============================================================================
--- STEP 11: Grant necessary permissions
+-- STEP 15: Grant necessary permissions
 -- ============================================================================
 
 -- Grant usage on public schema
@@ -340,7 +497,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 
 -- ============================================================================
--- STEP 12: Create updated_at trigger function (optional but recommended)
+-- STEP 16: Create updated_at trigger function (optional but recommended)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -368,17 +525,29 @@ CREATE TRIGGER update_radio_stations_updated_at
 -- MIGRATION COMPLETE
 -- ============================================================================
 -- After running this migration:
--- 1. All necessary tables are created
--- 2. Each user has their own isolated playlists, liked tracks, and history
--- 3. Radio stations are shared across all users
--- 4. Guest users can browse stations (anon access)
--- 5. When guests sign up, their data will be migrated with their user_id
+-- 1. All necessary tables are created (if they didn't exist)
+-- 2. user_id columns added to existing tables
+-- 3. Each user has their own isolated playlists, liked tracks, and history
+-- 4. Radio stations are shared across all users
+-- 5. Guest users can browse stations (anon access)
+-- 6. When guests sign up, their data will be migrated with their user_id
 -- ============================================================================
 
 -- Verify migration
 SELECT
   'Migration completed successfully!' as status,
   NOW() as completed_at;
+
+-- Show table structure
+SELECT
+  table_name,
+  column_name,
+  data_type,
+  is_nullable
+FROM information_schema.columns
+WHERE table_name IN ('playlists', 'liked_tracks', 'recent_tracks', 'station_history')
+  AND column_name = 'user_id'
+ORDER BY table_name, column_name;
 
 -- Show table counts
 SELECT
