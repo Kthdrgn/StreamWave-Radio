@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Radio Stream</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #151933;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --primary-color: #667eea;
+            --primary-hover: #5568d3;
+            --error-color: #ff4757;
+            --success-color: #2ed573;
+            --border-color: #2a2e4a;
+            --input-bg: #1a1e3a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+        }
+
+        .logo h1 {
+            color: var(--text-primary);
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--input-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 25px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        .social-login {
+            display: flex;
+            gap: 10px;
+        }
+
+        .social-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .social-btn:hover {
+            border-color: var(--primary-color);
+            background: var(--input-bg);
+        }
+
+        .guest-link {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .guest-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .guest-link a:hover {
+            opacity: 0.8;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(46, 213, 115, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <img src="icons/icon-512x512.png" alt="Radio Logo">
+            <h1>Radio Stream</h1>
+            <p>Sign in to sync your data across devices</p>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Sign In</button>
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form class="auth-form active" id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="submit-btn" id="loginBtn">
+                Sign In
+            </button>
+        </form>
+
+        <!-- Signup Form -->
+        <form class="auth-form" id="signupForm">
+            <div class="form-group">
+                <label class="form-label" for="signupEmail">Email</label>
+                <input type="email" id="signupEmail" class="form-input" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="signupPassword">Password</label>
+                <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="signupConfirm">Confirm Password</label>
+                <input type="password" id="signupConfirm" class="form-input" placeholder="••••••••" minlength="6" required>
+            </div>
+            <button type="submit" class="submit-btn" id="signupBtn">
+                Create Account
+            </button>
+        </form>
+
+        <div class="divider">or continue with</div>
+
+        <div class="social-login">
+            <button class="social-btn" id="googleBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Google
+            </button>
+            <button class="social-btn" id="githubBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+                </svg>
+                GitHub
+            </button>
+        </div>
+
+        <div class="guest-link">
+            <a href="index.html" id="guestLink">Continue as Guest</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://zwrunupvlkhnwbylzizj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3cnVudXB2bGtobndieWx6aXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTIxNzEsImV4cCI6MjA3NjY4ODE3MX0.WBTLcTNWgGZ-I6o_Dd7ObfS2avmJc_iiIEpDp8-VuQ4';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // DOM elements
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const messageDiv = document.getElementById('message');
+        const authTabs = document.querySelectorAll('.auth-tab');
+        const authForms = document.querySelectorAll('.auth-form');
+
+        // Tab switching
+        authTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                // Update active tab
+                authTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show corresponding form
+                authForms.forEach(form => {
+                    if (form.id === `${tabName}Form`) {
+                        form.classList.add('active');
+                    } else {
+                        form.classList.remove('active');
+                    }
+                });
+                
+                // Clear message
+                hideMessage();
+            });
+        });
+
+        // Show message
+        function showMessage(text, type = 'error') {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+        }
+
+        // Hide message
+        function hideMessage() {
+            messageDiv.className = 'message';
+        }
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const originalText = btn.textContent;
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> Signing in...';
+                hideMessage();
+
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) throw error;
+
+                // Check if there's guest data to migrate
+                const hasGuestData = localStorage.getItem('likedTracks') || 
+                                    localStorage.getItem('recentTracks') || 
+                                    localStorage.getItem('playlists');
+
+                if (hasGuestData) {
+                    // Store session and redirect to migration
+                    sessionStorage.setItem('needsMigration', 'true');
+                }
+
+                // Success - redirect to main app
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
+        // Signup
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('signupBtn');
+            const originalText = btn.textContent;
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> Creating account...';
+                hideMessage();
+
+                const email = document.getElementById('signupEmail').value;
+                const password = document.getElementById('signupPassword').value;
+                const confirm = document.getElementById('signupConfirm').value;
+
+                if (password !== confirm) {
+                    throw new Error('Passwords do not match');
+                }
+
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            display_name: email.split('@')[0]
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                showMessage('Account created! Please check your email to verify your account.', 'success');
+                
+                // Clear form
+                signupForm.reset();
+                
+                btn.disabled = false;
+                btn.textContent = originalText;
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
+        // Google Sign In
+        document.getElementById('googleBtn').addEventListener('click', async () => {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/index.html'
+                    }
+                });
+                
+                if (error) throw error;
+            } catch (error) {
+                showMessage(error.message, 'error');
+            }
+        });
+
+        // GitHub Sign In
+        document.getElementById('githubBtn').addEventListener('click', async () => {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'github',
+                    options: {
+                        redirectTo: window.location.origin + '/index.html'
+                    }
+                });
+                
+                if (error) throw error;
+            } catch (error) {
+                showMessage(error.message, 'error');
+            }
+        });
+
+        // Check if already logged in
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

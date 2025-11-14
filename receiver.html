@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Stream Receiver</title>
+    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .artwork-container {
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 40px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .artwork-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: zoomIn 0.5s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .station-icon {
+            font-size: 120px;
+            opacity: 0.5;
+        }
+
+        .now-playing-label {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            opacity: 0.7;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .song-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .artist-name {
+            font-size: 36px;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            animation: slideUp 0.5s ease-out 0.1s both;
+        }
+
+        .station-name {
+            font-size: 28px;
+            opacity: 0.7;
+            margin-top: 20px;
+            font-weight: 300;
+            animation: slideUp 0.5s ease-out 0.2s both;
+        }
+
+        .loading {
+            font-size: 24px;
+            opacity: 0.6;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Playback state indicator */
+        .playback-state {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .buffering-indicator {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .buffering-indicator.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="playback-state" id="playbackState">🎵 Playing</div>
+    
+    <div class="container">
+        <div class="now-playing-label" id="nowPlayingLabel">NOW PLAYING</div>
+        
+        <div class="artwork-container" id="artworkContainer">
+            <div class="station-icon">📻</div>
+            <div class="buffering-indicator" id="bufferingIndicator">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <div class="song-title" id="songTitle">Loading...</div>
+        <div class="artist-name" id="artistName"></div>
+        <div class="station-name" id="stationName"></div>
+    </div>
+
+    <script>
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
+
+        // DOM elements
+        const songTitle = document.getElementById('songTitle');
+        const artistName = document.getElementById('artistName');
+        const stationName = document.getElementById('stationName');
+        const artworkContainer = document.getElementById('artworkContainer');
+        const playbackState = document.getElementById('playbackState');
+        const bufferingIndicator = document.getElementById('bufferingIndicator');
+        const nowPlayingLabel = document.getElementById('nowPlayingLabel');
+
+        // Listen for media load
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            request => {
+                console.log('Load request received:', request);
+                
+                // Extract metadata
+                if (request.media && request.media.metadata) {
+                    const metadata = request.media.metadata;
+                    updateDisplay(metadata);
+                }
+                
+                return request;
+            }
+        );
+
+        // Listen for player state changes
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PLAYER_STATE_CHANGED,
+            (event) => {
+                console.log('Player state:', event.state);
+                
+                switch (event.state) {
+                    case 'PLAYING':
+                        playbackState.textContent = '🎵 Playing';
+                        bufferingIndicator.classList.remove('active');
+                        break;
+                    case 'PAUSED':
+                        playbackState.textContent = '⏸ Paused';
+                        bufferingIndicator.classList.remove('active');
+                        break;
+                    case 'BUFFERING':
+                        playbackState.textContent = '⏳ Buffering';
+                        bufferingIndicator.classList.add('active');
+                        break;
+                    case 'IDLE':
+                        playbackState.textContent = '⏹ Stopped';
+                        bufferingIndicator.classList.remove('active');
+                        break;
+                }
+            }
+        );
+
+        // Update display with metadata
+        function updateDisplay(metadata) {
+            console.log('Updating display with metadata:', metadata);
+            
+            // Update song title
+            if (metadata.songName || metadata.title) {
+                songTitle.textContent = metadata.songName || metadata.title;
+                songTitle.style.display = 'block';
+            } else {
+                songTitle.textContent = 'Live Radio Stream';
+            }
+            
+            // Update artist
+            if (metadata.artist) {
+                artistName.textContent = metadata.artist;
+                artistName.style.display = 'block';
+            } else {
+                artistName.style.display = 'none';
+            }
+            
+            // Update station/album name
+            if (metadata.albumName || metadata.subtitle) {
+                stationName.textContent = metadata.albumName || metadata.subtitle;
+                stationName.style.display = 'block';
+            } else {
+                stationName.style.display = 'none';
+            }
+            
+            // Update artwork
+            if (metadata.images && metadata.images.length > 0) {
+                const imageUrl = metadata.images[0].url;
+                artworkContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art">`;
+            } else {
+                artworkContainer.innerHTML = '<div class="station-icon">📻</div>';
+            }
+        }
+
+        // Listen for custom messages (for live metadata updates)
+        context.addCustomMessageListener('urn:x-cast:com.radio.metadata', (customEvent) => {
+            console.log('Custom metadata received:', customEvent.data);
+            
+            if (customEvent.data) {
+                updateDisplay(customEvent.data);
+            }
+        });
+
+        // Set application state
+        const playbackConfig = new cast.framework.PlaybackConfig();
+        
+        // Auto play on load
+        playbackConfig.autoResumeDuration = 5;
+        
+        // Apply playback config
+        context.setPlaybackConfig(playbackConfig);
+
+        // Start the receiver
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = true;
+        
+        context.start(options);
+        
+        console.log('Cast Receiver started');
+    </script>
+</body>
+</html>
