@@ -3,7 +3,7 @@
 -- ============================================================================
 -- This migration works with both NEW and EXISTING databases:
 -- - Creates tables if they don't exist
--- - Adds user_id columns to existing tables
+-- - Converts existing user_id columns from TEXT to UUID
 -- - Sets up Row Level Security for user data isolation
 --
 -- INSTRUCTIONS:
@@ -84,50 +84,93 @@ CREATE TABLE IF NOT EXISTS station_history (
 );
 
 -- ============================================================================
--- STEP 2: Add user_id columns to existing tables (if not already present)
+-- STEP 2: Handle existing user_id columns (convert TEXT to UUID or add if missing)
 -- ============================================================================
 
--- Add user_id to playlists (make nullable first for existing data)
+-- Handle playlists.user_id
 DO $$
+DECLARE
+    user_id_type TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'playlists' AND column_name = 'user_id'
-    ) THEN
+    -- Check if user_id column exists and get its type
+    SELECT data_type INTO user_id_type
+    FROM information_schema.columns
+    WHERE table_name = 'playlists' AND column_name = 'user_id';
+
+    IF user_id_type IS NULL THEN
+        -- Column doesn't exist, add it as UUID
         ALTER TABLE playlists ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Added user_id column to playlists';
+    ELSIF user_id_type = 'text' OR user_id_type = 'character varying' THEN
+        -- Column exists as TEXT, need to convert
+        -- First, clear any existing data with text user_ids (they're anonymous and can't be linked to real users)
+        DELETE FROM playlists WHERE user_id IS NOT NULL AND user_id NOT LIKE '%-%-%-%-%';
+        -- Drop the old column
+        ALTER TABLE playlists DROP COLUMN user_id;
+        -- Add new UUID column
+        ALTER TABLE playlists ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Converted playlists.user_id from TEXT to UUID';
     END IF;
 END $$;
 
--- Add user_id to liked_tracks
+-- Handle liked_tracks.user_id
 DO $$
+DECLARE
+    user_id_type TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'liked_tracks' AND column_name = 'user_id'
-    ) THEN
+    SELECT data_type INTO user_id_type
+    FROM information_schema.columns
+    WHERE table_name = 'liked_tracks' AND column_name = 'user_id';
+
+    IF user_id_type IS NULL THEN
         ALTER TABLE liked_tracks ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Added user_id column to liked_tracks';
+    ELSIF user_id_type = 'text' OR user_id_type = 'character varying' THEN
+        DELETE FROM liked_tracks WHERE user_id IS NOT NULL AND user_id NOT LIKE '%-%-%-%-%';
+        ALTER TABLE liked_tracks DROP COLUMN user_id;
+        ALTER TABLE liked_tracks ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Converted liked_tracks.user_id from TEXT to UUID';
     END IF;
 END $$;
 
--- Add user_id to recent_tracks
+-- Handle recent_tracks.user_id
 DO $$
+DECLARE
+    user_id_type TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'recent_tracks' AND column_name = 'user_id'
-    ) THEN
+    SELECT data_type INTO user_id_type
+    FROM information_schema.columns
+    WHERE table_name = 'recent_tracks' AND column_name = 'user_id';
+
+    IF user_id_type IS NULL THEN
         ALTER TABLE recent_tracks ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Added user_id column to recent_tracks';
+    ELSIF user_id_type = 'text' OR user_id_type = 'character varying' THEN
+        DELETE FROM recent_tracks WHERE user_id IS NOT NULL AND user_id NOT LIKE '%-%-%-%-%';
+        ALTER TABLE recent_tracks DROP COLUMN user_id;
+        ALTER TABLE recent_tracks ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Converted recent_tracks.user_id from TEXT to UUID';
     END IF;
 END $$;
 
--- Add user_id to station_history
+-- Handle station_history.user_id
 DO $$
+DECLARE
+    user_id_type TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'station_history' AND column_name = 'user_id'
-    ) THEN
+    SELECT data_type INTO user_id_type
+    FROM information_schema.columns
+    WHERE table_name = 'station_history' AND column_name = 'user_id';
+
+    IF user_id_type IS NULL THEN
         ALTER TABLE station_history ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Added user_id column to station_history';
+    ELSIF user_id_type = 'text' OR user_id_type = 'character varying' THEN
+        -- Station history with anonymous users can be safely deleted (it's just click tracking)
+        DELETE FROM station_history WHERE user_id IS NOT NULL AND user_id NOT LIKE '%-%-%-%-%';
+        ALTER TABLE station_history DROP COLUMN user_id;
+        ALTER TABLE station_history ADD COLUMN user_id UUID;
+        RAISE NOTICE 'Converted station_history.user_id from TEXT to UUID';
     END IF;
 END $$;
 
@@ -145,6 +188,7 @@ BEGIN
         ALTER TABLE playlists
         ADD CONSTRAINT playlists_user_id_fkey
         FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to playlists.user_id';
     END IF;
 END $$;
 
@@ -158,6 +202,7 @@ BEGIN
         ALTER TABLE liked_tracks
         ADD CONSTRAINT liked_tracks_user_id_fkey
         FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to liked_tracks.user_id';
     END IF;
 END $$;
 
@@ -171,6 +216,7 @@ BEGIN
         ALTER TABLE recent_tracks
         ADD CONSTRAINT recent_tracks_user_id_fkey
         FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to recent_tracks.user_id';
     END IF;
 END $$;
 
@@ -184,6 +230,7 @@ BEGIN
         ALTER TABLE station_history
         ADD CONSTRAINT station_history_user_id_fkey
         FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to station_history.user_id';
     END IF;
 END $$;
 
@@ -200,6 +247,7 @@ BEGIN
         ALTER TABLE playlist_items
         ADD CONSTRAINT playlist_items_playlist_id_fkey
         FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to playlist_items.playlist_id';
     END IF;
 END $$;
 
@@ -212,6 +260,7 @@ BEGIN
         ALTER TABLE playlist_items
         ADD CONSTRAINT playlist_items_station_id_fkey
         FOREIGN KEY (station_id) REFERENCES radio_stations(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to playlist_items.station_id';
     END IF;
 END $$;
 
@@ -224,6 +273,7 @@ BEGIN
         ALTER TABLE station_history
         ADD CONSTRAINT station_history_station_id_fkey
         FOREIGN KEY (station_id) REFERENCES radio_stations(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Added foreign key constraint to station_history.station_id';
     END IF;
 END $$;
 
@@ -240,6 +290,7 @@ BEGIN
         ALTER TABLE playlist_items
         ADD CONSTRAINT playlist_items_playlist_id_station_id_key
         UNIQUE(playlist_id, station_id);
+        RAISE NOTICE 'Added unique constraint to playlist_items';
     END IF;
 END $$;
 
@@ -526,11 +577,14 @@ CREATE TRIGGER update_radio_stations_updated_at
 -- ============================================================================
 -- After running this migration:
 -- 1. All necessary tables are created (if they didn't exist)
--- 2. user_id columns added to existing tables
+-- 2. user_id columns converted from TEXT to UUID (old anonymous data cleared)
 -- 3. Each user has their own isolated playlists, liked tracks, and history
 -- 4. Radio stations are shared across all users
 -- 5. Guest users can browse stations (anon access)
 -- 6. When guests sign up, their data will be migrated with their user_id
+--
+-- NOTE: Any existing anonymous tracking data (text user_ids) was cleared
+--       since it cannot be associated with real authenticated users.
 -- ============================================================================
 
 -- Verify migration
