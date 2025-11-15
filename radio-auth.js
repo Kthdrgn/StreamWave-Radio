@@ -115,10 +115,11 @@ async function signOut() {
 // Migrate guest data to authenticated user
 async function migrateGuestData() {
     console.log('🔄 Migrating guest data to user account...');
-    
+
     try {
         let migratedCount = 0;
-        
+        let stationHistoryCount = 0;
+
         // Migrate liked tracks
         const guestLikedTracks = localStorage.getItem('likedTracks');
         if (guestLikedTracks) {
@@ -138,7 +139,7 @@ async function migrateGuestData() {
             migratedCount += tracks.length;
             console.log(`✅ Migrated ${tracks.length} liked tracks`);
         }
-        
+
         // Migrate recent tracks
         const guestRecentTracks = localStorage.getItem('recentTracks');
         if (guestRecentTracks) {
@@ -157,13 +158,42 @@ async function migrateGuestData() {
             }
             console.log(`✅ Migrated ${tracks.length} recent tracks`);
         }
-        
+
+        // Migrate station history (recent stations & most played)
+        const guestStationHistory = localStorage.getItem('station_history');
+        if (guestStationHistory) {
+            const history = JSON.parse(guestStationHistory);
+            // Batch insert station history
+            if (history.length > 0) {
+                const historyRecords = history.map(record => ({
+                    user_id: window.currentUser.id,
+                    station_id: record.station_id,
+                    clicked_at: record.clicked_at
+                }));
+
+                // Insert in batches of 100 to avoid request limits
+                for (let i = 0; i < historyRecords.length; i += 100) {
+                    const batch = historyRecords.slice(i, i + 100);
+                    await supabaseClient
+                        .from('station_history')
+                        .insert(batch);
+                }
+
+                stationHistoryCount = history.length;
+                console.log(`✅ Migrated ${history.length} station history records`);
+            }
+        }
+
         // Clear localStorage after successful migration
         localStorage.removeItem('likedTracks');
         localStorage.removeItem('recentTracks');
-        
-        if (migratedCount > 0) {
-            alert(`✨ Successfully migrated ${migratedCount} liked tracks to your account!`);
+        localStorage.removeItem('station_history');
+
+        if (migratedCount > 0 || stationHistoryCount > 0) {
+            const messages = [];
+            if (migratedCount > 0) messages.push(`${migratedCount} liked tracks`);
+            if (stationHistoryCount > 0) messages.push(`${stationHistoryCount} station history records`);
+            alert(`✨ Successfully migrated ${messages.join(' and ')} to your account!`);
         }
     } catch (error) {
         console.error('❌ Error migrating data:', error);
