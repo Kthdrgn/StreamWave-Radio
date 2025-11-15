@@ -2450,41 +2450,36 @@
         // ======================
         
         // Generate a simple anonymous user ID for tracking
-        function getOrCreateUserId() {
-            let userId = localStorage.getItem('radio_user_id');
-            if (!userId) {
-                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('radio_user_id', userId);
-            }
-            return userId;
-        }
-        
-        // Track station click in Supabase
+        // Track station click (works in both guest and authenticated mode)
         async function trackStationClick(stationId) {
-            try {
-                const userId = getOrCreateUserId();
-                const { error} = await supabase
-                    .from('station_history')
-                    .insert({
-                        station_id: stationId,
-                        user_id: userId,
-                        clicked_at: new Date().toISOString()
-                    });
-                
-                if (error) {
-                    console.error('Error tracking station click:', error);
-                    trackStationClickLocal(stationId);
-                } else {
-                    console.log('Station click tracked successfully');
-                    trackStationClickLocal(stationId);
-                }
-            } catch (error) {
-                console.error('Error tracking station click:', error);
+            if (window.isGuestMode) {
+                // Guest mode - use localStorage only
                 trackStationClickLocal(stationId);
+            } else {
+                // Authenticated - save to Supabase
+                try {
+                    const { error } = await supabase
+                        .from('station_history')
+                        .insert({
+                            station_id: stationId,
+                            user_id: window.currentUser.id,
+                            clicked_at: new Date().toISOString()
+                        });
+
+                    if (error) {
+                        console.error('Error tracking station click:', error);
+                        trackStationClickLocal(stationId); // Fallback to local
+                    } else {
+                        console.log('Station click tracked successfully');
+                    }
+                } catch (error) {
+                    console.error('Error tracking station click:', error);
+                    trackStationClickLocal(stationId); // Fallback to local
+                }
             }
         }
-        
-        // Track station click in local storage (backup method)
+
+        // Track station click in local storage (guest mode or fallback)
         function trackStationClickLocal(stationId) {
             try {
                 let history = JSON.parse(localStorage.getItem('station_history') || '[]');
@@ -2501,37 +2496,41 @@
             }
         }
         
-        // Get most recent stations
+        // Get most recent stations (works in both guest and authenticated mode)
         async function getMostRecentStations(limit = 10) {
-            try {
-                const userId = getOrCreateUserId();
-                
-                const { data, error } = await supabase
-                    .from('station_history')
-                    .select('station_id, clicked_at')
-                    .eq('user_id', userId)
-                    .order('clicked_at', { ascending: false })
-                    .limit(limit * 3);
-                
-                if (error) throw error;
-                
-                const uniqueStationIds = [];
-                const seenIds = new Set();
-                
-                for (const record of data) {
-                    if (!seenIds.has(record.station_id)) {
-                        seenIds.add(record.station_id);
-                        uniqueStationIds.push(record.station_id);
-                        if (uniqueStationIds.length >= limit) break;
-                    }
-                }
-                
-                return stations.filter(s => uniqueStationIds.includes(s.id))
-                    .sort((a, b) => uniqueStationIds.indexOf(a.id) - uniqueStationIds.indexOf(b.id));
-                
-            } catch (error) {
-                console.error('Error getting recent stations from database:', error);
+            if (window.isGuestMode) {
+                // Guest mode - use localStorage
                 return getMostRecentStationsLocal(limit);
+            } else {
+                // Authenticated - use Supabase
+                try {
+                    const { data, error } = await supabase
+                        .from('station_history')
+                        .select('station_id, clicked_at')
+                        .eq('user_id', window.currentUser.id)
+                        .order('clicked_at', { ascending: false })
+                        .limit(limit * 3);
+
+                    if (error) throw error;
+
+                    const uniqueStationIds = [];
+                    const seenIds = new Set();
+
+                    for (const record of data) {
+                        if (!seenIds.has(record.station_id)) {
+                            seenIds.add(record.station_id);
+                            uniqueStationIds.push(record.station_id);
+                            if (uniqueStationIds.length >= limit) break;
+                        }
+                    }
+
+                    return stations.filter(s => uniqueStationIds.includes(s.id))
+                        .sort((a, b) => uniqueStationIds.indexOf(a.id) - uniqueStationIds.indexOf(b.id));
+
+                } catch (error) {
+                    console.error('Error getting recent stations from database:', error);
+                    return getMostRecentStationsLocal(limit);
+                }
             }
         }
         
@@ -2561,35 +2560,39 @@
             }
         }
         
-        // Get most played stations
+        // Get most played stations (works in both guest and authenticated mode)
         async function getMostPlayedStations(limit = 10) {
-            try {
-                const userId = getOrCreateUserId();
-                
-                const { data, error } = await supabase
-                    .from('station_history')
-                    .select('station_id')
-                    .eq('user_id', userId);
-                
-                if (error) throw error;
-                
-                const counts = {};
-                data.forEach(record => {
-                    counts[record.station_id] = (counts[record.station_id] || 0) + 1;
-                });
-                
-                // Sort by count and get top station IDs (as numbers)
-                const sortedStationIds = Object.keys(counts)
-                    .map(id => parseInt(id))
-                    .sort((a, b) => counts[b] - counts[a])
-                    .slice(0, limit);
-                
-                return stations.filter(s => sortedStationIds.includes(s.id))
-                    .sort((a, b) => counts[b.id] - counts[a.id]);
-                
-            } catch (error) {
-                console.error('Error getting most played stations from database:', error);
+            if (window.isGuestMode) {
+                // Guest mode - use localStorage
                 return getMostPlayedStationsLocal(limit);
+            } else {
+                // Authenticated - use Supabase
+                try {
+                    const { data, error } = await supabase
+                        .from('station_history')
+                        .select('station_id')
+                        .eq('user_id', window.currentUser.id);
+
+                    if (error) throw error;
+
+                    const counts = {};
+                    data.forEach(record => {
+                        counts[record.station_id] = (counts[record.station_id] || 0) + 1;
+                    });
+
+                    // Sort by count and get top station IDs (as numbers)
+                    const sortedStationIds = Object.keys(counts)
+                        .map(id => parseInt(id))
+                        .sort((a, b) => counts[b] - counts[a])
+                        .slice(0, limit);
+
+                    return stations.filter(s => sortedStationIds.includes(s.id))
+                        .sort((a, b) => counts[b.id] - counts[a.id]);
+
+                } catch (error) {
+                    console.error('Error getting most played stations from database:', error);
+                    return getMostPlayedStationsLocal(limit);
+                }
             }
         }
         
