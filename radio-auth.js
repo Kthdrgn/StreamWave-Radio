@@ -465,9 +465,6 @@ function normalizeTrack(track) {
 // INITIALIZATION
 // ==============================================
 
-// Auto-initialize authentication when this script loads
-console.log('🔐 Authentication module loaded');
-
 // Export functions to global scope for use in main app
 window.checkAuth = checkAuth;
 window.signOut = signOut;
@@ -486,4 +483,7 @@ window.clearAllRecentTracks = clearAllRecentTracks;
 window.normalizeTrack = normalizeTrack;
 window.supabaseClient = supabaseClient;
 
-console.log('✅ Authentication functions available globally');
+// Auto-initialize authentication when this script loads
+console.log('🔐 Authentication module loaded');
+checkAuth();
+console.log('✅ Authentication check initiated');
