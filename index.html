@@ -3182,7 +3182,21 @@
         // Download Recent Tracks button
         const downloadRecentBtn = document.getElementById('downloadRecentBtn');
         downloadRecentBtn.addEventListener('click', downloadRecentTracksFile);
-        
+
+        // Auth Button
+        const authBtn = document.getElementById('authBtn');
+        if (authBtn) {
+            authBtn.addEventListener('click', () => {
+                if (window.isAuthenticated) {
+                    // User is logged in, show sign out
+                    signOut();
+                } else {
+                    // User is not logged in, redirect to login page
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
         // Close playlist modal
         closePlaylistModal.addEventListener('click', () => {
             playlistModal.classList.remove('active');
