@@ -485,5 +485,15 @@ window.supabaseClient = supabaseClient;
 
 // Auto-initialize authentication when this script loads
 console.log('🔐 Authentication module loaded');
-checkAuth();
-console.log('✅ Authentication check initiated');
+
+// Check auth after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('✅ DOM ready, checking authentication...');
+        checkAuth();
+    });
+} else {
+    // DOM is already ready
+    console.log('✅ DOM already ready, checking authentication...');
+    checkAuth();
+}
