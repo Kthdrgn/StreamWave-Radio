@@ -2926,6 +2926,20 @@
                         // Start metadata-only player to continue receiving metadata locally
                         startMetadataOnlyPlayer();
 
+                        // Add media status listener to keep button in sync
+                        castSession.addMediaListener((media) => {
+                            console.log('Cast media status changed:', media.playerState);
+                            if (media.playerState === 'PLAYING' || media.playerState === 'BUFFERING') {
+                                updatePlayPauseButton(true);
+                                updateStatus('Casting...', 'playing');
+                            } else if (media.playerState === 'PAUSED') {
+                                updatePlayPauseButton(false);
+                                updateStatus('Paused (Casting)', 'stopped');
+                            } else if (media.playerState === 'IDLE') {
+                                updatePlayPauseButton(false);
+                            }
+                        });
+
                         // Wait a moment for session to fully establish before loading media
                         setTimeout(() => {
                             if (currentStation && castSession) {
@@ -3004,6 +3018,10 @@
                         console.log('✅ Media loaded successfully to Cast');
                         currentMediaInfo = mediaInfo;
                         updateStatus('Casting...', 'playing');
+                        // Enable play/pause button and set to pause state (casting is playing)
+                        playPauseBtn.disabled = false;
+                        updatePlayPauseButton(true);
+                        isPlaying = true;
                     },
                     (errorCode) => {
                         console.error('❌ Failed to load media:', errorCode);
@@ -4272,9 +4290,39 @@
         
         // Play/Pause button handler
         playPauseBtn.addEventListener('click', async () => {
-            // Don't start local playback if we're casting
+            // If we're casting, control the Cast media session instead of local playback
             if (castSession) {
-                console.log('Currently casting - ignoring play button');
+                const media = castSession.getMediaSession();
+                if (media) {
+                    const playerState = media.playerState;
+                    console.log('Cast player state:', playerState);
+
+                    if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
+                        // Pause the cast
+                        console.log('Pausing Cast playback...');
+                        media.pause(new chrome.cast.media.PauseRequest()).then(() => {
+                            console.log('✅ Cast paused');
+                            updatePlayPauseButton(false);
+                            updateStatus('Paused (Casting)', 'stopped');
+                        }).catch(error => {
+                            console.error('Failed to pause Cast:', error);
+                        });
+                    } else if (playerState === 'PAUSED') {
+                        // Resume the cast
+                        console.log('Resuming Cast playback...');
+                        media.play(new chrome.cast.media.PlayRequest()).then(() => {
+                            console.log('✅ Cast resumed');
+                            updatePlayPauseButton(true);
+                            updateStatus('Casting...', 'playing');
+                        }).catch(error => {
+                            console.error('Failed to resume Cast:', error);
+                        });
+                    } else {
+                        console.log('Cast player in unknown state:', playerState);
+                    }
+                } else {
+                    console.log('No active Cast media session');
+                }
                 return;
             }
             
