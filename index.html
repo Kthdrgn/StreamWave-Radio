@@ -3095,17 +3095,33 @@
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
                     metadataTypes: ['icy', 'ogg'],
-                    enableLogging: false,
+                    enableLogging: true, // Enable logging to debug
 
                     onMetadata: (metadata) => {
                         console.log('📻 Metadata received (while casting):', metadata);
                         displayMetadata(metadata);
                     },
 
+                    onPlay: () => {
+                        console.log('✅ Metadata-only player is playing');
+                    },
+
+                    onLoad: () => {
+                        console.log('✅ Metadata-only player loaded');
+                    },
+
+                    onStreamStart: () => {
+                        console.log('✅ Metadata-only player stream started');
+                    },
+
                     onError: (error) => {
-                        console.log('Metadata-only player error (non-fatal):', error);
+                        console.log('❌ Metadata-only player error:', error);
                         // Don't show errors to user - this is a background process
                         // If it fails, we just won't have metadata during casting
+                    },
+
+                    onStop: () => {
+                        console.log('⏹️ Metadata-only player stopped');
                     }
                 });
 
@@ -3114,6 +3130,11 @@
                     metadataOnlyPlayer.audioElement.volume = 0;
                     metadataOnlyPlayer.audioElement.muted = true;
                     console.log('✅ Metadata-only player started (muted)');
+                    console.log('Audio element state:', {
+                        paused: metadataOnlyPlayer.audioElement.paused,
+                        readyState: metadataOnlyPlayer.audioElement.readyState,
+                        networkState: metadataOnlyPlayer.audioElement.networkState
+                    });
                 } else {
                     console.log('⚠️ Metadata-only player created, waiting for audio element...');
                     // Set volume when it becomes available
@@ -3122,6 +3143,11 @@
                             metadataOnlyPlayer.audioElement.volume = 0;
                             metadataOnlyPlayer.audioElement.muted = true;
                             console.log('✅ Metadata-only player audio element muted');
+                            console.log('Audio element state:', {
+                                paused: metadataOnlyPlayer.audioElement.paused,
+                                readyState: metadataOnlyPlayer.audioElement.readyState,
+                                networkState: metadataOnlyPlayer.audioElement.networkState
+                            });
                         }
                     }, 500);
                 }
