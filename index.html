@@ -3125,15 +3125,22 @@
                     }
                 });
 
-                // Mute the audio element so it plays silently
+                // Mute the audio element so it plays silently, then start playback
                 if (metadataOnlyPlayer.audioElement) {
                     metadataOnlyPlayer.audioElement.volume = 0;
                     metadataOnlyPlayer.audioElement.muted = true;
-                    console.log('✅ Metadata-only player started (muted)');
-                    console.log('Audio element state:', {
+                    console.log('✅ Metadata-only player created and muted');
+                    console.log('Audio element state before play:', {
                         paused: metadataOnlyPlayer.audioElement.paused,
                         readyState: metadataOnlyPlayer.audioElement.readyState,
                         networkState: metadataOnlyPlayer.audioElement.networkState
+                    });
+
+                    // Start playing to receive metadata
+                    metadataOnlyPlayer.play().then(() => {
+                        console.log('✅ Metadata-only player playback started');
+                    }).catch(error => {
+                        console.log('❌ Failed to start metadata-only player playback:', error);
                     });
                 } else {
                     console.log('⚠️ Metadata-only player created, waiting for audio element...');
@@ -3142,11 +3149,18 @@
                         if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
                             metadataOnlyPlayer.audioElement.volume = 0;
                             metadataOnlyPlayer.audioElement.muted = true;
-                            console.log('✅ Metadata-only player audio element muted');
-                            console.log('Audio element state:', {
+                            console.log('✅ Metadata-only player audio element muted (delayed)');
+                            console.log('Audio element state before play:', {
                                 paused: metadataOnlyPlayer.audioElement.paused,
                                 readyState: metadataOnlyPlayer.audioElement.readyState,
                                 networkState: metadataOnlyPlayer.audioElement.networkState
+                            });
+
+                            // Start playing to receive metadata
+                            metadataOnlyPlayer.play().then(() => {
+                                console.log('✅ Metadata-only player playback started (delayed)');
+                            }).catch(error => {
+                                console.log('❌ Failed to start metadata-only player playback (delayed):', error);
                             });
                         }
                     }, 500);
