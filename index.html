@@ -2926,17 +2926,23 @@
                         // Start metadata-only player to continue receiving metadata locally
                         startMetadataOnlyPlayer();
 
-                        // Add media status listener to keep button in sync
-                        castSession.addMediaListener((media) => {
-                            console.log('Cast media status changed:', media.playerState);
-                            if (media.playerState === 'PLAYING' || media.playerState === 'BUFFERING') {
-                                updatePlayPauseButton(true);
-                                updateStatus('Casting...', 'playing');
-                            } else if (media.playerState === 'PAUSED') {
-                                updatePlayPauseButton(false);
-                                updateStatus('Paused (Casting)', 'stopped');
-                            } else if (media.playerState === 'IDLE') {
-                                updatePlayPauseButton(false);
+                        // Add update listener to keep button in sync with Cast state
+                        castSession.addUpdateListener((isAlive) => {
+                            if (isAlive && castSession) {
+                                const media = castSession.getMediaSession();
+                                if (media) {
+                                    const playerState = media.playerState;
+                                    console.log('Cast media status changed:', playerState);
+                                    if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
+                                        updatePlayPauseButton(true);
+                                        updateStatus('Casting...', 'playing');
+                                    } else if (playerState === 'PAUSED') {
+                                        updatePlayPauseButton(false);
+                                        updateStatus('Paused (Casting)', 'stopped');
+                                    } else if (playerState === 'IDLE') {
+                                        updatePlayPauseButton(false);
+                                    }
+                                }
                             }
                         });
 
@@ -3046,38 +3052,44 @@
             if (!castSession) {
                 return;
             }
-            
+
             try {
                 const media = castSession.getMediaSession();
                 if (!media) {
-                    console.log('No active media session to update');
+                    // Media hasn't loaded yet, retry in a moment
+                    setTimeout(() => {
+                        const retryMedia = castSession ? castSession.getMediaSession() : null;
+                        if (retryMedia) {
+                            updateCastMetadata(title, artist, artworkUrl);
+                        }
+                    }, 1500);
                     return;
                 }
-                
+
                 // Create new metadata
                 const metadata = new chrome.cast.media.MusicTrackMediaMetadata();
                 metadata.songName = title || currentStation.name;
                 metadata.artist = artist || 'Live Radio Stream';
                 metadata.albumName = currentStation.name;
-                
+
                 // Use album art if available, otherwise station icon
                 if (artworkUrl) {
                     metadata.images = [new chrome.cast.Image(artworkUrl)];
                 } else if (currentStation.icon_url) {
                     metadata.images = [new chrome.cast.Image(currentStation.icon_url)];
                 }
-                
+
                 // Update the media info
                 const mediaInfo = media.media;
                 mediaInfo.metadata = metadata;
-                
+
                 // Send the update
                 const request = new chrome.cast.media.QueueUpdateItemsRequest([{
                     media: mediaInfo
                 }]);
-                
-                console.log('Updating Cast metadata:', { title, artist, artworkUrl });
-                
+
+                console.log('✅ Updated Cast metadata:', { title, artist, artworkUrl });
+
             } catch (error) {
                 console.log('Could not update Cast metadata:', error);
             }
