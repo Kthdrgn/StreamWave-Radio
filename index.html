@@ -663,6 +663,7 @@
         let hlsPlayer = null;
         let audioElement = null;
         let simpleAudioPlayer = null;
+        let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
         let isPlaying = false;
         let isPaused = false;
         let currentStation = null;
@@ -2253,8 +2254,14 @@
                 setTimeout(() => {
                     playPauseBtn.click();
                 }, 100);
+            } else {
+                // If casting, restart metadata-only player for the new station
+                stopMetadataOnlyPlayer();
+                setTimeout(() => {
+                    startMetadataOnlyPlayer();
+                }, 500);
             }
-            
+
             // Update Cast if currently casting
             updateCastMedia();
 
@@ -2903,7 +2910,7 @@
                     case cast.framework.SessionState.SESSION_STARTED:
                         castSession = cast.framework.CastContext.getInstance().getCurrentSession();
                         console.log('Cast session started');
-                        
+
                         // Stop local playback
                         if (player) {
                             try {
@@ -2913,9 +2920,12 @@
                         if (simpleAudioPlayer && !simpleAudioPlayer.paused) {
                             simpleAudioPlayer.pause();
                         }
-                        
+
                         updateStatus('Cast connected...', 'playing');
-                        
+
+                        // Start metadata-only player to continue receiving metadata locally
+                        startMetadataOnlyPlayer();
+
                         // Wait a moment for session to fully establish before loading media
                         setTimeout(() => {
                             if (currentStation && castSession) {
@@ -2923,14 +2933,17 @@
                                 loadMediaToCast();
                             }
                         }, 1000);
-                        
+
                         break;
                         
                     case cast.framework.SessionState.SESSION_ENDED:
                         castSession = null;
                         console.log('Cast session ended');
                         updateStatus('Not connected', '');
-                        
+
+                        // Stop metadata-only player
+                        stopMetadataOnlyPlayer();
+
                         // Resume local playback if desired
                         if (currentStation && isPlaying) {
                             setTimeout(() => {
@@ -3051,7 +3064,87 @@
                 console.log('Could not update Cast metadata:', error);
             }
         }
-        
+
+        // Start metadata-only player (silent, for Chromecast sessions)
+        function startMetadataOnlyPlayer() {
+            if (!currentStation || metadataOnlyPlayer) {
+                return; // Already running or no station
+            }
+
+            console.log('Starting metadata-only player for Chromecast session...');
+
+            // Get stream URL based on quality
+            const rawUrl = selectedQuality === 'low' && currentStation.url_low ? currentStation.url_low :
+                          selectedQuality === 'high' && currentStation.url_high ? currentStation.url_high :
+                          currentStation.url;
+
+            if (!rawUrl) {
+                console.log('No stream URL available for metadata-only player');
+                return;
+            }
+
+            // Skip HLS streams - they don't support Icecast metadata
+            if (isHLSStream(rawUrl)) {
+                console.log('HLS streams do not support Icecast metadata, skipping metadata-only player');
+                return;
+            }
+
+            // Try with CORS proxy first for best metadata compatibility
+            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
+            try {
+                metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
+                    metadataTypes: ['icy', 'ogg'],
+                    enableLogging: false,
+
+                    onMetadata: (metadata) => {
+                        console.log('📻 Metadata received (while casting):', metadata);
+                        displayMetadata(metadata);
+                    },
+
+                    onError: (error) => {
+                        console.log('Metadata-only player error (non-fatal):', error);
+                        // Don't show errors to user - this is a background process
+                        // If it fails, we just won't have metadata during casting
+                    }
+                });
+
+                // Mute the audio element so it plays silently
+                if (metadataOnlyPlayer.audioElement) {
+                    metadataOnlyPlayer.audioElement.volume = 0;
+                    metadataOnlyPlayer.audioElement.muted = true;
+                    console.log('✅ Metadata-only player started (muted)');
+                } else {
+                    console.log('⚠️ Metadata-only player created, waiting for audio element...');
+                    // Set volume when it becomes available
+                    setTimeout(() => {
+                        if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                            metadataOnlyPlayer.audioElement.volume = 0;
+                            metadataOnlyPlayer.audioElement.muted = true;
+                            console.log('✅ Metadata-only player audio element muted');
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                console.log('Failed to start metadata-only player:', error);
+                metadataOnlyPlayer = null;
+            }
+        }
+
+        // Stop metadata-only player
+        function stopMetadataOnlyPlayer() {
+            if (metadataOnlyPlayer) {
+                console.log('Stopping metadata-only player...');
+                try {
+                    metadataOnlyPlayer.stop();
+                } catch (e) {
+                    console.log('Error stopping metadata-only player:', e);
+                }
+                metadataOnlyPlayer = null;
+                console.log('✅ Metadata-only player stopped');
+            }
+        }
+
         // Theme Toggle Functionality
         const themeToggle = document.getElementById('themeToggle');
         const resetThemeBtn = document.getElementById('resetThemeBtn');
