@@ -1342,8 +1342,8 @@
         
         // Get most recent stations (works in both guest and authenticated mode)
         async function getMostRecentStations(limit = 10) {
-            if (window.isGuestMode) {
-                // Guest mode - use localStorage
+            if (window.isGuestMode || !window.currentUser) {
+                // Guest mode or not authenticated - use localStorage
                 return getMostRecentStationsLocal(limit);
             } else {
                 // Authenticated - use Supabase
@@ -1406,8 +1406,8 @@
         
         // Get most played stations (works in both guest and authenticated mode)
         async function getMostPlayedStations(limit = 10) {
-            if (window.isGuestMode) {
-                // Guest mode - use localStorage
+            if (window.isGuestMode || !window.currentUser) {
+                // Guest mode or not authenticated - use localStorage
                 return getMostPlayedStationsLocal(limit);
             } else {
                 // Authenticated - use Supabase
@@ -2515,15 +2515,22 @@
         
         // Open playlist
         function openPlaylist(id) {
+            console.log('openPlaylist called with id:', id);
+            console.log('Available playlists:', playlists);
             currentPlaylist = playlists.find(p => p.id === id);
-            if (!currentPlaylist) return;
-            
+            console.log('Found playlist:', currentPlaylist);
+            if (!currentPlaylist) {
+                console.log('Playlist not found!');
+                return;
+            }
+
             lastOpenedModal = { type: 'playlist', id: id };
             playlistModalTitle.textContent = currentPlaylist.name;
             loadPlaylistStations(id);
-            
+
             playlistsModal.classList.remove('active');
             playlistModal.classList.add('active');
+            console.log('Playlist modal should now be active');
         }
         
         // Show playlist form
