@@ -1561,9 +1561,35 @@
             const playedStations = await getMostPlayedStations(10);
             renderCarousel('playedTrack', playedStations, 'station');
 
-            // Load playlists
+            // Load playlists with their stations for collage
             await loadPlaylists();
-            renderCarousel('playlistsTrack', playlists, 'playlist');
+
+            // Load stations for each playlist (for artwork collage)
+            const playlistsWithStations = await Promise.all(playlists.map(async (playlist) => {
+                try {
+                    const { data, error } = await supabase
+                        .from('playlist_items')
+                        .select('*, radio_stations(*)')
+                        .eq('playlist_id', playlist.id)
+                        .order('created_at')
+                        .limit(4); // Only need first 4 for collage
+
+                    if (error) throw error;
+
+                    return {
+                        ...playlist,
+                        stations: data ? data.map(item => item.radio_stations) : []
+                    };
+                } catch (error) {
+                    console.error('Error loading playlist stations:', error);
+                    return {
+                        ...playlist,
+                        stations: []
+                    };
+                }
+            }));
+
+            renderCarousel('playlistsTrack', playlistsWithStations, 'playlist');
 
             // Setup carousel navigation
             setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
@@ -1589,20 +1615,41 @@
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
-                                <div class="carousel-item-subtitle">${escapeHtml(item.genres || 'Radio Station')}</div>
                             </div>
                         </div>
                     `;
                 } else if (type === 'playlist') {
-                    const itemCount = item.playlist_items && item.playlist_items[0] ? item.playlist_items[0].count : 0;
+                    // Create a collage of station artworks
+                    const stations = item.stations || [];
+                    const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                    let imageContent;
+                    if (stationIcons.length === 0) {
+                        // No stations with icons - show emoji
+                        imageContent = '<span class="carousel-item-icon">📋</span>';
+                    } else if (stationIcons.length === 1) {
+                        // Single station - show its icon
+                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                    } else {
+                        // Multiple stations - create collage
+                        imageContent = `
+                            <div class="playlist-collage">
+                                ${stationIcons.map(s => `
+                                    <div class="playlist-collage-item">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
                     return `
                         <div class="carousel-item" data-playlist-id="${item.id}">
                             <div class="carousel-item-image">
-                                <span class="carousel-item-icon">📋</span>
+                                ${imageContent}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
-                                <div class="carousel-item-subtitle">${itemCount} station${itemCount !== 1 ? 's' : ''}</div>
                             </div>
                         </div>
                     `;
