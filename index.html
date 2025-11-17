@@ -1606,7 +1606,12 @@
                 return;
             }
 
+            console.log('renderCarousel called with type:', type, 'items:', items);
+
             track.innerHTML = items.map(item => {
+                if (type === 'playlist') {
+                    console.log('Rendering playlist item:', item, 'id:', item.id);
+                }
                 if (type === 'station') {
                     return `
                         <div class="carousel-item" data-station-id="${item.id}">
