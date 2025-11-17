@@ -44,13 +44,13 @@
 <body>
     <div class="player-container">
         <!-- Currently playing station display -->
-        <div id="stationDisplay" class="station-display" style="display: none;">
-            <img id="stationDisplayIcon" class="station-display-icon" src="" alt="">
+        <div id="stationDisplay" class="station-display" style="display: flex;">
+            <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
             <div class="station-display-info">
-                <div id="stationDisplayName" class="station-display-name"></div>
-                <div id="stationDisplayDetails" class="station-display-details"></div>
+                <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
+                <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
             </div>
-            <div class="station-display-change">CHANGE</div>
+            <div class="station-display-change">BROWSE</div>
         </div>
         
         <!-- Album artwork -->
@@ -210,7 +210,48 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Overview/Home Modal -->
+    <div id="overviewModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">StreamWave Radio</h2>
+                <button class="modal-close" id="closeOverviewModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Most Recent Stations Carousel -->
+                <div class="carousel-section">
+                    <h3 class="carousel-title">Most Recent Stations</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="recentPrev">‹</button>
+                        <div class="carousel-track" id="recentTrack"></div>
+                        <button class="carousel-btn carousel-next" id="recentNext">›</button>
+                    </div>
+                </div>
+
+                <!-- Most Played Stations Carousel -->
+                <div class="carousel-section">
+                    <h3 class="carousel-title">Most Played Stations</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="playedPrev">‹</button>
+                        <div class="carousel-track" id="playedTrack"></div>
+                        <button class="carousel-btn carousel-next" id="playedNext">›</button>
+                    </div>
+                </div>
+
+                <!-- Playlists Carousel -->
+                <div class="carousel-section">
+                    <h3 class="carousel-title">Your Playlists</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="playlistsPrev">‹</button>
+                        <div class="carousel-track" id="playlistsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="playlistsNext">›</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quality Modal -->
     <div id="qualityModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 350px;">
@@ -712,7 +753,9 @@
         const settingsModal = document.getElementById('settingsModal');
         const settingsBtn = document.getElementById('settingsBtn');
         const closeSettingsModal = document.getElementById('closeSettingsModal');
-        
+        const overviewModal = document.getElementById('overviewModal');
+        const closeOverviewModal = document.getElementById('closeOverviewModal');
+
         const stationList = document.getElementById('stationList');
         const stationSearch = document.getElementById('stationSearch');
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -1507,7 +1550,113 @@
                 console.error('Error loading playlist stations:', error);
             }
         }
-        
+
+        // Load overview modal with carousels
+        async function loadOverviewModal() {
+            // Load recent stations
+            const recentStations = await getMostRecentStations(10);
+            renderCarousel('recentTrack', recentStations, 'station');
+
+            // Load most played stations
+            const playedStations = await getMostPlayedStations(10);
+            renderCarousel('playedTrack', playedStations, 'station');
+
+            // Load playlists
+            await loadPlaylists();
+            renderCarousel('playlistsTrack', playlists, 'playlist');
+
+            // Setup carousel navigation
+            setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
+            setupCarouselNavigation('played', 'playedTrack', 'playedPrev', 'playedNext');
+            setupCarouselNavigation('playlists', 'playlistsTrack', 'playlistsPrev', 'playlistsNext');
+        }
+
+        // Render carousel items
+        function renderCarousel(trackId, items, type) {
+            const track = document.getElementById(trackId);
+
+            if (!items || items.length === 0) {
+                track.innerHTML = '<div class="carousel-empty">No items to display</div>';
+                return;
+            }
+
+            track.innerHTML = items.map(item => {
+                if (type === 'station') {
+                    return `
+                        <div class="carousel-item" data-station-id="${item.id}">
+                            <div class="carousel-item-image">
+                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}">` : '<span class="carousel-item-icon">📻</span>'}
+                            </div>
+                            <div class="carousel-item-content">
+                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                <div class="carousel-item-subtitle">${escapeHtml(item.genres || 'Radio Station')}</div>
+                            </div>
+                        </div>
+                    `;
+                } else if (type === 'playlist') {
+                    const itemCount = item.playlist_items && item.playlist_items[0] ? item.playlist_items[0].count : 0;
+                    return `
+                        <div class="carousel-item" data-playlist-id="${item.id}">
+                            <div class="carousel-item-image">
+                                <span class="carousel-item-icon">📋</span>
+                            </div>
+                            <div class="carousel-item-content">
+                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                <div class="carousel-item-subtitle">${itemCount} station${itemCount !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            // Add click handlers
+            track.querySelectorAll('.carousel-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (type === 'station') {
+                        const stationId = parseInt(item.dataset.stationId);
+                        const station = stations.find(s => s.id === stationId);
+                        if (station) {
+                            selectStation(station);
+                            overviewModal.classList.remove('active');
+                        }
+                    } else if (type === 'playlist') {
+                        const playlistId = parseInt(item.dataset.playlistId);
+                        openPlaylist(playlistId);
+                        overviewModal.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        // Setup carousel navigation
+        function setupCarouselNavigation(name, trackId, prevBtnId, nextBtnId) {
+            const track = document.getElementById(trackId);
+            const prevBtn = document.getElementById(prevBtnId);
+            const nextBtn = document.getElementById(nextBtnId);
+
+            const scrollAmount = 200; // pixels to scroll
+
+            prevBtn.addEventListener('click', () => {
+                track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            });
+
+            nextBtn.addEventListener('click', () => {
+                track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            });
+
+            // Update button states based on scroll position
+            const updateButtonStates = () => {
+                const isAtStart = track.scrollLeft <= 0;
+                const isAtEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+
+                prevBtn.disabled = isAtStart;
+                nextBtn.disabled = isAtEnd;
+            };
+
+            track.addEventListener('scroll', updateButtonStates);
+            updateButtonStates(); // Initial state
+        }
+
         // Create playlist
         async function createPlaylist(name, description) {
             try {
@@ -2708,45 +2857,10 @@
             playlistModal.classList.add('active');
         });
         
-        // Station display click - reopen last modal
+        // Station display click - open overview modal
         stationDisplay.addEventListener('click', async () => {
-            if (!lastOpenedModal) return;
-            
-            if (lastOpenedModal === 'browse') {
-                browseStationsModal.classList.add('active');
-                if (stations.length > 0) {
-                    if (filteredStations.length === 0) {
-                        filteredStations = [...stations];
-                    }
-                    renderStationList();
-                }
-            } else if (lastOpenedModal === 'playlists') {
-                playlistsModal.classList.add('active');
-                loadPlaylists();
-            } else if (lastOpenedModal === 'recent') {
-                const recentStations = await getMostRecentStations(10);
-                if (recentStations.length > 0) {
-                    playlistStations = recentStations;
-                    currentPlaylist = { id: 'recent', name: 'Most Recent Stations' };
-                    playlistModalTitle.textContent = 'Most Recent Stations';
-                    renderPlaylistStations();
-                    playlistModal.classList.add('active');
-                }
-            } else if (lastOpenedModal === 'played') {
-                const playedStations = await getMostPlayedStations(10);
-                if (playedStations.length > 0) {
-                    playlistStations = playedStations;
-                    currentPlaylist = { id: 'played', name: 'Most Played Stations' };
-                    playlistModalTitle.textContent = 'Most Played Stations';
-                    renderPlaylistStations();
-                    playlistModal.classList.add('active');
-                }
-            } else if (lastOpenedModal.type === 'playlist') {
-                const playlist = playlists.find(p => p.id === lastOpenedModal.id);
-                if (playlist) {
-                    openPlaylist(lastOpenedModal.id);
-                }
-            }
+            await loadOverviewModal();
+            overviewModal.classList.add('active');
         });
         
         // Close playlists modal
@@ -2764,6 +2878,11 @@
             settingsModal.classList.add('active');
         });
         
+        // Close overview modal
+        closeOverviewModal.addEventListener('click', () => {
+            overviewModal.classList.remove('active');
+        });
+
         // Close settings modal
         closeSettingsModal.addEventListener('click', () => {
             settingsModal.classList.remove('active');
