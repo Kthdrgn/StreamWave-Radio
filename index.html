@@ -1606,12 +1606,7 @@
                 return;
             }
 
-            console.log('renderCarousel called with type:', type, 'items:', items);
-
             track.innerHTML = items.map(item => {
-                if (type === 'playlist') {
-                    console.log('Rendering playlist item:', item, 'id:', item.id);
-                }
                 if (type === 'station') {
                     return `
                         <div class="carousel-item" data-station-id="${item.id}">
@@ -1672,7 +1667,7 @@
                             overviewModal.classList.remove('active');
                         }
                     } else if (type === 'playlist') {
-                        const playlistId = parseInt(item.dataset.playlistId);
+                        const playlistId = item.dataset.playlistId; // Don't parseInt - IDs are UUIDs (strings)
                         openPlaylist(playlistId);
                         overviewModal.classList.remove('active');
                     }
@@ -2520,14 +2515,8 @@
         
         // Open playlist
         function openPlaylist(id) {
-            console.log('openPlaylist called with id:', id);
-            console.log('Available playlists:', playlists);
             currentPlaylist = playlists.find(p => p.id === id);
-            console.log('Found playlist:', currentPlaylist);
-            if (!currentPlaylist) {
-                console.log('Playlist not found!');
-                return;
-            }
+            if (!currentPlaylist) return;
 
             lastOpenedModal = { type: 'playlist', id: id };
             playlistModalTitle.textContent = currentPlaylist.name;
@@ -2535,7 +2524,6 @@
 
             playlistsModal.classList.remove('active');
             playlistModal.classList.add('active');
-            console.log('Playlist modal should now be active');
         }
         
         // Show playlist form
