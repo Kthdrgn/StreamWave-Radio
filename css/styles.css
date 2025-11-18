@@ -2059,3 +2059,70 @@ body[data-layout="landscape"] {
 body[data-layout="landscape"] .player-container {
     display: contents !important;
 }
+
+/* Layout toggle styles (same as theme toggle) */
+.layout-toggle-container {
+    margin-top: 10px;
+}
+
+.layout-toggle-btn {
+    position: relative;
+    display: flex;
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 50px;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.layout-toggle-btn:hover {
+    border-color: var(--border-hover);
+}
+
+.layout-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.layout-option.active {
+    color: var(--text-primary);
+}
+
+.layout-icon {
+    font-size: 18px;
+}
+
+.layout-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.layout-slider {
+    position: absolute;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--button-bg);
+    border-radius: 50px;
+    top: 4px;
+    left: 4px;
+    transition: all 0.3s ease;
+    z-index: 0;
+}
+
+.layout-option:first-of-type.active ~ .layout-slider {
+    left: 4px;
+}
+
+.layout-option:last-of-type.active ~ .layout-slider {
+    left: calc(50% + 0px);
+}
