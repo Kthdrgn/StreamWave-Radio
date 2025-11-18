@@ -1,10 +1,11 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v1';
+const CACHE_NAME = 'radio-player-v2'; // Incremented to force cache update
 const urlsToCache = [
     './',
     './index.html',
+    './radio-auth.js', // Added authentication module
     './manifest.json',
     './icons/icon-192x192.png',
     './icons/icon-512x512.png'
@@ -17,6 +18,10 @@ self.addEventListener('install', (event) => {
             .then((cache) => {
                 console.log('Opened cache');
                 return cache.addAll(urlsToCache);
+            })
+            .then(() => {
+                // Force the waiting service worker to become active
+                return self.skipWaiting();
             })
     );
 });
@@ -33,6 +38,9 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
+        }).then(() => {
+            // Take control of all clients immediately
+            return self.clients.claim();
         })
     );
 });
