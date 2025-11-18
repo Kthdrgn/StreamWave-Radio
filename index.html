@@ -815,72 +815,61 @@
         // ======================
         // LIKED TRACKS FUNCTIONS
         // ======================
-        
-        // Load liked tracks from localStorage
-        function loadLikedTracks() {
-            const stored = localStorage.getItem('likedTracks');
-            return stored ? JSON.parse(stored) : [];
-        }
-        
-        // Save liked tracks to localStorage
-        function saveLikedTracks(tracks) {
-            localStorage.setItem('likedTracks', JSON.stringify(tracks));
-        }
+
+        // Note: loadLikedTracks, saveLikedTracks, addLikedTrack, removeLikedTrack
+        // are now provided by radio-auth.js and available as window functions
+        // They automatically handle both guest (localStorage) and authenticated (Supabase) modes
         
         // Check if current track is liked
-        function isCurrentTrackLiked() {
+        async function isCurrentTrackLiked() {
             if (!currentTrack.title || !currentTrack.artist) return false;
-            const likedTracks = loadLikedTracks();
-            return likedTracks.some(track => 
-                track.title === currentTrack.title && 
-                track.artist === currentTrack.artist
-            );
+            return await window.isTrackLiked(currentTrack.title, currentTrack.artist);
         }
         
         // Toggle like for current track
-        function toggleLikeTrack() {
+        async function toggleLikeTrack() {
             if (!currentTrack.title || !currentTrack.artist) return;
-            
-            const likedTracks = loadLikedTracks();
-            const trackIndex = likedTracks.findIndex(track => 
-                track.title === currentTrack.title && 
-                track.artist === currentTrack.artist
-            );
-            
-            if (trackIndex >= 0) {
-                // Unlike
-                likedTracks.splice(trackIndex, 1);
+
+            const isLiked = await window.isTrackLiked(currentTrack.title, currentTrack.artist);
+
+            if (isLiked) {
+                // Unlike - need to find the track object first
+                const likedTracks = await window.loadLikedTracks();
+                const track = likedTracks.find(t =>
+                    t.title === currentTrack.title && t.artist === currentTrack.artist
+                );
+                if (track) {
+                    await window.removeLikedTrack(track);
+                }
             } else {
-                // Like
-                const newLikedTrack = {
+                // Like - use addLikedTrack from radio-auth.js
+                await window.addLikedTrack({
                     title: currentTrack.title,
                     artist: currentTrack.artist,
                     album: currentTrack.album || '',
                     artworkUrl: currentTrack.artworkUrl || '',
-                    station: currentStation ? currentStation.name : 'Unknown Station',
-                    timestamp: new Date().toISOString()
-                };
-                likedTracks.unshift(newLikedTrack);
+                    station: currentStation ? currentStation.name : 'Unknown Station'
+                });
             }
-            
-            saveLikedTracks(likedTracks);
-            updateLikeButton();
+
+            await updateLikeButton();
         }
         
         // Update like button state
-        function updateLikeButton() {
+        async function updateLikeButton() {
             const likeBtn = document.getElementById('likeBtn');
             if (!likeBtn) return;
-            
+
             if (!currentTrack.title || !currentTrack.artist) {
                 likeBtn.classList.add('disabled');
                 likeBtn.innerHTML = '♡';
                 return;
             }
-            
+
             likeBtn.classList.remove('disabled');
-            
-            if (isCurrentTrackLiked()) {
+
+            const isLiked = await isCurrentTrackLiked();
+            if (isLiked) {
                 likeBtn.classList.add('liked');
                 likeBtn.innerHTML = '♥';
             } else {
@@ -892,57 +881,22 @@
         // ======================
         // RECENT TRACKS MANAGEMENT
         // ======================
-        
+
+        // Note: loadRecentTracks, saveRecentTracks, addToRecentTracks, clearAllRecentTracks
+        // are now provided by radio-auth.js and available as window functions
+        // They automatically handle both guest (localStorage) and authenticated (Supabase) modes
+
         const MAX_RECENT_TRACKS = 15;
         
-        // Load recent tracks from localStorage
-        function loadRecentTracks() {
-            const stored = localStorage.getItem('recentTracks');
-            return stored ? JSON.parse(stored) : [];
-        }
-        
-        // Save recent tracks to localStorage
-        function saveRecentTracks(tracks) {
-            localStorage.setItem('recentTracks', JSON.stringify(tracks));
-        }
-        
-        // Add track to recent tracks
-        function addToRecentTracks(trackInfo) {
-            if (!trackInfo.title || !trackInfo.artist) return;
-            
-            const recentTracks = loadRecentTracks();
-            
-            // Remove duplicate if exists (by title and artist)
-            const filteredTracks = recentTracks.filter(track => 
-                !(track.title === trackInfo.title && track.artist === trackInfo.artist)
-            );
-            
-            // Add new track at the beginning
-            const newTrack = {
-                title: trackInfo.title,
-                artist: trackInfo.artist,
-                album: trackInfo.album || '',
-                artworkUrl: trackInfo.artworkUrl || '',
-                station: currentStation ? currentStation.name : 'Unknown Station',
-                timestamp: new Date().toISOString()
-            };
-            
-            filteredTracks.unshift(newTrack);
-            
-            // Keep only last 15 tracks
-            const limitedTracks = filteredTracks.slice(0, MAX_RECENT_TRACKS);
-            
-            saveRecentTracks(limitedTracks);
-        }
-        
         // Display recent tracks in modal
-        function displayRecentTracks() {
-            const recentTracks = loadRecentTracks();
+        async function displayRecentTracks() {
+            const rawTracks = await window.loadRecentTracks();
+            const recentTracks = rawTracks.map(t => window.normalizeTrack(t));
             const recentTracksList = document.getElementById('recentTracksList');
             const clearRecentTracksBtn = document.getElementById('clearRecentTracksBtn');
             const copyAllRecentBtn = document.getElementById('copyAllRecentBtn');
             const downloadRecentBtn = document.getElementById('downloadRecentBtn');
-            
+
             if (recentTracks.length === 0) {
                 recentTracksList.innerHTML = `
                     <div class="empty-state">
@@ -960,10 +914,10 @@
                 recentTracksList.innerHTML = recentTracks.map((track, index) => {
                     const date = new Date(track.timestamp);
                     const timeAgo = getTimeAgo(date);
-                    
+
                     return `
                         <div class="liked-track-item">
-                            ${track.artworkUrl ? 
+                            ${track.artworkUrl ?
                                 `<img class="liked-track-art" src="${track.artworkUrl}" alt="${escapeHtml(track.title)}">` :
                                 `<div class="liked-track-art">♪</div>`
                             }
@@ -986,10 +940,10 @@
         }
         
         // Clear all recent tracks
-        function clearAllRecentTracks() {
+        async function clearAllRecentTracks() {
             if (confirm('Are you sure you want to clear all recently played tracks?')) {
-                saveRecentTracks([]);
-                displayRecentTracks();
+                await window.clearAllRecentTracks();
+                await displayRecentTracks();
             }
         }
         
@@ -1172,11 +1126,12 @@
         }
         
         // Display liked tracks in modal
-        function displayLikedTracks() {
-            const likedTracks = loadLikedTracks();
+        async function displayLikedTracks() {
+            const rawTracks = await window.loadLikedTracks();
+            const likedTracks = rawTracks.map(t => window.normalizeTrack(t));
             const copyAllLikedBtn = document.getElementById('copyAllLikedBtn');
             const downloadLikedBtn = document.getElementById('downloadLikedBtn');
-            
+
             if (likedTracks.length === 0) {
                 likedTracksList.innerHTML = `
                     <div class="empty-state">
@@ -1191,25 +1146,26 @@
                 clearAllLikesBtn.style.display = 'block';
                 copyAllLikedBtn.style.display = 'block';
                 downloadLikedBtn.style.display = 'block';
-                likedTracksList.innerHTML = likedTracks.map((track, index) => {
-                    const date = new Date(track.timestamp);
+                likedTracksList.innerHTML = rawTracks.map((track, index) => {
+                    const normalizedTrack = window.normalizeTrack(track);
+                    const date = new Date(normalizedTrack.timestamp);
                     const timeAgo = getTimeAgo(date);
-                    
+
                     return `
-                        <div class="liked-track-item">
-                            ${track.artworkUrl ? 
-                                `<img class="liked-track-art" src="${track.artworkUrl}" alt="${escapeHtml(track.title)}">` :
+                        <div class="liked-track-item" data-track-index="${index}">
+                            ${normalizedTrack.artworkUrl ?
+                                `<img class="liked-track-art" src="${normalizedTrack.artworkUrl}" alt="${escapeHtml(normalizedTrack.title)}">` :
                                 `<div class="liked-track-art">♪</div>`
                             }
                             <div class="liked-track-info">
-                                <div class="liked-track-title">${escapeHtml(track.title)}</div>
-                                <div class="liked-track-artist">${escapeHtml(track.artist)}</div>
+                                <div class="liked-track-title">${escapeHtml(normalizedTrack.title)}</div>
+                                <div class="liked-track-artist">${escapeHtml(normalizedTrack.artist)}</div>
                                 <div class="liked-track-meta">
-                                    ${escapeHtml(track.station)} • ${timeAgo}
+                                    ${escapeHtml(normalizedTrack.station)} • ${timeAgo}
                                 </div>
                             </div>
                             <div class="track-actions">
-                                <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(track.artist)}', '${escapeHtml(track.title)}', this)">
+                                <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(normalizedTrack.artist)}', '${escapeHtml(normalizedTrack.title)}', this)">
                                     <svg width="14" height="14" viewBox="0 0 256 256" style="vertical-align: middle;">
                                         <path fill="currentColor" d="M216 32H88a16 16 0 0 0-16 16v40H40a16 16 0 0 0-16 16v120a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16v-40h32a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zm-48 192H40V104h128zm48-48h-32V104a16 16 0 0 0-16-16H88V48h128z"/>
                                     </svg>
@@ -1223,20 +1179,22 @@
         }
         
         // Unlike a track by index
-        function unlikeTrack(index) {
-            const likedTracks = loadLikedTracks();
-            likedTracks.splice(index, 1);
-            saveLikedTracks(likedTracks);
-            displayLikedTracks();
-            updateLikeButton();
+        async function unlikeTrack(index) {
+            const likedTracks = await window.loadLikedTracks();
+            const track = likedTracks[index];
+            if (track) {
+                await window.removeLikedTrack(track);
+                await displayLikedTracks();
+                await updateLikeButton();
+            }
         }
-        
+
         // Clear all liked tracks
-        function clearAllLikedTracks() {
+        async function clearAllLikedTracks() {
             if (confirm('Are you sure you want to clear all liked tracks? This cannot be undone.')) {
-                saveLikedTracks([]);
-                displayLikedTracks();
-                updateLikeButton();
+                await window.clearAllLikedTracks();
+                await displayLikedTracks();
+                await updateLikeButton();
             }
         }
         
@@ -4042,7 +4000,7 @@
             currentTrack.album = album;
             
             // Add to recent tracks
-            addToRecentTracks({
+            window.addToRecentTracks({
                 title: title,
                 artist: artist,
                 album: album,
@@ -4115,7 +4073,7 @@
                             updateCastMetadata(title, artist, artUrl);
                             // Update recent tracks with artwork
                             if (currentTrack.title && currentTrack.artist) {
-                                addToRecentTracks({
+                                window.addToRecentTracks({
                                     title: currentTrack.title,
                                     artist: currentTrack.artist,
                                     album: currentTrack.album,
@@ -4168,7 +4126,7 @@
                             updateCastMetadata(title, artist, artUrl);
                             // Update recent tracks with artwork
                             if (currentTrack.title && currentTrack.artist) {
-                                addToRecentTracks({
+                                window.addToRecentTracks({
                                     title: currentTrack.title,
                                     artist: currentTrack.artist,
                                     album: currentTrack.album,
