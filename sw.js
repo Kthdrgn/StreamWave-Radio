@@ -1,11 +1,12 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v3'; // Incremented to force cache update
+const CACHE_NAME = 'radio-player-v4'; // Incremented to force cache update
 const urlsToCache = [
     './',
     './index.html',
     './radio-auth.js', // Added authentication module
+    './css/styles.css', // Main stylesheet
     './manifest.json',
     './icons/icon-192x192.png',
     './icons/icon-512x512.png'
