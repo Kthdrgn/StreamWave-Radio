@@ -2107,7 +2107,8 @@ body[data-layout="portrait"] .tv-right-column {
     display: contents; /* Makes children appear as direct children of player-container */
 }
 
-/* Show/hide artwork based on layout mode */
+/* Artwork visibility control */
+
 /* In landscape mode: show left column artwork, hide portrait artwork */
 body[data-layout="landscape"] .tv-left-column {
     display: flex !important;
@@ -2117,8 +2118,26 @@ body[data-layout="landscape"] .portrait-artwork {
     display: none !important;
 }
 
-/* In portrait mode: hide left column, show portrait artwork */
+body[data-layout="landscape"] #artworkContainer {
+    display: block;
+}
+
+body[data-layout="landscape"] #artworkContainerPortrait {
+    display: none !important;
+}
+
+/* In portrait mode: hide left column artwork, show portrait artwork */
+body:not([data-layout="landscape"]) #artworkContainer,
+body[data-layout="portrait"] #artworkContainer {
+    display: none !important;
+}
+
 body:not([data-layout="landscape"]) .portrait-artwork,
 body[data-layout="portrait"] .portrait-artwork {
+    display: block !important;
+}
+
+body:not([data-layout="landscape"]) #artworkContainerPortrait,
+body[data-layout="portrait"] #artworkContainerPortrait {
     display: block !important;
 }
