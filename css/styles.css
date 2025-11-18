@@ -1979,26 +1979,38 @@
 }
 
 /* ============================================
-   LANDSCAPE LAYOUT MODE
+   LAYOUT MODES - Portrait vs Landscape
    ============================================ */
 
-/* Apply landscape layout when data-layout="landscape" */
-body[data-layout="landscape"] {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    padding: 0;
-    height: 100vh;
-    overflow: hidden;
+/* DEFAULT / PORTRAIT MODE */
+/* Hide left column entirely in portrait mode */
+body:not([data-layout="landscape"]) .tv-left-column,
+body[data-layout="portrait"] .tv-left-column {
+    display: none !important;
 }
 
-body[data-layout="landscape"] .player-container {
+/* Hide the left column artwork specifically */
+body:not([data-layout="landscape"]) #artworkContainer,
+body[data-layout="portrait"] #artworkContainer {
+    display: none !important;
+}
+
+/* tv-right-column uses display:contents to maintain original layout */
+body:not([data-layout="landscape"]) .tv-right-column,
+body[data-layout="portrait"] .tv-right-column {
     display: contents;
 }
 
-/* Left column - artwork only */
+/* Show the portrait artwork */
+body:not([data-layout="landscape"]) #artworkContainerPortrait,
+body[data-layout="portrait"] #artworkContainerPortrait {
+    display: block !important;
+}
+
+/* LANDSCAPE MODE */
+/* Show left column in landscape */
 body[data-layout="landscape"] .tv-left-column {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     align-items: center;
     gap: 15px;
@@ -2007,9 +2019,25 @@ body[data-layout="landscape"] .tv-left-column {
     padding: 40px;
 }
 
-/* Right column - everything else */
+/* Show left column artwork in landscape */
+body[data-layout="landscape"] #artworkContainer {
+    display: block !important;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0;
+}
+
+/* Hide portrait artwork in landscape */
+body[data-layout="landscape"] #artworkContainerPortrait,
+body[data-layout="landscape"] .portrait-artwork {
+    display: none !important;
+}
+
+/* Right column as flex column in landscape */
 body[data-layout="landscape"] .tv-right-column {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     gap: 30px;
     padding: 40px;
@@ -2018,126 +2046,16 @@ body[data-layout="landscape"] .tv-right-column {
     overflow-y: auto;
 }
 
-/* In landscape mode, artwork container is large and centered */
-body[data-layout="landscape"] #artworkContainer {
-    width: 100%;
-    max-width: 600px;
-    height: auto;
-    aspect-ratio: 1;
-    margin: 0;
+/* Landscape: two-column grid */
+body[data-layout="landscape"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
 }
 
-body[data-layout="landscape"] .album-art,
-body[data-layout="landscape"] .album-art-placeholder {
-    width: 100%;
-    height: 100%;
-}
-
-/* Hide elements that should not appear in landscape on the left column */
-body[data-layout="landscape"] .tv-left-column .controls,
-body[data-layout="landscape"] .tv-left-column .metadata-section,
-body[data-layout="landscape"] .tv-left-column .station-display {
-    display: none;
-}
-
-/* Station display in landscape mode */
-body[data-layout="landscape"] .station-display {
-    width: 100%;
-    padding: 20px;
-}
-
-/* Metadata section in landscape mode */
-body[data-layout="landscape"] #metadataSection {
-    text-align: left;
-    padding: 20px;
-}
-
-body[data-layout="landscape"] .song-title {
-    font-size: 36px;
-}
-
-body[data-layout="landscape"] .artist-name {
-    font-size: 24px;
-}
-
-body[data-layout="landscape"] .album-name {
-    font-size: 18px;
-}
-
-/* Controls in landscape mode */
-body[data-layout="landscape"] .controls {
-    justify-content: flex-start;
-    gap: 20px;
-}
-
-body[data-layout="landscape"] .control-icon-btn {
-    width: 80px;
-    height: 80px;
-}
-
-/* Hide the portrait-only elements in landscape */
-body[data-layout="landscape"] .station-selector-buttons {
-    display: none;
-}
-
-/* Mobile: disable landscape layout on small screens */
-@media (max-width: 768px) {
-    body[data-layout="landscape"] {
-        display: block;
-        grid-template-columns: none;
-        height: auto;
-        overflow: visible;
-    }
-    
-    body[data-layout="landscape"] .tv-left-column,
-    body[data-layout="landscape"] .tv-right-column {
-        height: auto;
-        padding: 20px;
-
-/* Portrait mode - default layout (hide left column) */
-body:not([data-layout="landscape"]) .tv-left-column,
-body[data-layout="portrait"] .tv-left-column {
-    display: none !important;
-}
-
-/* In portrait mode, tv-right-column should not apply special styling */
-/* Let the default .player-container styles handle the layout */
-body:not([data-layout="landscape"]) .tv-right-column,
-body[data-layout="portrait"] .tv-right-column {
-    display: contents; /* Makes children appear as direct children of player-container */
-}
-
-/* Artwork visibility control */
-
-/* In landscape mode: show left column artwork, hide portrait artwork */
-body[data-layout="landscape"] .tv-left-column {
-    display: flex !important;
-}
-
-body[data-layout="landscape"] .portrait-artwork {
-    display: none !important;
-}
-
-body[data-layout="landscape"] #artworkContainer {
-    display: block;
-}
-
-body[data-layout="landscape"] #artworkContainerPortrait {
-    display: none !important;
-}
-
-/* In portrait mode: hide left column artwork, show portrait artwork */
-body:not([data-layout="landscape"]) #artworkContainer,
-body[data-layout="portrait"] #artworkContainer {
-    display: none !important;
-}
-
-body:not([data-layout="landscape"]) .portrait-artwork,
-body[data-layout="portrait"] .portrait-artwork {
-    display: block !important;
-}
-
-body:not([data-layout="landscape"]) #artworkContainerPortrait,
-body[data-layout="portrait"] #artworkContainerPortrait {
-    display: block !important;
+body[data-layout="landscape"] .player-container {
+    display: contents !important;
 }
