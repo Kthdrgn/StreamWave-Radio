@@ -147,39 +147,21 @@
             </div>
             <div class="modal-body">
                 <div class="settings-content">
-                    <div class="setting-item">
-                        <label class="setting-label">CORS Proxy</label>
-                        <div class="form-checkbox">
-                            <input type="checkbox" id="globalCorsProxy" checked>
-                            <label for="globalCorsProxy" style="cursor: pointer;">Use CORS Proxy</label>
-                        </div>
-                        <div class="setting-description">
-                            Enable this if streams fail to load. Uses a proxy to bypass CORS restrictions.
-                        </div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <label class="setting-label">Auto-Fallback Mode</label>
-                        <div class="form-checkbox">
-                            <input type="checkbox" id="autoFallback" checked>
-                            <label for="autoFallback" style="cursor: pointer;">Auto-switch to Simple Mode if Live fails</label>
-                        </div>
-                        <div class="setting-description">
-                            Automatically try Simple Mode (without metadata) if Live Mode fails to connect.
-                        </div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <label class="setting-label">Album Artwork</label>
-                        <div class="form-checkbox">
-                            <input type="checkbox" id="useItunesApi" checked>
-                            <label for="useItunesApi" style="cursor: pointer;">Use iTunes API for Artwork</label>
-                        </div>
-                        <div class="setting-description">
-                            Automatically fetch album artwork from iTunes when available.
-                        </div>
-                    </div>
-                    
+                    <!-- Auth Button -->
+                    <button class="liked-tracks-btn" id="authBtn">
+                        <span id="authBtnText">🔐 Sign In</span>
+                    </button>
+
+                    <!-- Liked Tracks Button -->
+                    <button class="liked-tracks-btn" id="viewLikedTracksBtn">
+                        ♥ View Liked Tracks
+                    </button>
+
+                    <!-- Recent Tracks Button -->
+                    <button class="liked-tracks-btn" id="viewRecentTracksBtn">
+                        🕐 Recently Played Tracks
+                    </button>
+
                     <div class="setting-item">
                         <label class="setting-label">Theme</label>
                         <div class="theme-toggle-container">
@@ -223,18 +205,38 @@
                         </div>
                     </div>
 
-                    <!-- Liked Tracks Button -->
-                    <button class="liked-tracks-btn" id="viewLikedTracksBtn">
-                        ♥ View Liked Tracks
-                    </button>
-                    <!-- Recent Tracks Button -->
-                    <button class="liked-tracks-btn" id="viewRecentTracksBtn">
-                        🕐 Recently Played Tracks
-                    </button>
-                    <!-- Auth Button -->
-                    <button class="liked-tracks-btn" id="authBtn">
-                        <span id="authBtnText">🔐 Sign In</span>
-                    </button>
+                    <div class="setting-item">
+                        <label class="setting-label">CORS Proxy</label>
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="globalCorsProxy" checked>
+                            <label for="globalCorsProxy" style="cursor: pointer;">Use CORS Proxy</label>
+                        </div>
+                        <div class="setting-description">
+                            Enable this if streams fail to load. Uses a proxy to bypass CORS restrictions.
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Auto-Fallback Mode</label>
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="autoFallback" checked>
+                            <label for="autoFallback" style="cursor: pointer;">Auto-switch to Simple Mode if Live fails</label>
+                        </div>
+                        <div class="setting-description">
+                            Automatically try Simple Mode (without metadata) if Live Mode fails to connect.
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Album Artwork</label>
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="useItunesApi" checked>
+                            <label for="useItunesApi" style="cursor: pointer;">Use iTunes API for Artwork</label>
+                        </div>
+                        <div class="setting-description">
+                            Automatically fetch album artwork from iTunes when available.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
