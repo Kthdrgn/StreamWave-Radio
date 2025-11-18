@@ -36,7 +36,10 @@
     
     <!-- Load Supabase client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
+    <!-- Load authentication module -->
+    <script src="radio-auth.js"></script>
+
     <!-- Modular CSS -->
     <link rel="stylesheet" href="css/styles.css">
     
@@ -691,9 +694,6 @@
         </div>
     </div>
 
-    <!-- Supabase JavaScript Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script>
         // ======================
         // GLOBAL VARIABLES
@@ -1273,16 +1273,14 @@
         // ======================
         // SUPABASE INITIALIZATION
         // ======================
-        
-        // Initialize Supabase - Replace with your credentials
-        const SUPABASE_URL = 'https://zwrunupvlkhnwbylzizj.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3cnVudXB2bGtobndieWx6aXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTIxNzEsImV4cCI6MjA3NjY4ODE3MX0.WBTLcTNWgGZ-I6o_Dd7ObfS2avmJc_iiIEpDp8-VuQ4';
-          
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (error) {
-            console.error('Failed to initialize Supabase:', error);
-            updateStatus('Error: Failed to connect to database', 'error');
+
+        // Use the Supabase client initialized by radio-auth.js
+        // radio-auth.js sets up window.supabaseClient, window.currentUser, etc.
+        supabase = window.supabaseClient;
+
+        // Check authentication status on load
+        if (window.checkAuth) {
+            window.checkAuth();
         }
         
         // ======================
