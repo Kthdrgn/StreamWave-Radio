@@ -4075,7 +4075,8 @@
                 title: title,
                 artist: artist,
                 album: album,
-                artworkUrl: null // Will be updated when album art loads
+                artworkUrl: null, // Will be updated when album art loads
+                station: currentStation ? currentStation.name : 'Unknown Station'
             });
             
             metadataDiv.innerHTML = `
@@ -4148,7 +4149,8 @@
                                     title: currentTrack.title,
                                     artist: currentTrack.artist,
                                     album: currentTrack.album,
-                                    artworkUrl: artUrl
+                                    artworkUrl: artUrl,
+                                    station: currentStation ? currentStation.name : 'Unknown Station'
                                 });
                             }
                         };
@@ -4201,7 +4203,8 @@
                                     title: currentTrack.title,
                                     artist: currentTrack.artist,
                                     album: currentTrack.album,
-                                    artworkUrl: artUrl
+                                    artworkUrl: artUrl,
+                                    station: currentStation ? currentStation.name : 'Unknown Station'
                                 });
                             }
                         };
