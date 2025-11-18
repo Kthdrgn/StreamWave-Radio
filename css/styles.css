@@ -1977,3 +1977,169 @@
         margin-bottom: 10px;
     }
 }
+
+/* ============================================
+   LANDSCAPE LAYOUT MODE
+   ============================================ */
+
+/* Apply landscape layout when data-layout="landscape" */
+body[data-layout="landscape"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+body[data-layout="landscape"] .player-container {
+    display: contents;
+}
+
+/* Left column - artwork only */
+body[data-layout="landscape"] .tv-left-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    height: 100vh;
+    padding: 40px;
+}
+
+/* Right column - everything else */
+body[data-layout="landscape"] .tv-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 40px;
+    height: 100vh;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+/* In landscape mode, artwork container is large and centered */
+body[data-layout="landscape"] #artworkContainer {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0;
+}
+
+body[data-layout="landscape"] .album-art,
+body[data-layout="landscape"] .album-art-placeholder {
+    width: 100%;
+    height: 100%;
+}
+
+/* Hide elements that should not appear in landscape on the left column */
+body[data-layout="landscape"] .tv-left-column .controls,
+body[data-layout="landscape"] .tv-left-column .metadata-section,
+body[data-layout="landscape"] .tv-left-column .station-display {
+    display: none;
+}
+
+/* Station display in landscape mode */
+body[data-layout="landscape"] .station-display {
+    width: 100%;
+    padding: 20px;
+}
+
+/* Metadata section in landscape mode */
+body[data-layout="landscape"] #metadataSection {
+    text-align: left;
+    padding: 20px;
+}
+
+body[data-layout="landscape"] .song-title {
+    font-size: 36px;
+}
+
+body[data-layout="landscape"] .artist-name {
+    font-size: 24px;
+}
+
+body[data-layout="landscape"] .album-name {
+    font-size: 18px;
+}
+
+/* Controls in landscape mode */
+body[data-layout="landscape"] .controls {
+    justify-content: flex-start;
+    gap: 20px;
+}
+
+body[data-layout="landscape"] .control-icon-btn {
+    width: 80px;
+    height: 80px;
+}
+
+/* Hide the portrait-only elements in landscape */
+body[data-layout="landscape"] .station-selector-buttons {
+    display: none;
+}
+
+/* Mobile: disable landscape layout on small screens */
+@media (max-width: 768px) {
+    body[data-layout="landscape"] {
+        display: block;
+        grid-template-columns: none;
+        height: auto;
+        overflow: visible;
+    }
+    
+    body[data-layout="landscape"] .tv-left-column,
+    body[data-layout="landscape"] .tv-right-column {
+        height: auto;
+        padding: 20px;
+    }
+    
+    body[data-layout="landscape"] #artworkContainer {
+        max-width: 100%;
+    }
+}
+
+/* Portrait mode - default layout (hide left column) */
+body:not([data-layout="landscape"]) .tv-left-column,
+body[data-layout="portrait"] .tv-left-column {
+    display: none;
+}
+
+body:not([data-layout="landscape"]) .tv-right-column,
+body[data-layout="portrait"] .tv-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* In portrait mode, artwork is in the right column (default behavior) */
+body:not([data-layout="landscape"]) #artworkContainer,
+body[data-layout="portrait"] #artworkContainer {
+    /* Let it use the default styles from the main stylesheet */
+}
+
+/* Show/hide artwork based on layout mode */
+/* In landscape mode: show left column artwork, hide portrait artwork */
+body[data-layout="landscape"] .tv-left-column {
+    display: flex !important;
+}
+
+body[data-layout="landscape"] .portrait-artwork {
+    display: none !important;
+}
+
+/* In portrait mode: hide left column, show portrait artwork */
+body:not([data-layout="landscape"]) .tv-left-column,
+body[data-layout="portrait"] .tv-left-column {
+    display: none !important;
+}
+
+body:not([data-layout="landscape"]) .portrait-artwork,
+body[data-layout="portrait"] .portrait-artwork {
+    display: block !important;
+}
