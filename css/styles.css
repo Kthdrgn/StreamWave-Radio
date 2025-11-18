@@ -2093,13 +2093,6 @@ body[data-layout="landscape"] .station-selector-buttons {
     body[data-layout="landscape"] .tv-right-column {
         height: auto;
         padding: 20px;
-    }
-    
-    body[data-layout="landscape"] #artworkContainer {
-        max-width: 100%;
-    }
-}
-
 
 /* Portrait mode - default layout (hide left column) */
 body:not([data-layout="landscape"]) .tv-left-column,
@@ -2107,13 +2100,11 @@ body[data-layout="portrait"] .tv-left-column {
     display: none !important;
 }
 
+/* In portrait mode, tv-right-column should not apply special styling */
+/* Let the default .player-container styles handle the layout */
 body:not([data-layout="landscape"]) .tv-right-column,
 body[data-layout="portrait"] .tv-right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px;
-    width: 100%;
+    display: contents; /* Makes children appear as direct children of player-container */
 }
 
 /* Show/hide artwork based on layout mode */
@@ -2130,23 +2121,4 @@ body[data-layout="landscape"] .portrait-artwork {
 body:not([data-layout="landscape"]) .portrait-artwork,
 body[data-layout="portrait"] .portrait-artwork {
     display: block !important;
-}
-
-/* Override default body/container styles in portrait mode */
-body:not([data-layout="landscape"]),
-body[data-layout="portrait"] {
-    display: block;
-    justify-content: flex-start;
-    align-items: flex-start;
-    padding: 0;
-}
-
-body:not([data-layout="landscape"]) .player-container,
-body[data-layout="portrait"] .player-container {
-    max-width: 100%;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
 }
