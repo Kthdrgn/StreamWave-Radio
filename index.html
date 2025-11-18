@@ -1693,6 +1693,15 @@
 
             // Update button states based on scroll position
             const updateButtonStates = () => {
+                const hasOverflow = track.scrollWidth > track.clientWidth;
+
+                if (!hasOverflow) {
+                    // No scrolling needed - disable both buttons
+                    prevBtn.disabled = true;
+                    nextBtn.disabled = true;
+                    return;
+                }
+
                 const isAtStart = track.scrollLeft <= 0;
                 const isAtEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
 
@@ -1701,7 +1710,9 @@
             };
 
             track.addEventListener('scroll', updateButtonStates);
-            updateButtonStates(); // Initial state
+
+            // Wait for DOM to be fully rendered before checking button states
+            setTimeout(updateButtonStates, 100);
         }
 
         // Create playlist
