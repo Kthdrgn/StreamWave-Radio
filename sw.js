@@ -1,7 +1,7 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v2'; // Incremented to force cache update
+const CACHE_NAME = 'radio-player-v3'; // Incremented to force cache update
 const urlsToCache = [
     './',
     './index.html',
@@ -53,6 +53,29 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // For HTML files, use network-first strategy to ensure fresh content
+    if (event.request.url.endsWith('.html') || event.request.url.endsWith('/')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    // Cache the new version
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // Fallback to cache if network fails
+                    return caches.match(event.request);
+                })
+        );
+        return;
+    }
+
+    // For other files, use cache-first strategy
     event.respondWith(
         caches.match(event.request)
             .then((response) => {

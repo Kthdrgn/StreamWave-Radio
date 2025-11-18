@@ -753,6 +753,7 @@
         const settingsModal = document.getElementById('settingsModal');
         const settingsBtn = document.getElementById('settingsBtn');
         const closeSettingsModal = document.getElementById('closeSettingsModal');
+        const authBtn = document.getElementById('authBtn');
         const overviewModal = document.getElementById('overviewModal');
         const closeOverviewModal = document.getElementById('closeOverviewModal');
 
@@ -2943,11 +2944,24 @@
         closeSettingsModal.addEventListener('click', () => {
             settingsModal.classList.remove('active');
         });
-        
+
         // Close settings modal when clicking outside
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
                 settingsModal.classList.remove('active');
+            }
+        });
+
+        // Auth button handler
+        authBtn.addEventListener('click', () => {
+            if (window.isAuthenticated && window.currentUser) {
+                // User is signed in, call sign out
+                if (window.signOut) {
+                    window.signOut();
+                }
+            } else {
+                // User is not signed in, redirect to login
+                window.location.href = 'login.html';
             }
         });
         
