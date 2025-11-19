@@ -4512,13 +4512,12 @@
 
             try {
                 const searchQuery = encodeURIComponent(`${artist} ${title}`);
-                const searchUrl = `https://api.genius.com/search?q=${searchQuery}`;
+                // Use CORS proxy for the API request and pass token as query parameter
+                const corsProxy = 'https://corsproxy.io/?';
+                const searchUrl = `https://api.genius.com/search?q=${searchQuery}&access_token=${GENIUS_ACCESS_TOKEN}`;
+                const proxiedUrl = corsProxy + encodeURIComponent(searchUrl);
 
-                const response = await fetch(searchUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
-                    }
-                });
+                const response = await fetch(proxiedUrl);
 
                 if (!response.ok) {
                     console.error('Genius API search failed:', response.status);
