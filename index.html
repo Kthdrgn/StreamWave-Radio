@@ -412,7 +412,22 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Lyrics Modal -->
+    <div id="lyricsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="lyricsModalTitle">Lyrics</h2>
+                <button class="modal-close" id="closeLyricsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="lyricsContent" class="lyrics-content">
+                    <div class="lyrics-loading">Loading lyrics...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Playlists Modal -->
     <div id="playlistsModal" class="modal-overlay">
         <div class="modal-content">
@@ -722,7 +737,10 @@
         // ======================
         // GLOBAL VARIABLES
         // ======================
-        
+
+        // Genius API Configuration
+        const GENIUS_ACCESS_TOKEN = 'faHSdnj-ZTeNbOE28fLIZD4meaa_rfzq83CcCuXEiFK3a9IrlhDg_escEdyd6Lsj';
+
         let supabase;
         let player = null;
         let hlsPlayer = null;
@@ -741,7 +759,10 @@
             title: null,
             artist: null,
             album: null,
-            artworkUrl: null
+            artworkUrl: null,
+            lyrics: null,
+            lyricsUrl: null,
+            hasLyrics: false
         };
         let likedTracks = [];
         let recentTracks = [];
@@ -3795,15 +3816,27 @@
         });
         
         clearRecentTracksBtn.addEventListener('click', clearAllRecentTracks);
-        
+
         // Copy All Recent Tracks button
         const copyAllRecentBtn = document.getElementById('copyAllRecentBtn');
         copyAllRecentBtn.addEventListener('click', copyAllRecentTracks);
-        
+
         // Download Recent Tracks button
         const downloadRecentBtn = document.getElementById('downloadRecentBtn');
         downloadRecentBtn.addEventListener('click', downloadRecentTracksFile);
-        
+
+        // Lyrics Modal event listeners
+        const lyricsModal = document.getElementById('lyricsModal');
+        const closeLyricsModalBtn = document.getElementById('closeLyricsModal');
+
+        closeLyricsModalBtn.addEventListener('click', closeLyricsModal);
+
+        lyricsModal.addEventListener('click', (e) => {
+            if (e.target === lyricsModal) {
+                closeLyricsModal();
+            }
+        });
+
         // Close playlist modal
         closePlaylistModal.addEventListener('click', () => {
             playlistModal.classList.remove('active');
@@ -4251,8 +4284,9 @@
                 `;
                 displayStationIcon();
                 // Reset current track
-                currentTrack = { title: null, artist: null, album: null, artworkUrl: null };
+                currentTrack = { title: null, artist: null, album: null, artworkUrl: null, lyrics: null, lyricsUrl: null, hasLyrics: false };
                 updateLikeButton();
+                updateLyricsIndicator();
                 // Update media session with station info when no metadata
                 if (currentStation) {
                     updateMediaSession(
@@ -4332,7 +4366,10 @@
             
             // Try to fetch album art
             fetchAlbumArt(title, artist);
-            
+
+            // Fetch lyrics for the current track
+            fetchLyricsForCurrentTrack();
+
             // Update Cast metadata if casting
             updateCastMetadata(title, artist, null); // Will update again with artwork when fetched
         }
@@ -4462,7 +4499,210 @@
             displayStationIcon();
             updateMediaSession(title, artist, '', null);
         }
-        
+
+        // ======================
+        // GENIUS LYRICS API
+        // ======================
+
+        // Search for lyrics using Genius API
+        async function searchGeniusLyrics(title, artist) {
+            if (!title || !artist) {
+                return null;
+            }
+
+            try {
+                const searchQuery = encodeURIComponent(`${artist} ${title}`);
+                const searchUrl = `https://api.genius.com/search?q=${searchQuery}`;
+
+                const response = await fetch(searchUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${GENIUS_ACCESS_TOKEN}`
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Genius API search failed:', response.status);
+                    return null;
+                }
+
+                const data = await response.json();
+
+                if (data.response.hits && data.response.hits.length > 0) {
+                    // Get the first hit (most relevant)
+                    const hit = data.response.hits[0];
+                    return {
+                        url: hit.result.url,
+                        title: hit.result.title,
+                        artist: hit.result.primary_artist.name,
+                        thumbnail: hit.result.song_art_image_thumbnail_url
+                    };
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error searching Genius lyrics:', error);
+                return null;
+            }
+        }
+
+        // Fetch lyrics from Genius song page
+        async function fetchGeniusLyrics(geniusUrl) {
+            try {
+                // Use a CORS proxy to fetch the lyrics page
+                const corsProxy = 'https://corsproxy.io/?';
+                const response = await fetch(corsProxy + encodeURIComponent(geniusUrl));
+                const html = await response.text();
+
+                // Parse lyrics from the HTML
+                // Genius uses data-lyrics-container attribute for lyrics divs
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const lyricsContainers = doc.querySelectorAll('[data-lyrics-container="true"]');
+
+                if (lyricsContainers.length === 0) {
+                    return null;
+                }
+
+                let lyrics = '';
+                lyricsContainers.forEach(container => {
+                    // Get text content and preserve line breaks
+                    const text = container.innerHTML
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<\/div>/gi, '\n')
+                        .replace(/<[^>]+>/g, '');
+                    lyrics += text + '\n';
+                });
+
+                // Clean up the lyrics
+                lyrics = lyrics
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+
+                return lyrics || null;
+            } catch (error) {
+                console.error('Error fetching Genius lyrics:', error);
+                return null;
+            }
+        }
+
+        // Fetch and display lyrics for current track
+        async function fetchLyricsForCurrentTrack() {
+            if (!currentTrack.title || !currentTrack.artist) {
+                return;
+            }
+
+            try {
+                // Search for the song on Genius
+                const geniusResult = await searchGeniusLyrics(currentTrack.title, currentTrack.artist);
+
+                if (geniusResult) {
+                    currentTrack.lyricsUrl = geniusResult.url;
+                    currentTrack.hasLyrics = true;
+
+                    // Fetch the actual lyrics
+                    const lyrics = await fetchGeniusLyrics(geniusResult.url);
+                    if (lyrics) {
+                        currentTrack.lyrics = lyrics;
+                    }
+
+                    // Update artwork to show lyrics indicator
+                    updateLyricsIndicator();
+                } else {
+                    currentTrack.hasLyrics = false;
+                    currentTrack.lyrics = null;
+                    currentTrack.lyricsUrl = null;
+                    updateLyricsIndicator();
+                }
+            } catch (error) {
+                console.error('Error fetching lyrics:', error);
+                currentTrack.hasLyrics = false;
+                updateLyricsIndicator();
+            }
+        }
+
+        // Update lyrics indicator on artwork
+        function updateLyricsIndicator() {
+            const artworkContainer = document.getElementById('artworkContainer');
+            const artworkContainerPortrait = document.getElementById('artworkContainerPortrait');
+
+            // Remove existing indicators
+            const existingIndicators = document.querySelectorAll('.lyrics-indicator');
+            existingIndicators.forEach(indicator => indicator.remove());
+
+            if (currentTrack.hasLyrics) {
+                // Add lyrics indicator to both artwork containers
+                [artworkContainer, artworkContainerPortrait].forEach(container => {
+                    if (container) {
+                        const indicator = document.createElement('div');
+                        indicator.className = 'lyrics-indicator';
+                        indicator.innerHTML = '♪';
+                        indicator.title = 'Lyrics available - Click artwork to view';
+                        container.appendChild(indicator);
+                    }
+                });
+
+                // Make artwork clickable
+                artworkContainer.style.cursor = 'pointer';
+                artworkContainerPortrait.style.cursor = 'pointer';
+                artworkContainer.onclick = showLyricsModal;
+                artworkContainerPortrait.onclick = showLyricsModal;
+            } else {
+                // Remove click functionality if no lyrics
+                artworkContainer.style.cursor = 'default';
+                artworkContainerPortrait.style.cursor = 'default';
+                artworkContainer.onclick = null;
+                artworkContainerPortrait.onclick = null;
+            }
+        }
+
+        // Show lyrics modal
+        function showLyricsModal() {
+            if (!currentTrack.hasLyrics) {
+                return;
+            }
+
+            const modal = document.getElementById('lyricsModal');
+            const modalTitle = document.getElementById('lyricsModalTitle');
+            const lyricsContent = document.getElementById('lyricsContent');
+
+            // Set modal title
+            modalTitle.textContent = `${currentTrack.title} - ${currentTrack.artist}`;
+
+            if (currentTrack.lyrics) {
+                // Display lyrics
+                lyricsContent.innerHTML = `<pre class="lyrics-text">${escapeHtml(currentTrack.lyrics)}</pre>`;
+
+                // Add attribution link
+                if (currentTrack.lyricsUrl) {
+                    lyricsContent.innerHTML += `<div class="lyrics-attribution">Lyrics from <a href="${currentTrack.lyricsUrl}" target="_blank" rel="noopener noreferrer">Genius</a></div>`;
+                }
+            } else {
+                lyricsContent.innerHTML = '<div class="lyrics-loading">Loading lyrics...</div>';
+
+                // Try to fetch lyrics if not already loaded
+                fetchGeniusLyrics(currentTrack.lyricsUrl).then(lyrics => {
+                    if (lyrics) {
+                        currentTrack.lyrics = lyrics;
+                        lyricsContent.innerHTML = `<pre class="lyrics-text">${escapeHtml(lyrics)}</pre>`;
+                        if (currentTrack.lyricsUrl) {
+                            lyricsContent.innerHTML += `<div class="lyrics-attribution">Lyrics from <a href="${currentTrack.lyricsUrl}" target="_blank" rel="noopener noreferrer">Genius</a></div>`;
+                        }
+                    } else {
+                        lyricsContent.innerHTML = '<div class="lyrics-error">Failed to load lyrics. Please try again later.</div>';
+                    }
+                });
+            }
+
+            modal.classList.add('active');
+            lastOpenedModal = 'lyricsModal';
+        }
+
+        // Close lyrics modal
+        function closeLyricsModal() {
+            const modal = document.getElementById('lyricsModal');
+            modal.classList.remove('active');
+        }
+
         // Update Media Session API
         function updateMediaSession(title, artist, album, artworkUrl) {
             if ('mediaSession' in navigator) {
