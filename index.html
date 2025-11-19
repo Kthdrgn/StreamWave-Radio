@@ -1799,6 +1799,16 @@
             await loadExploreSection(recentStations, playedStations);
         }
 
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
         // Load Explore section with genre-based recommendations
         async function loadExploreSection(recentStations, playedStations) {
             const exploreSection = document.getElementById('exploreSection');
@@ -1814,7 +1824,7 @@
                     const genre = Array.isArray(mostRecentStation.genres) ? mostRecentStation.genres[0] : mostRecentStation.genres;
 
                     // Find stations with the same genre (excluding the recent station itself)
-                    const sameGenreStations = stations.filter(station => {
+                    const filteredStations = stations.filter(station => {
                         if (station.id === mostRecentStation.id) return false;
                         if (!station.genres) return false;
 
@@ -1826,7 +1836,9 @@
                             return station.genres.toLowerCase().includes(genre.toLowerCase());
                         }
                         return false;
-                    }).slice(0, 10);
+                    });
+                    // Shuffle and take up to 10 stations
+                    const sameGenreStations = shuffleArray(filteredStations).slice(0, 10);
 
                     if (sameGenreStations.length > 0) {
                         document.getElementById('becauseListenedTitle').textContent = `Because you listened to ${genre}`;
@@ -1845,7 +1857,7 @@
                     const genre = Array.isArray(mostPlayedStation.genres) ? mostPlayedStation.genres[0] : mostPlayedStation.genres;
 
                     // Find stations with the same genre (excluding the most played station itself and any from "Because you listened")
-                    const sameGenreStations = stations.filter(station => {
+                    const filteredStations = stations.filter(station => {
                         if (station.id === mostPlayedStation.id) return false;
                         if (!station.genres) return false;
 
@@ -1857,7 +1869,9 @@
                             return station.genres.toLowerCase().includes(genre.toLowerCase());
                         }
                         return false;
-                    }).slice(0, 10);
+                    });
+                    // Shuffle and take up to 10 stations
+                    const sameGenreStations = shuffleArray(filteredStations).slice(0, 10);
 
                     if (sameGenreStations.length > 0) {
                         document.getElementById('becauseLikeTitle').textContent = `Because you like ${genre}`;
