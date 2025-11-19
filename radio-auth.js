@@ -71,14 +71,17 @@ function updateAuthUI() {
         // Show user email indicator
         const userEmail = window.currentUser.email;
         const displayName = userEmail.split('@')[0];
-        
-        // Add user indicator
+
+        // Add user indicator at top of settings modal
         if (!document.getElementById('userIndicator')) {
-            const userIndicator = document.createElement('div');
-            userIndicator.id = 'userIndicator';
-            userIndicator.style.cssText = 'position: fixed; top: 20px; right: 80px; color: var(--text-secondary); font-size: 12px; z-index: 1000; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);';
-            userIndicator.innerHTML = `👤 ${displayName}`;
-            document.body.appendChild(userIndicator);
+            const settingsContent = document.querySelector('.settings-content');
+            if (settingsContent) {
+                const userIndicator = document.createElement('div');
+                userIndicator.id = 'userIndicator';
+                userIndicator.style.cssText = 'color: var(--text-secondary); font-size: 14px; background: var(--bg-secondary); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; text-align: center;';
+                userIndicator.innerHTML = `👤 Signed in as <strong>${displayName}</strong>`;
+                settingsContent.insertBefore(userIndicator, settingsContent.firstChild);
+            }
         }
     } else {
         // Remove user indicator if it exists
@@ -87,7 +90,7 @@ function updateAuthUI() {
             userIndicator.remove();
         }
     }
-    
+
     // Update auth button
     updateAuthButton();
 }

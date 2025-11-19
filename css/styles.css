@@ -1740,3 +1740,389 @@
                 padding: 10px;
             }
         }
+        }
+
+/* Overview Modal Carousel Styles */
+.carousel-section {
+    margin-bottom: 30px;
+}
+
+.carousel-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.carousel-track {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    padding: 10px 0;
+    flex: 1;
+}
+
+.carousel-track::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.carousel-item {
+    min-width: 180px;
+    max-width: 180px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.carousel-item:hover {
+    background: var(--card-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.carousel-item-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.carousel-item-icon {
+    font-size: 60px;
+    color: var(--text-tertiary);
+}
+
+.carousel-item-content {
+    padding: 12px;
+}
+
+.carousel-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.carousel-item-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.carousel-btn {
+    background: var(--button-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.carousel-btn:hover {
+    background: var(--button-hover);
+    border-color: var(--border-hover);
+}
+
+.carousel-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.carousel-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+
+/* Playlist Collage Styles */
+.playlist-collage {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+    background: var(--border-color);
+}
+
+.playlist-collage-item {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.playlist-collage-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Single item in collage - take full space */
+.playlist-collage:has(.playlist-collage-item:only-child) {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+}
+
+/* Two items in collage - split horizontally */
+.playlist-collage:has(.playlist-collage-item:nth-child(2):last-child) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+}
+
+/* Three items in collage - 2 on top, 1 on bottom */
+.playlist-collage:has(.playlist-collage-item:nth-child(3):last-child) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr 1fr;
+}
+
+.playlist-collage:has(.playlist-collage-item:nth-child(3):last-child) .playlist-collage-item:nth-child(3) {
+    grid-column: 1 / -1;
+}
+
+
+/* Mobile and Tablet Responsive Styles for Overview Modal */
+@media (max-width: 768px) {
+    /* Reduce carousel item size by 50% on mobile */
+    .carousel-item {
+        min-width: 90px;
+        max-width: 90px;
+    }
+    
+    .carousel-item-image {
+        height: 90px;
+    }
+    
+    .carousel-item-icon {
+        font-size: 30px;
+    }
+    
+    .carousel-item-content {
+        padding: 8px;
+    }
+    
+    .carousel-item-title {
+        font-size: 11px;
+    }
+    
+    .carousel-item-subtitle {
+        font-size: 10px;
+    }
+    
+    /* Hide carousel navigation arrows on phone/tablet */
+    .carousel-btn {
+        display: none;
+    }
+    
+    .carousel-container {
+        gap: 0;
+    }
+    
+    /* Make overview modal full-screen like main page */
+    .modal-overlay {
+        padding: 0;
+    }
+    
+    #overviewModal .modal-content {
+        max-width: 100%;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .carousel-section {
+        margin-bottom: 20px;
+    }
+    
+    .carousel-title {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+}
+
+/* ============================================
+   LAYOUT MODES - Portrait vs Landscape
+   ============================================ */
+
+/* DEFAULT / PORTRAIT MODE */
+/* Hide left column entirely in portrait mode */
+body:not([data-layout="landscape"]) .tv-left-column,
+body[data-layout="portrait"] .tv-left-column {
+    display: none !important;
+}
+
+/* Hide the left column artwork specifically */
+body:not([data-layout="landscape"]) #artworkContainer,
+body[data-layout="portrait"] #artworkContainer {
+    display: none !important;
+}
+
+/* tv-right-column uses display:contents to maintain original layout */
+body:not([data-layout="landscape"]) .tv-right-column,
+body[data-layout="portrait"] .tv-right-column {
+    display: contents;
+}
+
+/* Show the portrait artwork */
+body:not([data-layout="landscape"]) #artworkContainerPortrait,
+body[data-layout="portrait"] #artworkContainerPortrait {
+    display: block !important;
+}
+
+/* LANDSCAPE MODE */
+/* Show left column in landscape */
+body[data-layout="landscape"] .tv-left-column {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    height: 100vh;
+    padding: 40px;
+}
+
+/* Show left column artwork in landscape */
+body[data-layout="landscape"] #artworkContainer {
+    display: block !important;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0;
+}
+
+/* Hide portrait artwork in landscape */
+body[data-layout="landscape"] #artworkContainerPortrait,
+body[data-layout="landscape"] .portrait-artwork {
+    display: none !important;
+}
+
+/* Right column as flex column in landscape */
+body[data-layout="landscape"] .tv-right-column {
+    display: flex !important;
+    flex-direction: column;
+    gap: 30px;
+    padding: 40px;
+    height: 100vh;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+/* Landscape: two-column grid */
+body[data-layout="landscape"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+body[data-layout="landscape"] .player-container {
+    display: contents !important;
+}
+
+/* Layout toggle styles (same as theme toggle) */
+.layout-toggle-container {
+    margin-top: 10px;
+}
+
+.layout-toggle-btn {
+    position: relative;
+    display: flex;
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 50px;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.layout-toggle-btn:hover {
+    border-color: var(--border-hover);
+}
+
+.layout-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.layout-option.active {
+    color: var(--text-primary);
+}
+
+.layout-icon {
+    font-size: 18px;
+}
+
+.layout-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.layout-slider {
+    position: absolute;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--button-bg);
+    border-radius: 50px;
+    top: 4px;
+    left: 4px;
+    transition: all 0.3s ease;
+    z-index: 0;
+}
+
+.layout-option:first-of-type.active ~ .layout-slider {
+    left: 4px;
+}
+
+.layout-option:last-of-type.active ~ .layout-slider {
+    left: calc(50% + 0px);
+}
