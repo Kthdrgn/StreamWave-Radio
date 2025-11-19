@@ -578,7 +578,7 @@
             cursor: pointer;
             font-size: 13px;
             transition: all 0.3s;
-            display: inline-flex;
+            display: none;
             align-items: center;
             gap: 6px;
             color: var(--text-secondary);
