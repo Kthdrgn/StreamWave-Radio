@@ -4308,8 +4308,9 @@
                 displayStationIcon();
                 // Reset current track
                 currentTrack = { title: null, artist: null, album: null, artworkUrl: null, lyrics: null, lyricsUrl: null, hasLyrics: false };
-                // Reset last fetched track to allow fresh artwork fetch when metadata returns
+                // Reset last fetched track and lyrics to allow fresh fetches when metadata returns
                 lastFetchedTrack = { title: null, artist: null };
+                lastFetchedLyrics = { title: null, artist: null };
                 updateLikeButton();
                 updateLyricsIndicator();
                 // Update media session with station info when no metadata
@@ -4672,12 +4673,25 @@
         }
 
         // Fetch and display lyrics for current track
+        let lastFetchedLyrics = { title: null, artist: null }; // Track what we last fetched to avoid duplicates
+
         async function fetchLyricsForCurrentTrack() {
             if (!currentTrack.title || !currentTrack.artist) {
                 return;
             }
 
+            // Check if we've already fetched lyrics for this exact song
+            if (lastFetchedLyrics.title === currentTrack.title && lastFetchedLyrics.artist === currentTrack.artist) {
+                console.log('Skipping duplicate lyrics fetch for:', `"${currentTrack.artist}" - "${currentTrack.title}"`);
+                return;
+            }
+
+            // Update the last fetched lyrics track
+            lastFetchedLyrics = { title: currentTrack.title, artist: currentTrack.artist };
+
             try {
+                console.log(`Searching Genius for lyrics: "${currentTrack.artist}" - "${currentTrack.title}"`);
+
                 // Search for the song on Genius
                 const geniusResult = await searchGeniusLyrics(currentTrack.title, currentTrack.artist);
 
