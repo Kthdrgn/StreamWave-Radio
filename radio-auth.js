@@ -67,31 +67,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 // Update UI based on auth state
 function updateAuthUI() {
-    if (window.isAuthenticated && window.currentUser) {
-        // Show user email indicator
-        const userEmail = window.currentUser.email;
-        const displayName = userEmail.split('@')[0];
-
-        // Add user indicator at top of settings modal
-        if (!document.getElementById('userIndicator')) {
-            const settingsContent = document.querySelector('.settings-content');
-            if (settingsContent) {
-                const userIndicator = document.createElement('div');
-                userIndicator.id = 'userIndicator';
-                userIndicator.style.cssText = 'color: var(--text-secondary); font-size: 14px; background: var(--bg-secondary); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; text-align: center;';
-                userIndicator.innerHTML = `👤 Signed in as <strong>${displayName}</strong>`;
-                settingsContent.insertBefore(userIndicator, settingsContent.firstChild);
-            }
-        }
-    } else {
-        // Remove user indicator if it exists
-        const userIndicator = document.getElementById('userIndicator');
-        if (userIndicator) {
-            userIndicator.remove();
-        }
-    }
-
-    // Update auth button
+    // Update auth button with user info
     updateAuthButton();
 }
 
@@ -100,9 +76,11 @@ function updateAuthButton() {
     const authBtnText = document.getElementById('authBtnText');
     if (authBtnText) {
         if (window.isAuthenticated && window.currentUser) {
-            authBtnText.textContent = '🚪 Sign Out';
+            const userEmail = window.currentUser.email;
+            const displayName = userEmail.split('@')[0];
+            authBtnText.textContent = `Signed in as ${displayName}`;
         } else {
-            authBtnText.textContent = '🔐 Sign In';
+            authBtnText.textContent = 'Sign In';
         }
     }
 }

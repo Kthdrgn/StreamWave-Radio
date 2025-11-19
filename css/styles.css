@@ -578,7 +578,7 @@
             cursor: pointer;
             font-size: 13px;
             transition: all 0.3s;
-            display: inline-flex;
+            display: none;
             align-items: center;
             gap: 6px;
             color: var(--text-secondary);
@@ -2365,4 +2365,148 @@ body[data-layout="landscape"] .player-container {
 /* Make artwork container relative for positioning */
 .artwork-container {
     position: relative;
+}
+
+/* Hamburger Menu Container */
+.hamburger-menu-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+    padding: 15px;
+}
+
+/* Hamburger Button */
+.hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 0;
+}
+
+.hamburger-btn:hover {
+    background: var(--card-hover);
+    border-color: var(--border-hover);
+    transform: scale(1.05);
+}
+
+.hamburger-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-primary);
+    fill: none;
+}
+
+/* Menu Options */
+.menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 18px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: left;
+}
+
+.menu-option-btn:hover {
+    background: var(--card-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+}
+
+.menu-option-btn svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    stroke: var(--text-primary);
+    fill: none;
+}
+
+.menu-option-btn span {
+    flex: 1;
+}
+
+/* Specific icon styles for buttons with filled icons */
+#viewLikedTracksBtn svg {
+    fill: var(--text-primary);
+    stroke: none;
+}
+
+/* Menu Divider */
+.menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+    opacity: 0.5;
+}
+
+/* Cast Menu Button - Override Google Cast SDK defaults */
+.cast-menu-btn {
+    /* Cast SDK color variables */
+    --connected-color: var(--text-primary) !important;
+    --disconnected-color: var(--text-primary) !important;
+
+    /* Force consistent sizing and layout */
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 18px 20px !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    cursor: pointer !important;
+    transition: all 0.3s !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    text-align: left !important;
+
+    /* Override any SDK positioning */
+    position: relative !important;
+    margin: 0 !important;
+}
+
+.cast-menu-btn:hover {
+    background: var(--card-hover) !important;
+    border-color: var(--border-hover) !important;
+    transform: translateY(-2px) !important;
+}
+
+.cast-menu-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+}
+
+.cast-menu-btn span {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    flex: 1 !important;
 }
