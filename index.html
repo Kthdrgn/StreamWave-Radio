@@ -2989,15 +2989,20 @@
                 
                 // Then apply search query if present
                 if (!query) return true;
-                
+
+                // Search across all station fields
                 const nameMatch = station.name && station.name.toLowerCase().includes(lowerQuery);
-                
+                const callLettersMatch = station.call_letters && station.call_letters.toLowerCase().includes(lowerQuery);
+                const frequencyMatch = station.frequency && station.frequency.toLowerCase().includes(lowerQuery);
+                const websiteMatch = station.website_url && station.website_url.toLowerCase().includes(lowerQuery);
+                const descriptionMatch = station.description && station.description.toLowerCase().includes(lowerQuery);
+
                 // Handle genres as array or string
                 let genresMatch = false;
                 if (station.genres) {
                     if (Array.isArray(station.genres)) {
                         // Search in array elements
-                        genresMatch = station.genres.some(genre => 
+                        genresMatch = station.genres.some(genre =>
                             genre.toLowerCase().includes(lowerQuery)
                         );
                     } else if (typeof station.genres === 'string') {
@@ -3005,8 +3010,8 @@
                         genresMatch = station.genres.toLowerCase().includes(lowerQuery);
                     }
                 }
-                
-                return nameMatch || genresMatch;
+
+                return nameMatch || genresMatch || callLettersMatch || frequencyMatch || websiteMatch || descriptionMatch;
             });
             console.log('Filtered stations:', filteredStations.length);
             sortStations(); // Apply current sort after filtering
