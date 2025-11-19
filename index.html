@@ -2692,11 +2692,11 @@
             
             // Reset fallback attempt flag for new station
             hasFallbackAttempted = false;
-            
+
             // Reset to Live mode for new station
             if (playbackMode === 'simple') {
                 playbackMode = 'live';
-                currentModeText.textContent = 'Live';
+                if (currentModeText) currentModeText.textContent = 'Live';
             }
             
             // Track the station click
@@ -4225,55 +4225,56 @@
                 }
             });
         });
-        
-        // Playback mode modal handlers
+
+        // Playback mode modal handlers - commented out since button is hidden
+        /*
         playbackModeBtn.addEventListener('click', () => {
             playbackModeModal.classList.add('active');
         });
-        
+
         closePlaybackModeModal.addEventListener('click', () => {
             playbackModeModal.classList.remove('active');
         });
-        
+
         playbackModeModal.addEventListener('click', (e) => {
             if (e.target === playbackModeModal) {
                 playbackModeModal.classList.remove('active');
             }
         });
-        
+
         // Playback mode option selection
         const modeOptions = playbackModeModal.querySelectorAll('.quality-option-modal[data-mode]');
         console.log('Found', modeOptions.length, 'mode options');
         modeOptions.forEach(option => {
             option.addEventListener('click', () => {
                 console.log('Mode option clicked:', option.dataset.mode);
-                
+
                 // Check if this is already selected
                 if (option.classList.contains('selected')) {
                     playbackModeModal.classList.remove('active');
                     return;
                 }
-                
+
                 const wasPlaying = isPlaying;
                 const newMode = option.dataset.mode;
-                
+
                 // Stop current playback
                 stopAllPlayers();
-                
+
                 modeOptions.forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 playbackMode = newMode;
-                
+
                 // Update button text
                 const modeNames = {
                     'live': 'Live',
                     'simple': 'Simple'
                 };
-                currentModeText.textContent = modeNames[newMode];
-                
+                if (currentModeText) currentModeText.textContent = modeNames[newMode];
+
                 // Close modal
                 playbackModeModal.classList.remove('active');
-                
+
                 // If player was playing, restart with new mode
                 if (wasPlaying && currentStation) {
                     console.log(`Switching to ${newMode} mode...`);
@@ -4283,7 +4284,8 @@
                 }
             });
         });
-        
+        */
+
         // Close modals on overlay click
         [playlistsModal, browseStationsModal, playlistModal, playlistFormModal, stationFormModal, qualityModal, playbackModeModal].forEach(modal => {
             modal.addEventListener('click', (e) => {
@@ -5424,7 +5426,7 @@
                                 
                                 // Now officially switch to Simple mode
                                 playbackMode = 'simple';
-                                currentModeText.textContent = 'Simple';
+                                if (currentModeText) currentModeText.textContent = 'Simple';
                                 
                                 // Set up the real simple audio player
                                 if (simpleAudioPlayer) {
@@ -5730,7 +5732,8 @@
             const savedPlaybackMode = localStorage.getItem('playbackMode');
             if (savedPlaybackMode) {
                 playbackMode = savedPlaybackMode;
-                document.getElementById('currentMode').textContent = playbackMode === 'live' ? 'Live' : 'Simple';
+                const currentModeElement = document.getElementById('currentMode');
+                if (currentModeElement) currentModeElement.textContent = playbackMode === 'live' ? 'Live' : 'Simple';
             }
 
             const savedQuality = localStorage.getItem('quality');
