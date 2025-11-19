@@ -260,14 +260,10 @@
                     </div>
                 </div>
 
-                <!-- Most Played Stations Carousel -->
+                <!-- Most Played Stations List -->
                 <div class="carousel-section">
                     <h3 class="carousel-title">Most Played Stations</h3>
-                    <div class="carousel-container">
-                        <button class="carousel-btn carousel-prev" id="playedPrev">‹</button>
-                        <div class="carousel-track" id="playedTrack"></div>
-                        <button class="carousel-btn carousel-next" id="playedNext">›</button>
-                    </div>
+                    <div class="stations-list" id="playedStationsList"></div>
                 </div>
 
                 <!-- Playlists Carousel -->
@@ -1436,25 +1432,142 @@
         function getMostPlayedStationsLocal(limit = 10) {
             try {
                 const history = JSON.parse(localStorage.getItem('station_history') || '[]');
-                
+
                 const counts = {};
                 history.forEach(record => {
                     counts[record.station_id] = (counts[record.station_id] || 0) + 1;
                 });
-                
+
                 // Sort by count and get top station IDs (as numbers)
                 const sortedStationIds = Object.keys(counts)
                     .map(id => parseInt(id))
                     .sort((a, b) => counts[b] - counts[a])
                     .slice(0, limit);
-                
+
                 return stations.filter(s => sortedStationIds.includes(s.id))
                     .sort((a, b) => counts[b.id] - counts[a.id]);
-                
+
             } catch (error) {
                 console.error('Error getting most played stations from local storage:', error);
                 return [];
             }
+        }
+
+        // Fetch current metadata from a station's stream
+        async function fetchStationCurrentMetadata(station) {
+            return new Promise((resolve) => {
+                // Timeout after 10 seconds
+                const timeout = setTimeout(() => {
+                    if (tempPlayer) {
+                        try {
+                            tempPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping temp player:', e);
+                        }
+                    }
+                    resolve(null);
+                }, 10000);
+
+                let tempPlayer = null;
+                let metadataReceived = false;
+
+                try {
+                    // Get the standard quality URL
+                    const rawUrl = station.url_standard || station.url;
+                    if (!rawUrl) {
+                        clearTimeout(timeout);
+                        resolve(null);
+                        return;
+                    }
+
+                    // Use CORS proxy
+                    const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
+                    tempPlayer = new IcecastMetadataPlayer(streamUrl, {
+                        metadataTypes: ['icy', 'ogg'],
+                        enableLogging: false,
+
+                        onMetadata: (metadata) => {
+                            if (metadataReceived) return; // Only process first metadata
+                            metadataReceived = true;
+
+                            clearTimeout(timeout);
+
+                            // Stop and cleanup the player
+                            if (tempPlayer) {
+                                try {
+                                    tempPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping temp player:', e);
+                                }
+                            }
+
+                            // Parse metadata
+                            if (metadata && metadata.StreamTitle) {
+                                const streamTitle = metadata.StreamTitle;
+                                let title = 'Unknown';
+                                let artist = '';
+
+                                // Check for structured format
+                                const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
+                                const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
+
+                                if (titleMatch || artistMatch) {
+                                    title = titleMatch ? titleMatch[1].trim() : 'Unknown';
+                                    artist = artistMatch ? artistMatch[1].trim() : '';
+                                } else if (streamTitle.includes(' - ')) {
+                                    const parts = streamTitle.split(' - ');
+                                    artist = parts[0].trim();
+                                    title = parts[1].trim();
+                                } else {
+                                    title = streamTitle;
+                                }
+
+                                resolve({ title, artist });
+                            } else {
+                                resolve(null);
+                            }
+                        },
+
+                        onError: (error) => {
+                            clearTimeout(timeout);
+                            if (tempPlayer) {
+                                try {
+                                    tempPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping temp player:', e);
+                                }
+                            }
+                            resolve(null);
+                        }
+                    });
+
+                    // Mute and start playback
+                    if (tempPlayer.audioElement) {
+                        tempPlayer.audioElement.volume = 0;
+                        tempPlayer.audioElement.muted = true;
+                        tempPlayer.play().catch(() => {
+                            clearTimeout(timeout);
+                            resolve(null);
+                        });
+                    } else {
+                        setTimeout(() => {
+                            if (tempPlayer && tempPlayer.audioElement) {
+                                tempPlayer.audioElement.volume = 0;
+                                tempPlayer.audioElement.muted = true;
+                                tempPlayer.play().catch(() => {
+                                    clearTimeout(timeout);
+                                    resolve(null);
+                                });
+                            }
+                        }, 500);
+                    }
+                } catch (error) {
+                    clearTimeout(timeout);
+                    console.log('Error fetching station metadata:', error);
+                    resolve(null);
+                }
+            });
         }
         
         // Load stations from Supabase
@@ -1551,7 +1664,7 @@
 
             // Load most played stations
             const playedStations = await getMostPlayedStations(10);
-            renderCarousel('playedTrack', playedStations, 'station');
+            await renderMostPlayedList(playedStations);
 
             // Load playlists with their stations for collage
             await loadPlaylists();
@@ -1585,7 +1698,6 @@
 
             // Setup carousel navigation
             setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
-            setupCarouselNavigation('played', 'playedTrack', 'playedPrev', 'playedNext');
             setupCarouselNavigation('playlists', 'playlistsTrack', 'playlistsPrev', 'playlistsNext');
         }
 
@@ -1664,6 +1776,79 @@
                         overviewModal.classList.remove('active');
                     }
                 });
+            });
+        }
+
+        // Render Most Played Stations as a list with currently playing song
+        async function renderMostPlayedList(stations) {
+            const listContainer = document.getElementById('playedStationsList');
+
+            if (!stations || stations.length === 0) {
+                listContainer.innerHTML = '<div class="stations-list-empty">No stations to display</div>';
+                return;
+            }
+
+            // First render the list with loading states
+            listContainer.innerHTML = stations.map(station => {
+                return `
+                    <div class="station-list-item" data-station-id="${station.id}">
+                        <div class="station-list-icon">
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}">` : '<span class="station-list-icon-emoji">📻</span>'}
+                        </div>
+                        <div class="station-list-content">
+                            <div class="station-list-name">${escapeHtml(station.name)}</div>
+                            <div class="station-list-metadata-loading">Loading current track...</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add click handlers
+            listContainer.querySelectorAll('.station-list-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const stationId = parseInt(item.dataset.stationId);
+                    const station = stations.find(s => s.id === stationId);
+                    if (station) {
+                        selectStation(station);
+                        overviewModal.classList.remove('active');
+                    }
+                });
+            });
+
+            // Fetch metadata for each station in parallel
+            stations.forEach(async (station, index) => {
+                const metadata = await fetchStationCurrentMetadata(station);
+
+                // Update the station's metadata display
+                const stationElement = listContainer.querySelector(`[data-station-id="${station.id}"]`);
+                if (!stationElement) return;
+
+                const contentDiv = stationElement.querySelector('.station-list-content');
+                if (!contentDiv) return;
+
+                // Remove loading message
+                const loadingDiv = contentDiv.querySelector('.station-list-metadata-loading');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                if (metadata && (metadata.title || metadata.artist)) {
+                    // Add metadata display
+                    const metadataDiv = document.createElement('div');
+                    metadataDiv.className = 'station-list-metadata';
+                    metadataDiv.innerHTML = `
+                        <div class="station-list-now-playing">
+                            ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                        </div>
+                    `;
+                    contentDiv.appendChild(metadataDiv);
+                } else {
+                    // No metadata available
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'station-list-metadata-empty';
+                    emptyDiv.textContent = 'No track info available';
+                    contentDiv.appendChild(emptyDiv);
+                }
             });
         }
 
@@ -2286,14 +2471,14 @@
         }
         
         // Render playlist stations
-        function renderPlaylistStations() {
+        async function renderPlaylistStations() {
             // Apply grid view class if in grid mode
             if (playlistStationViewMode === 'grid') {
                 playlistStationList.classList.add('grid-view');
             } else {
                 playlistStationList.classList.remove('grid-view');
             }
-            
+
             if (playlistStations.length === 0) {
                 playlistStationList.innerHTML = `
                     <div class="empty-state">
@@ -2303,13 +2488,13 @@
                 `;
                 return;
             }
-            
+
             playlistStationList.innerHTML = playlistStations.map(station => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
                     : (station.genres || 'No genres');
-                
+
                 // Build station details (call letters and frequency)
                 const detailsParts = [];
                 if (station.call_letters) {
@@ -2319,17 +2504,17 @@
                     detailsParts.push(station.frequency);
                 }
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
-                
+
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
-                    ${station.icon_url ? 
+                    ${station.icon_url ?
                         `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
                         ${detailsDisplay ? `<div class="station-details">${escapeHtml(detailsDisplay)}</div>` : ''}
-                        <div class="station-genres">${escapeHtml(genresDisplay)}</div>
+                        <div class="station-now-playing-loading">Loading current track...</div>
                     </div>
                     <button class="station-menu-btn" data-id="${station.id}">⋮</button>
                     <div class="station-dropdown">
@@ -2373,7 +2558,7 @@
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const action = item.dataset.action;
-                    
+
                     if (action === 'remove-from-playlist') {
                         const playlistId = item.dataset.playlistId;
                         const stationId = parseInt(item.dataset.stationId);
@@ -2381,6 +2566,51 @@
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     }
                 });
+            });
+
+            // Fetch metadata for each station in parallel
+            playlistStations.forEach(async (station) => {
+                const metadata = await fetchStationCurrentMetadata(station);
+
+                // Update the station's metadata display
+                const stationElement = playlistStationList.querySelector(`[data-id="${station.id}"]`);
+                if (!stationElement) return;
+
+                const infoDiv = stationElement.querySelector('.station-info');
+                if (!infoDiv) return;
+
+                // Remove loading message
+                const loadingDiv = infoDiv.querySelector('.station-now-playing-loading');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                if (metadata && (metadata.title || metadata.artist)) {
+                    // Add metadata display (replaces the genres div position)
+                    const genresDiv = infoDiv.querySelector('.station-genres');
+                    if (genresDiv) {
+                        genresDiv.remove();
+                    }
+
+                    const metadataDiv = document.createElement('div');
+                    metadataDiv.className = 'station-now-playing';
+                    metadataDiv.innerHTML = `
+                        <span class="now-playing-label">♪</span> ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                    `;
+                    infoDiv.appendChild(metadataDiv);
+                } else {
+                    // No metadata available - show genres
+                    const genresDiv = infoDiv.querySelector('.station-genres');
+                    if (!genresDiv) {
+                        const newGenresDiv = document.createElement('div');
+                        newGenresDiv.className = 'station-genres';
+                        const genresDisplay = station.genres && Array.isArray(station.genres)
+                            ? station.genres.join(', ')
+                            : (station.genres || 'No genres');
+                        newGenresDiv.textContent = genresDisplay;
+                        infoDiv.appendChild(newGenresDiv);
+                    }
+                }
             });
         }
         
@@ -4079,7 +4309,7 @@
             currentTrack.title = title;
             currentTrack.artist = artist;
             currentTrack.album = album;
-            
+
             // Add to recent tracks
             window.addToRecentTracks({
                 title: title,
