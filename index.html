@@ -1054,20 +1054,20 @@
         
         // Copy all liked tracks to clipboard
         async function copyAllLikedTracks() {
-            const likedTracks = loadLikedTracks();
-            
+            const likedTracks = await window.loadLikedTracks();
+
             if (likedTracks.length === 0) {
                 alert('No liked tracks to copy');
                 return;
             }
-            
-            const text = likedTracks.map(track => 
+
+            const text = likedTracks.map(track =>
                 `${track.artist} - ${track.title}`
             ).join('\n');
-            
+
             try {
                 await navigator.clipboard.writeText(text);
-                
+
                 // Visual feedback
                 const btn = document.getElementById('copyAllLikedBtn');
                 const originalHTML = btn.innerHTML;
@@ -1075,7 +1075,7 @@
                 btn.style.background = 'rgba(76, 175, 80, 0.3)';
                 btn.style.borderColor = 'rgba(76, 175, 80, 0.5)';
                 btn.style.color = '#4caf50';
-                
+
                 setTimeout(() => {
                     btn.innerHTML = originalHTML;
                     btn.style.background = '';
@@ -1090,20 +1090,20 @@
         
         // Copy all recent tracks to clipboard
         async function copyAllRecentTracks() {
-            const recentTracks = loadRecentTracks();
-            
+            const recentTracks = await window.loadRecentTracks();
+
             if (recentTracks.length === 0) {
                 alert('No recent tracks to copy');
                 return;
             }
-            
-            const text = recentTracks.map(track => 
+
+            const text = recentTracks.map(track =>
                 `${track.artist} - ${track.title}`
             ).join('\n');
-            
+
             try {
                 await navigator.clipboard.writeText(text);
-                
+
                 // Visual feedback
                 const btn = document.getElementById('copyAllRecentBtn');
                 const originalHTML = btn.innerHTML;
@@ -1111,7 +1111,7 @@
                 btn.style.background = 'rgba(76, 175, 80, 0.3)';
                 btn.style.borderColor = 'rgba(76, 175, 80, 0.5)';
                 btn.style.color = '#4caf50';
-                
+
                 setTimeout(() => {
                     btn.innerHTML = originalHTML;
                     btn.style.background = '';
@@ -1125,18 +1125,18 @@
         }
         
         // Download liked tracks as text file
-        function downloadLikedTracksFile() {
-            const likedTracks = loadLikedTracks();
-            
+        async function downloadLikedTracksFile() {
+            const likedTracks = await window.loadLikedTracks();
+
             if (likedTracks.length === 0) {
                 alert('No liked tracks to download');
                 return;
             }
-            
-            const text = likedTracks.map(track => 
+
+            const text = likedTracks.map(track =>
                 `${track.artist} - ${track.title}`
             ).join('\n');
-            
+
             // Create blob and download
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
@@ -1147,7 +1147,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             // Visual feedback
             const btn = document.getElementById('downloadLikedBtn');
             const originalHTML = btn.innerHTML;
@@ -1155,7 +1155,7 @@
             btn.style.background = 'rgba(76, 175, 80, 0.3)';
             btn.style.borderColor = 'rgba(76, 175, 80, 0.5)';
             btn.style.color = '#4caf50';
-            
+
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
                 btn.style.background = '';
@@ -1165,18 +1165,18 @@
         }
         
         // Download recent tracks as text file
-        function downloadRecentTracksFile() {
-            const recentTracks = loadRecentTracks();
-            
+        async function downloadRecentTracksFile() {
+            const recentTracks = await window.loadRecentTracks();
+
             if (recentTracks.length === 0) {
                 alert('No recent tracks to download');
                 return;
             }
-            
-            const text = recentTracks.map(track => 
+
+            const text = recentTracks.map(track =>
                 `${track.artist} - ${track.title}`
             ).join('\n');
-            
+
             // Create blob and download
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
@@ -1187,7 +1187,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             // Visual feedback
             const btn = document.getElementById('downloadRecentBtn');
             const originalHTML = btn.innerHTML;
@@ -1195,7 +1195,7 @@
             btn.style.background = 'rgba(76, 175, 80, 0.3)';
             btn.style.borderColor = 'rgba(76, 175, 80, 0.5)';
             btn.style.color = '#4caf50';
-            
+
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
                 btn.style.background = '';
