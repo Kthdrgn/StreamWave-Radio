@@ -1711,15 +1711,25 @@
         async function createPlaylist(name, description) {
             try {
                 console.log('Creating playlist with:', { name, description });
-                
+
+                // Ensure user is authenticated
+                if (!window.currentUser || !window.currentUser.id) {
+                    throw new Error('You must be signed in to create playlists. Please sign in and try again.');
+                }
+
                 // Get the max sort_order to add new playlist at the end
-                const maxSortOrder = playlists.length > 0 
+                const maxSortOrder = playlists.length > 0
                     ? Math.max(...playlists.map(p => p.sort_order || 0))
                     : -1;
-                
+
                 const { data, error } = await supabase
                     .from('playlists')
-                    .insert([{ name, description, sort_order: maxSortOrder + 1 }])
+                    .insert([{
+                        name,
+                        description,
+                        sort_order: maxSortOrder + 1,
+                        user_id: window.currentUser.id
+                    }])
                     .select();
                 
                 if (error) {
@@ -5121,48 +5131,53 @@
         // ======================
         // INITIALIZATION
         // ======================
-        
-        console.log('=== INITIALIZATION STARTING ===');
-        console.log('Supabase initialized:', !!supabase);
-        
-        // Initialize quality modal options
-        qualityModal.querySelectorAll('.quality-option-modal[data-quality]').forEach(option => {
-            if (option.dataset.quality !== 'standard') {
-                option.classList.add('disabled');
+
+        (async () => {
+            console.log('=== INITIALIZATION STARTING ===');
+            console.log('Supabase initialized:', !!supabase);
+
+            // Check authentication status
+            await checkAuth();
+
+            // Initialize quality modal options
+            qualityModal.querySelectorAll('.quality-option-modal[data-quality]').forEach(option => {
+                if (option.dataset.quality !== 'standard') {
+                    option.classList.add('disabled');
+                }
+            });
+
+            console.log('About to call loadStations()');
+
+            // Load saved settings from localStorage
+            const savedPlaybackMode = localStorage.getItem('playbackMode');
+            if (savedPlaybackMode) {
+                playbackMode = savedPlaybackMode;
+                document.getElementById('currentMode').textContent = playbackMode === 'live' ? 'Live' : 'Simple';
             }
-        });
-        
-        console.log('About to call loadStations()');
-        
-        // Load saved settings from localStorage
-        const savedPlaybackMode = localStorage.getItem('playbackMode');
-        if (savedPlaybackMode) {
-            playbackMode = savedPlaybackMode;
-            document.getElementById('currentMode').textContent = playbackMode === 'live' ? 'Live' : 'Simple';
-        }
-        
-        const savedQuality = localStorage.getItem('quality');
-        if (savedQuality) {
-            quality = savedQuality;
-            selectedQuality = savedQuality;
-            document.getElementById('currentQuality').textContent = quality === 'high' ? 'High' : 'Standard';
-        }
-        
-        const savedAutoFallback = localStorage.getItem('autoFallback');
-        if (savedAutoFallback !== null) {
-            autoFallbackEnabled = savedAutoFallback === 'true';
-            const checkbox = document.getElementById('autoFallback');
-            if (checkbox) checkbox.checked = autoFallbackEnabled;
-        }
-        
-        // Load stations from Supabase on startup
-        loadStations();
-        loadPlaylists();
-        
-        console.log('loadStations() and loadPlaylists() called');
-        
-        // Setup Media Session handlers
-        setupMediaSessionHandlers();
+
+            const savedQuality = localStorage.getItem('quality');
+            if (savedQuality) {
+                quality = savedQuality;
+                selectedQuality = savedQuality;
+                document.getElementById('currentQuality').textContent = quality === 'high' ? 'High' : 'Standard';
+            }
+
+            const savedAutoFallback = localStorage.getItem('autoFallback');
+            if (savedAutoFallback !== null) {
+                autoFallbackEnabled = savedAutoFallback === 'true';
+                const checkbox = document.getElementById('autoFallback');
+                if (checkbox) checkbox.checked = autoFallbackEnabled;
+            }
+
+            // Load stations from Supabase on startup
+            loadStations();
+            loadPlaylists();
+
+            console.log('loadStations() and loadPlaylists() called');
+
+            // Setup Media Session handlers
+            setupMediaSessionHandlers();
+        })();
         
         // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
