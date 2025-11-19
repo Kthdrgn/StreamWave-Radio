@@ -1249,7 +1249,30 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
+        .station-now-playing {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .station-now-playing .now-playing-label {
+            color: #667eea;
+            font-size: 11px;
+            margin-right: 4px;
+        }
+
+        .station-now-playing-loading {
+            font-size: 11px;
+            color: var(--text-quaternary);
+            margin-top: 2px;
+            font-style: italic;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
         .station-menu-btn {
             background: none;
             border: none;

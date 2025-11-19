@@ -2471,14 +2471,14 @@
         }
         
         // Render playlist stations
-        function renderPlaylistStations() {
+        async function renderPlaylistStations() {
             // Apply grid view class if in grid mode
             if (playlistStationViewMode === 'grid') {
                 playlistStationList.classList.add('grid-view');
             } else {
                 playlistStationList.classList.remove('grid-view');
             }
-            
+
             if (playlistStations.length === 0) {
                 playlistStationList.innerHTML = `
                     <div class="empty-state">
@@ -2488,13 +2488,13 @@
                 `;
                 return;
             }
-            
+
             playlistStationList.innerHTML = playlistStations.map(station => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
                     : (station.genres || 'No genres');
-                
+
                 // Build station details (call letters and frequency)
                 const detailsParts = [];
                 if (station.call_letters) {
@@ -2504,17 +2504,17 @@
                     detailsParts.push(station.frequency);
                 }
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
-                
+
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
-                    ${station.icon_url ? 
+                    ${station.icon_url ?
                         `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
                         ${detailsDisplay ? `<div class="station-details">${escapeHtml(detailsDisplay)}</div>` : ''}
-                        <div class="station-genres">${escapeHtml(genresDisplay)}</div>
+                        <div class="station-now-playing-loading">Loading current track...</div>
                     </div>
                     <button class="station-menu-btn" data-id="${station.id}">⋮</button>
                     <div class="station-dropdown">
@@ -2558,7 +2558,7 @@
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const action = item.dataset.action;
-                    
+
                     if (action === 'remove-from-playlist') {
                         const playlistId = item.dataset.playlistId;
                         const stationId = parseInt(item.dataset.stationId);
@@ -2566,6 +2566,51 @@
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     }
                 });
+            });
+
+            // Fetch metadata for each station in parallel
+            playlistStations.forEach(async (station) => {
+                const metadata = await fetchStationCurrentMetadata(station);
+
+                // Update the station's metadata display
+                const stationElement = playlistStationList.querySelector(`[data-id="${station.id}"]`);
+                if (!stationElement) return;
+
+                const infoDiv = stationElement.querySelector('.station-info');
+                if (!infoDiv) return;
+
+                // Remove loading message
+                const loadingDiv = infoDiv.querySelector('.station-now-playing-loading');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                if (metadata && (metadata.title || metadata.artist)) {
+                    // Add metadata display (replaces the genres div position)
+                    const genresDiv = infoDiv.querySelector('.station-genres');
+                    if (genresDiv) {
+                        genresDiv.remove();
+                    }
+
+                    const metadataDiv = document.createElement('div');
+                    metadataDiv.className = 'station-now-playing';
+                    metadataDiv.innerHTML = `
+                        <span class="now-playing-label">♪</span> ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                    `;
+                    infoDiv.appendChild(metadataDiv);
+                } else {
+                    // No metadata available - show genres
+                    const genresDiv = infoDiv.querySelector('.station-genres');
+                    if (!genresDiv) {
+                        const newGenresDiv = document.createElement('div');
+                        newGenresDiv.className = 'station-genres';
+                        const genresDisplay = station.genres && Array.isArray(station.genres)
+                            ? station.genres.join(', ')
+                            : (station.genres || 'No genres');
+                        newGenresDiv.textContent = genresDisplay;
+                        infoDiv.appendChild(newGenresDiv);
+                    }
+                }
             });
         }
         
