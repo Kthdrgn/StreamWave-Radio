@@ -4564,11 +4564,16 @@
 
                 let lyrics = '';
                 lyricsContainers.forEach(container => {
-                    // Get text content and preserve line breaks
-                    const text = container.innerHTML
-                        .replace(/<br\s*\/?>/gi, '\n')
-                        .replace(/<\/div>/gi, '\n')
-                        .replace(/<[^>]+>/g, '');
+                    // Clone the container to manipulate it
+                    const clone = container.cloneNode(true);
+
+                    // Replace <br> tags with newlines
+                    clone.querySelectorAll('br').forEach(br => {
+                        br.replaceWith('\n');
+                    });
+
+                    // Get text content (automatically decodes HTML entities)
+                    const text = clone.textContent || clone.innerText;
                     lyrics += text + '\n';
                 });
 
