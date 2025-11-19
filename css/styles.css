@@ -2444,36 +2444,18 @@ body[data-layout="landscape"] .player-container {
     fill: none;
 }
 
-/* Cast Overlay Button */
-.cast-overlay-btn {
-    position: absolute !important;
-    top: 15px;
-    left: 15px;
-    z-index: 10;
-    width: 48px !important;
-    height: 48px !important;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    cursor: pointer !important;
-    transition: all 0.3s;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
-    min-width: unset !important;
-    --connected-color: var(--primary-color);
-    --disconnected-color: #ffffff;
+/* Cast Menu Button */
+.cast-menu-btn {
+    --connected-color: var(--text-primary);
+    --disconnected-color: var(--text-primary);
 }
 
-.cast-overlay-btn:hover {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: var(--border-hover);
-    transform: scale(1.05);
-}
-
-.cast-overlay-btn svg {
+.cast-menu-btn svg {
     width: 24px !important;
     height: 24px !important;
+    flex-shrink: 0;
+}
+
+.cast-menu-btn span {
+    margin-left: 15px;
 }
