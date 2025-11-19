@@ -2444,18 +2444,51 @@ body[data-layout="landscape"] .player-container {
     fill: none;
 }
 
-/* Cast Menu Button */
+/* Cast Menu Button - Override Google Cast SDK defaults */
 .cast-menu-btn {
-    --connected-color: var(--text-primary);
-    --disconnected-color: var(--text-primary);
+    /* Cast SDK color variables */
+    --connected-color: var(--text-primary) !important;
+    --disconnected-color: var(--text-primary) !important;
+
+    /* Force consistent sizing and layout */
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 18px 20px !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    cursor: pointer !important;
+    transition: all 0.3s !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    text-align: left !important;
+
+    /* Override any SDK positioning */
+    position: relative !important;
+    margin: 0 !important;
+}
+
+.cast-menu-btn:hover {
+    background: var(--card-hover) !important;
+    border-color: var(--border-hover) !important;
+    transform: translateY(-2px) !important;
 }
 
 .cast-menu-btn svg {
     width: 24px !important;
     height: 24px !important;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
 }
 
 .cast-menu-btn span {
-    margin-left: 15px;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    flex: 1 !important;
 }
