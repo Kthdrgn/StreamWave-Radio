@@ -260,14 +260,10 @@
                     </div>
                 </div>
 
-                <!-- Most Played Stations Carousel -->
+                <!-- Most Played Stations List -->
                 <div class="carousel-section">
                     <h3 class="carousel-title">Most Played Stations</h3>
-                    <div class="carousel-container">
-                        <button class="carousel-btn carousel-prev" id="playedPrev">‹</button>
-                        <div class="carousel-track" id="playedTrack"></div>
-                        <button class="carousel-btn carousel-next" id="playedNext">›</button>
-                    </div>
+                    <div class="stations-list" id="playedStationsList"></div>
                 </div>
 
                 <!-- Playlists Carousel -->
@@ -1436,25 +1432,119 @@
         function getMostPlayedStationsLocal(limit = 10) {
             try {
                 const history = JSON.parse(localStorage.getItem('station_history') || '[]');
-                
+
                 const counts = {};
                 history.forEach(record => {
                     counts[record.station_id] = (counts[record.station_id] || 0) + 1;
                 });
-                
+
                 // Sort by count and get top station IDs (as numbers)
                 const sortedStationIds = Object.keys(counts)
                     .map(id => parseInt(id))
                     .sort((a, b) => counts[b] - counts[a])
                     .slice(0, limit);
-                
+
                 return stations.filter(s => sortedStationIds.includes(s.id))
                     .sort((a, b) => counts[b.id] - counts[a.id]);
-                
+
             } catch (error) {
                 console.error('Error getting most played stations from local storage:', error);
                 return [];
             }
+        }
+
+        // Save station metadata (currently playing song)
+        async function saveStationMetadata(stationId, metadata) {
+            if (!stationId || !metadata) return;
+
+            const metadataRecord = {
+                station_id: stationId,
+                title: metadata.title,
+                artist: metadata.artist,
+                album: metadata.album,
+                artwork_url: metadata.artworkUrl,
+                last_updated: new Date().toISOString()
+            };
+
+            // Save to localStorage
+            try {
+                const stored = JSON.parse(localStorage.getItem('station_metadata') || '{}');
+                stored[stationId] = metadataRecord;
+                localStorage.setItem('station_metadata', JSON.stringify(stored));
+            } catch (error) {
+                console.error('Error saving station metadata to localStorage:', error);
+            }
+
+            // If authenticated, also save to Supabase
+            if (window.currentUser && !window.isGuestMode) {
+                try {
+                    const { error } = await supabase
+                        .from('station_metadata')
+                        .upsert({
+                            user_id: window.currentUser.id,
+                            station_id: stationId,
+                            title: metadata.title,
+                            artist: metadata.artist,
+                            album: metadata.album,
+                            artwork_url: metadata.artworkUrl,
+                            last_updated: new Date().toISOString()
+                        }, {
+                            onConflict: 'user_id,station_id'
+                        });
+
+                    if (error) throw error;
+                } catch (error) {
+                    console.error('Error saving station metadata to database:', error);
+                }
+            }
+        }
+
+        // Get station metadata (last played song)
+        async function getStationMetadata(stationId) {
+            if (!stationId) return null;
+
+            // Try to get from Supabase if authenticated
+            if (window.currentUser && !window.isGuestMode) {
+                try {
+                    const { data, error } = await supabase
+                        .from('station_metadata')
+                        .select('*')
+                        .eq('user_id', window.currentUser.id)
+                        .eq('station_id', stationId)
+                        .single();
+
+                    if (!error && data) {
+                        return {
+                            title: data.title,
+                            artist: data.artist,
+                            album: data.album,
+                            artworkUrl: data.artwork_url,
+                            lastUpdated: data.last_updated
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error getting station metadata from database:', error);
+                }
+            }
+
+            // Fallback to localStorage
+            try {
+                const stored = JSON.parse(localStorage.getItem('station_metadata') || '{}');
+                const metadata = stored[stationId];
+                if (metadata) {
+                    return {
+                        title: metadata.title,
+                        artist: metadata.artist,
+                        album: metadata.album,
+                        artworkUrl: metadata.artwork_url,
+                        lastUpdated: metadata.last_updated
+                    };
+                }
+            } catch (error) {
+                console.error('Error getting station metadata from localStorage:', error);
+            }
+
+            return null;
         }
         
         // Load stations from Supabase
@@ -1551,7 +1641,7 @@
 
             // Load most played stations
             const playedStations = await getMostPlayedStations(10);
-            renderCarousel('playedTrack', playedStations, 'station');
+            await renderMostPlayedList(playedStations);
 
             // Load playlists with their stations for collage
             await loadPlaylists();
@@ -1585,7 +1675,6 @@
 
             // Setup carousel navigation
             setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
-            setupCarouselNavigation('played', 'playedTrack', 'playedPrev', 'playedNext');
             setupCarouselNavigation('playlists', 'playlistsTrack', 'playlistsPrev', 'playlistsNext');
         }
 
@@ -1661,6 +1750,66 @@
                     } else if (type === 'playlist') {
                         const playlistId = item.dataset.playlistId; // Don't parseInt - IDs are UUIDs (strings)
                         openPlaylist(playlistId);
+                        overviewModal.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        // Render Most Played Stations as a list with currently playing song
+        async function renderMostPlayedList(stations) {
+            const listContainer = document.getElementById('playedStationsList');
+
+            if (!stations || stations.length === 0) {
+                listContainer.innerHTML = '<div class="stations-list-empty">No stations to display</div>';
+                return;
+            }
+
+            // Fetch metadata for all stations
+            const stationsWithMetadata = await Promise.all(stations.map(async (station) => {
+                const metadata = await getStationMetadata(station.id);
+                return {
+                    ...station,
+                    metadata
+                };
+            }));
+
+            // Render the list
+            listContainer.innerHTML = stationsWithMetadata.map(station => {
+                const metadata = station.metadata;
+                const hasMetadata = metadata && (metadata.title || metadata.artist);
+
+                return `
+                    <div class="station-list-item" data-station-id="${station.id}">
+                        <div class="station-list-icon">
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}">` : '<span class="station-list-icon-emoji">📻</span>'}
+                        </div>
+                        <div class="station-list-content">
+                            <div class="station-list-name">${escapeHtml(station.name)}</div>
+                            ${hasMetadata ? `
+                                <div class="station-list-metadata">
+                                    <div class="station-list-now-playing">
+                                        ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                                    </div>
+                                </div>
+                            ` : '<div class="station-list-metadata-empty">No recent track info</div>'}
+                        </div>
+                        ${hasMetadata && metadata.artworkUrl ? `
+                            <div class="station-list-artwork">
+                                <img src="${escapeHtml(metadata.artworkUrl)}" alt="Album Art">
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            // Add click handlers
+            listContainer.querySelectorAll('.station-list-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const stationId = parseInt(item.dataset.stationId);
+                    const station = stations.find(s => s.id === stationId);
+                    if (station) {
+                        selectStation(station);
                         overviewModal.classList.remove('active');
                     }
                 });
@@ -4079,7 +4228,17 @@
             currentTrack.title = title;
             currentTrack.artist = artist;
             currentTrack.album = album;
-            
+
+            // Save station metadata for later display
+            if (currentStation && currentStation.id) {
+                saveStationMetadata(currentStation.id, {
+                    title: title,
+                    artist: artist,
+                    album: album,
+                    artworkUrl: currentTrack.artworkUrl
+                });
+            }
+
             // Add to recent tracks
             window.addToRecentTracks({
                 title: title,
@@ -4163,6 +4322,15 @@
                                     station: currentStation ? currentStation.name : 'Unknown Station'
                                 });
                             }
+                            // Save updated metadata with artwork
+                            if (currentStation && currentStation.id) {
+                                saveStationMetadata(currentStation.id, {
+                                    title: currentTrack.title,
+                                    artist: currentTrack.artist,
+                                    album: currentTrack.album,
+                                    artworkUrl: artUrl
+                                });
+                            }
                         };
                         img.onerror = () => {
                             displayStationIcon();
@@ -4215,6 +4383,15 @@
                                     album: currentTrack.album,
                                     artworkUrl: artUrl,
                                     station: currentStation ? currentStation.name : 'Unknown Station'
+                                });
+                            }
+                            // Save updated metadata with artwork
+                            if (currentStation && currentStation.id) {
+                                saveStationMetadata(currentStation.id, {
+                                    title: currentTrack.title,
+                                    artist: currentTrack.artist,
+                                    album: currentTrack.album,
+                                    artworkUrl: artUrl
                                 });
                             }
                         };

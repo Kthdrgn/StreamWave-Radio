@@ -1916,6 +1916,111 @@
     grid-column: 1 / -1;
 }
 
+/* Most Played Stations List Styles */
+.stations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px 0;
+}
+
+.stations-list-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+.station-list-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.station-list-item:hover {
+    background: var(--card-hover);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.station-list-icon {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.station-list-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.station-list-icon-emoji {
+    font-size: 30px;
+    color: var(--text-tertiary);
+}
+
+.station-list-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.station-list-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.station-list-metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.station-list-now-playing {
+    font-size: 14px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.station-list-metadata-empty {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+.station-list-artwork {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.station-list-artwork img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 
 /* Mobile and Tablet Responsive Styles for Overview Modal */
 @media (max-width: 768px) {
