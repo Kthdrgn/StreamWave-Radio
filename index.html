@@ -49,24 +49,25 @@
         <!-- LEFT COLUMN: Artwork (only visible in landscape mode) -->
         <div class="tv-left-column">
             <div class="artwork-container" id="artworkContainer">
+                <google-cast-launcher id="castButton" class="cast-overlay-btn" title="Cast to Chromecast"></google-cast-launcher>
                 <div class="album-art-placeholder"><img src="icons/icon-512x512.png"></div>
             </div>
         </div>
 
         <!-- RIGHT COLUMN: Everything else -->
         <div class="tv-right-column">
-            <!-- Currently playing station display -->
-            <div id="stationDisplay" class="station-display" style="display: flex;">
-                <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
-                <div class="station-display-info">
-                    <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
-                    <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
-                </div>
-                <div class="station-display-change">BROWSE</div>
+            <!-- Hamburger Menu Icon -->
+            <div class="hamburger-menu-container">
+                <button id="hamburgerMenuBtn" class="hamburger-btn" title="Menu">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 6H20M4 12H20M4 18H20" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
             </div>
 
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
+                <google-cast-launcher id="castButtonPortrait" class="cast-overlay-btn" title="Cast to Chromecast"></google-cast-launcher>
                 <div class="album-art-placeholder"><img src="icons/icon-512x512.png"></div>
             </div>
 
@@ -104,36 +105,14 @@
                 <span id="statusText">Not connected</span>
             </div>
 
-            <!-- Navigation buttons (all in one row) -->
-            <div style="display: flex; gap: 10px; width: 100%; justify-content: center;">
-                <button id="settingsBtn" class="station-selector-btn icon-btn" title="Settings">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="3" stroke-width="1.5"/>
-                        <path opacity="0.5" d="M13.7654 2.15224C13.3978 2 12.9319 2 12 2C11.0681 2 10.6022 2 10.2346 2.15224C9.74457 2.35523 9.35522 2.74458 9.15223 3.23463C9.05957 3.45834 9.0233 3.7185 9.00911 4.09799C8.98826 4.65568 8.70226 5.17189 8.21894 5.45093C7.73564 5.72996 7.14559 5.71954 6.65219 5.45876C6.31645 5.2813 6.07301 5.18262 5.83294 5.15102C5.30704 5.08178 4.77518 5.22429 4.35436 5.5472C4.03874 5.78938 3.80577 6.1929 3.33983 6.99993C2.87389 7.80697 2.64092 8.21048 2.58899 8.60491C2.51976 9.1308 2.66227 9.66266 2.98518 10.0835C3.13256 10.2756 3.3397 10.437 3.66119 10.639C4.1338 10.936 4.43789 11.4419 4.43786 12C4.43783 12.5581 4.13375 13.0639 3.66118 13.3608C3.33965 13.5629 3.13248 13.7244 2.98508 13.9165C2.66217 14.3373 2.51966 14.8691 2.5889 15.395C2.64082 15.7894 2.87379 16.193 3.33973 17C3.80568 17.807 4.03865 18.2106 4.35426 18.4527C4.77508 18.7756 5.30694 18.9181 5.83284 18.8489C6.07289 18.8173 6.31632 18.7186 6.65204 18.5412C7.14547 18.2804 7.73556 18.27 8.2189 18.549C8.70224 18.8281 8.98826 19.3443 9.00911 19.9021C9.02331 20.2815 9.05957 20.5417 9.15223 20.7654C9.35522 21.2554 9.74457 21.6448 10.2346 21.8478C10.6022 22 11.0681 22 12 22C12.9319 22 13.3978 22 13.7654 21.8478C14.2554 21.6448 14.6448 21.2554 14.8477 20.7654C14.9404 20.5417 14.9767 20.2815 14.9909 19.902C15.0117 19.3443 15.2977 18.8281 15.781 18.549C16.2643 18.2699 16.8544 18.2804 17.3479 18.5412C17.6836 18.7186 17.927 18.8172 18.167 18.8488C18.6929 18.9181 19.2248 18.7756 19.6456 18.4527C19.9612 18.2105 20.1942 17.807 20.6601 16.9999C21.1261 16.1929 21.3591 15.7894 21.411 15.395C21.4802 14.8691 21.3377 14.3372 21.0148 13.9164C20.8674 13.7243 20.6602 13.5628 20.3387 13.3608C19.8662 13.0639 19.5621 12.558 19.5621 11.9999C19.5621 11.4418 19.8662 10.9361 20.3387 10.6392C20.6603 10.4371 20.8675 10.2757 21.0149 10.0835C21.3378 9.66273 21.4803 9.13087 21.4111 8.60497C21.3592 8.21055 21.1262 7.80703 20.6602 7C20.1943 6.19297 19.9613 5.78945 19.6457 5.54727C19.2249 5.22436 18.693 5.08185 18.1671 5.15109C17.9271 5.18269 17.6837 5.28136 17.3479 5.4588C16.8545 5.71959 16.2644 5.73002 15.7811 5.45096C15.2977 5.17191 15.0117 4.65566 14.9909 4.09794C14.9767 3.71848 14.9404 3.45833 14.8477 3.23463C14.6448 2.74458 14.2554 2.35523 13.7654 2.15224Z" stroke-width="1.5"/>
-                    </svg>
-                </button>
-                <button id="playlistsBtn" class="station-selector-btn icon-btn" title="Playlists">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6.75C8.58579 6.75 8.25 7.08579 8.25 7.5C8.25 7.91421 8.58579 8.25 9 8.25V6.75ZM19 8.25C19.4142 8.25 19.75 7.91421 19.75 7.5C19.75 7.08579 19.4142 6.75 19 6.75V8.25ZM5 6.75C4.58579 6.75 4.25 7.08579 4.25 7.5C4.25 7.91421 4.58579 8.25 5 8.25V6.75ZM6 8.25C6.41421 8.25 6.75 7.91421 6.75 7.5C6.75 7.08579 6.41421 6.75 6 6.75V8.25ZM5 11.75C4.58579 11.75 4.25 12.0858 4.25 12.5C4.25 12.9142 4.58579 13.25 5 13.25V11.75ZM6 13.25C6.41421 13.25 6.75 12.9142 6.75 12.5C6.75 12.0858 6.41421 11.75 6 11.75V13.25ZM5 16.75C4.58579 16.75 4.25 17.0858 4.25 17.5C4.25 17.9142 4.58579 18.25 5 18.25V16.75ZM6 18.25C6.41421 18.25 6.75 17.9142 6.75 17.5C6.75 17.0858 6.41421 16.75 6 16.75V18.25ZM9 11.75C8.58579 11.75 8.25 12.0858 8.25 12.5C8.25 12.9142 8.58579 13.25 9 13.25V11.75ZM19 13.25C19.4142 13.25 19.75 12.9142 19.75 12.5C19.75 12.0858 19.4142 11.75 19 11.75V13.25ZM9 16.75C8.58579 16.75 8.25 17.0858 8.25 17.5C8.25 17.9142 8.58579 18.25 9 18.25V16.75ZM19 18.25C19.4142 18.25 19.75 17.9142 19.75 17.5C19.75 17.0858 19.4142 16.75 19 16.75V18.25ZM9 8.25H19V6.75H9V8.25ZM5 8.25H6V6.75H5V8.25ZM5 13.25H6V11.75H5V13.25ZM5 18.25H6V16.75H5V18.25ZM9 13.25H19V11.75H9V13.25ZM9 18.25H19V16.75H9V18.25Z"/>
-                    </svg>
-                </button>
-                <button id="browseStationsBtn" class="station-selector-btn icon-btn" title="Browse">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M15.6786 1.68083C15.855 2.05562 15.6941 2.50242 15.3193 2.67879L9.85515 5.25018C9.88453 5.25018 9.91401 5.25018 9.94358 5.25018H14.0564C15.8942 5.25016 17.3498 5.25015 18.489 5.40331C19.6614 5.56094 20.6104 5.89306 21.3588 6.64142C22.1071 7.38978 22.4392 8.33873 22.5969 9.51115C22.75 10.6504 22.75 12.106 22.75 13.9438V14.0566C22.75 15.8944 22.75 17.35 22.5969 18.4892C22.4392 19.6616 22.1071 20.6106 21.3588 21.3589C20.6104 22.1073 19.6614 22.4394 18.489 22.597C17.3498 22.7502 15.8942 22.7502 14.0564 22.7502H9.94359C8.10583 22.7502 6.65019 22.7502 5.51098 22.597C4.33856 22.4394 3.38961 22.1073 2.64124 21.3589C1.89288 20.6106 1.56076 19.6616 1.40314 18.4892C1.24997 17.35 1.24998 15.8944 1.25 14.0566V13.9438C1.24998 12.106 1.24997 10.6504 1.40314 9.51115C1.56076 8.33873 1.89288 7.38978 2.64124 6.64142C3.38961 5.89306 4.33856 5.56094 5.51098 5.40331C5.71495 5.37589 5.92907 5.35337 6.15372 5.33489C6.16257 5.33029 6.17155 5.32585 6.18065 5.32156L14.6807 1.32156C15.0554 1.14519 15.5022 1.30604 15.6786 1.68083ZM5.71085 6.88994C4.70476 7.0252 4.12511 7.27887 3.7019 7.70208C3.27869 8.12529 3.02502 8.70494 2.88976 9.71103C2.75159 10.7387 2.75 12.0934 2.75 14.0002C2.75 15.907 2.75159 17.2617 2.88976 18.2893C3.02502 19.2954 3.27869 19.8751 3.7019 20.2983C4.12511 20.7215 4.70476 20.9752 5.71085 21.1104C6.73851 21.2486 8.09318 21.2502 10 21.2502H14C15.9068 21.2502 17.2615 21.2486 18.2892 21.1104C19.2952 20.9752 19.8749 20.7215 20.2981 20.2983C20.7213 19.8751 20.975 19.2954 21.1102 18.2893C21.2484 17.2617 21.25 15.907 21.25 14.0002C21.25 12.0934 21.2484 10.7387 21.1102 9.71103C20.975 8.70494 20.7213 8.12529 20.2981 7.70208C19.8749 7.27887 19.2952 7.0252 18.2892 6.88994C17.2615 6.75177 15.9068 6.75018 14 6.75018H10C8.09318 6.75018 6.73851 6.75177 5.71085 6.88994ZM8 11.7502C6.75736 11.7502 5.75 12.7575 5.75 14.0002C5.75 15.2428 6.75736 16.2502 8 16.2502C9.24264 16.2502 10.25 15.2428 10.25 14.0002C10.25 12.7575 9.24264 11.7502 8 11.7502ZM4.25 14.0002C4.25 11.9291 5.92893 10.2502 8 10.2502C10.0711 10.2502 11.75 11.9291 11.75 14.0002C11.75 16.0712 10.0711 17.7502 8 17.7502C5.92893 17.7502 4.25 16.0712 4.25 14.0002ZM12.75 11.0002C12.75 10.586 13.0858 10.2502 13.5 10.2502H19C19.4142 10.2502 19.75 10.586 19.75 11.0002C19.75 11.4144 19.4142 11.7502 19 11.7502H13.5C13.0858 11.7502 12.75 11.4144 12.75 11.0002ZM12.75 14.0002C12.75 13.586 13.0858 13.2502 13.5 13.2502H19C19.4142 13.2502 19.75 13.586 19.75 14.0002C19.75 14.4144 19.4142 14.7502 19 14.7502H13.5C13.0858 14.7502 12.75 14.4144 12.75 14.0002ZM12.75 17.0002C12.75 16.586 13.0858 16.2502 13.5 16.2502H19C19.4142 16.2502 19.75 16.586 19.75 17.0002C19.75 17.4144 19.4142 17.7502 19 17.7502H13.5C13.0858 17.7502 12.75 17.4144 12.75 17.0002Z"/>
-                    </svg>
-                </button>
-                <button id="mostPlayedBtn" class="station-selector-btn icon-btn" title="Most Played">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.993 5.09691C11.0387 4.25883 9.78328 3.75 8.40796 3.75C5.42122 3.75 3 6.1497 3 9.10988C3 10.473 3.50639 11.7242 4.35199 12.67L12 20.25L19.4216 12.8944L19.641 12.6631C20.4866 11.7172 21 10.473 21 9.10988C21 6.1497 18.5788 3.75 15.592 3.75C14.2167 3.75 12.9613 4.25883 12.007 5.09692L12 5.08998L11.993 5.09691ZM12 7.09938L12.0549 7.14755L12.9079 6.30208L12.9968 6.22399C13.6868 5.61806 14.5932 5.25 15.592 5.25C17.763 5.25 19.5 6.99073 19.5 9.10988C19.5 10.0813 19.1385 10.9674 18.5363 11.6481L18.3492 11.8453L12 18.1381L5.44274 11.6391C4.85393 10.9658 4.5 10.0809 4.5 9.10988C4.5 6.99073 6.23699 5.25 8.40796 5.25C9.40675 5.25 10.3132 5.61806 11.0032 6.22398L11.0921 6.30203L11.9452 7.14752L12 7.09938Z"/>
-                    </svg>
-                </button>
-                <button id="recentStationsBtn" class="station-selector-btn icon-btn" title="Recent">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="24" height="24" fill="none"/>
-                        <path d="M9.682,18.75a.75.75,0,0,1,.75-.75,8.25,8.25,0,1,0-6.189-2.795V12.568a.75.75,0,0,1,1.5,0v4.243a.75.75,0,0,1-.751.75H.75a.75.75,0,0,1,0-1.5H3a9.75,9.75,0,1,1,7.433,3.44A.75.75,0,0,1,9.682,18.75Zm2.875-4.814L9.9,11.281a.754.754,0,0,1-.22-.531V5.55a.75.75,0,1,1,1.5,0v4.889l2.436,2.436a.75.75,0,1,1-1.061,1.06Z" transform="translate(1.568 2.25)"/>
-                    </svg>
-                </button>
-                <google-cast-launcher id="castButton" class="station-selector-btn icon-btn" title="Cast to Chromecast"></google-cast-launcher>
+            <!-- Currently playing station display -->
+            <div id="stationDisplay" class="station-display" style="display: flex;">
+                <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
+                <div class="station-display-info">
+                    <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
+                    <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
+                </div>
+                <div class="station-display-change">BROWSE</div>
             </div>
         </div><!-- Close tv-right-column -->
     </div><!-- Close player-container -->
@@ -341,8 +320,34 @@
             </div>
         </div>
     </div>
-    
-    
+
+    <!-- Hamburger Menu Modal -->
+    <div id="hamburgerMenuModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 350px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Menu</h2>
+                <button class="modal-close" id="closeHamburgerMenuModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="menu-options">
+                    <button class="menu-option-btn" id="settingsMenuBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="3" stroke-width="1.5"/>
+                            <path opacity="0.5" d="M13.7654 2.15224C13.3978 2 12.9319 2 12 2C11.0681 2 10.6022 2 10.2346 2.15224C9.74457 2.35523 9.35522 2.74458 9.15223 3.23463C9.05957 3.45834 9.0233 3.7185 9.00911 4.09799C8.98826 4.65568 8.70226 5.17189 8.21894 5.45093C7.73564 5.72996 7.14559 5.71954 6.65219 5.45876C6.31645 5.2813 6.07301 5.18262 5.83294 5.15102C5.30704 5.08178 4.77518 5.22429 4.35436 5.5472C4.03874 5.78938 3.80577 6.1929 3.33983 6.99993C2.87389 7.80697 2.64092 8.21048 2.58899 8.60491C2.51976 9.1308 2.66227 9.66266 2.98518 10.0835C3.13256 10.2756 3.3397 10.437 3.66119 10.639C4.1338 10.936 4.43789 11.4419 4.43786 12C4.43783 12.5581 4.13375 13.0639 3.66118 13.3608C3.33965 13.5629 3.13248 13.7244 2.98508 13.9165C2.66217 14.3373 2.51966 14.8691 2.5889 15.395C2.64082 15.7894 2.87379 16.193 3.33973 17C3.80568 17.807 4.03865 18.2106 4.35426 18.4527C4.77508 18.7756 5.30694 18.9181 5.83284 18.8489C6.07289 18.8173 6.31632 18.7186 6.65204 18.5412C7.14547 18.2804 7.73556 18.27 8.2189 18.549C8.70224 18.8281 8.98826 19.3443 9.00911 19.9021C9.02331 20.2815 9.05957 20.5417 9.15223 20.7654C9.35522 21.2554 9.74457 21.6448 10.2346 21.8478C10.6022 22 11.0681 22 12 22C12.9319 22 13.3978 22 13.7654 21.8478C14.2554 21.6448 14.6448 21.2554 14.8477 20.7654C14.9404 20.5417 14.9767 20.2815 14.9909 19.902C15.0117 19.3443 15.2977 18.8281 15.781 18.549C16.2643 18.2699 16.8544 18.2804 17.3479 18.5412C17.6836 18.7186 17.927 18.8172 18.167 18.8488C18.6929 18.9181 19.2248 18.7756 19.6456 18.4527C19.9612 18.2105 20.1942 17.807 20.6601 16.9999C21.1261 16.1929 21.3591 15.7894 21.411 15.395C21.4802 14.8691 21.3377 14.3372 21.0148 13.9164C20.8674 13.7243 20.6602 13.5628 20.3387 13.3608C19.8662 13.0639 19.5621 12.558 19.5621 11.9999C19.5621 11.4418 19.8662 10.9361 20.3387 10.6392C20.6603 10.4371 20.8675 10.2757 21.0149 10.0835C21.3378 9.66273 21.4803 9.13087 21.4111 8.60497C21.3592 8.21055 21.1262 7.80703 20.6602 7C20.1943 6.19297 19.9613 5.78945 19.6457 5.54727C19.2249 5.22436 18.693 5.08185 18.1671 5.15109C17.9271 5.18269 17.6837 5.28136 17.3479 5.4588C16.8545 5.71959 16.2644 5.73002 15.7811 5.45096C15.2977 5.17191 15.0117 4.65566 14.9909 4.09794C14.9767 3.71848 14.9404 3.45833 14.8477 3.23463C14.6448 2.74458 14.2554 2.35523 13.7654 2.15224Z" stroke-width="1.5"/>
+                        </svg>
+                        <span>Settings</span>
+                    </button>
+                    <button class="menu-option-btn" id="browseMenuBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Browse Stations</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Liked Tracks Modal -->
     <div id="likedTracksModal" class="modal-overlay">
         <div class="modal-content">
@@ -784,19 +789,25 @@
         // ======================
         // DOM Elements
         // ======================
-        
-        const playlistsBtn = document.getElementById('playlistsBtn');
-        const browseStationsBtn = document.getElementById('browseStationsBtn');
-        const stationSelectorButtons = document.getElementById('stationSelectorButtons');
+
+        // Hamburger Menu
+        const hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
+        const hamburgerMenuModal = document.getElementById('hamburgerMenuModal');
+        const closeHamburgerMenuModal = document.getElementById('closeHamburgerMenuModal');
+        const settingsMenuBtn = document.getElementById('settingsMenuBtn');
+        const browseMenuBtn = document.getElementById('browseMenuBtn');
+
+        // Station Display
         const stationDisplay = document.getElementById('stationDisplay');
         const stationDisplayIcon = document.getElementById('stationDisplayIcon');
         const stationDisplayName = document.getElementById('stationDisplayName');
+
+        // Modals
         const playlistsModal = document.getElementById('playlistsModal');
         const closePlaylistsModal = document.getElementById('closePlaylistsModal');
         const browseStationsModal = document.getElementById('browseStationsModal');
         const closeBrowseStationsModal = document.getElementById('closeBrowseStationsModal');
         const settingsModal = document.getElementById('settingsModal');
-        const settingsBtn = document.getElementById('settingsBtn');
         const closeSettingsModal = document.getElementById('closeSettingsModal');
         const authBtn = document.getElementById('authBtn');
         const overviewModal = document.getElementById('overviewModal');
@@ -3123,20 +3134,30 @@
         // ======================
         // EVENT LISTENERS
         // ======================
-        
-        // Open playlists modal
-        playlistsBtn.addEventListener('click', () => {
-            lastOpenedModal = 'playlists';
-            playlistsModal.classList.add('active');
-            loadPlaylists();
+
+        // Open hamburger menu modal
+        hamburgerMenuBtn.addEventListener('click', () => {
+            hamburgerMenuModal.classList.add('active');
         });
-        
-        // Open browse stations modal
-        browseStationsBtn.addEventListener('click', () => {
+
+        // Close hamburger menu modal
+        closeHamburgerMenuModal.addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+        });
+
+        // Settings menu button - opens settings modal
+        settingsMenuBtn.addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            settingsModal.classList.add('active');
+        });
+
+        // Browse menu button - opens browse stations modal
+        browseMenuBtn.addEventListener('click', () => {
             console.log('Opening browse stations modal', {
                 stationsLength: stations.length,
                 filteredStationsLength: filteredStations.length
             });
+            hamburgerMenuModal.classList.remove('active');
             lastOpenedModal = 'browse';
             browseStationsModal.classList.add('active');
             // Ensure stations are displayed
@@ -3151,58 +3172,21 @@
                 console.log('No stations loaded yet');
             }
         });
-        
-        // Most Recent Stations button
-        document.getElementById('recentStationsBtn').addEventListener('click', async () => {
-            const recentStations = await getMostRecentStations(10);
-            if (recentStations.length === 0) {
-                alert('No recent stations yet. Start listening to build your history!');
-                return;
-            }
-            // Open in playlist modal
-            playlistStations = recentStations;
-            currentPlaylist = { id: 'recent', name: 'Most Recent Stations' };
-            lastOpenedModal = 'recent';
-            playlistModalTitle.textContent = 'Most Recent Stations';
-            renderPlaylistStations();
-            playlistModal.classList.add('active');
-        });
-        
-        // Most Played Stations button
-        document.getElementById('mostPlayedBtn').addEventListener('click', async () => {
-            const playedStations = await getMostPlayedStations(10);
-            if (playedStations.length === 0) {
-                alert('No play history yet. Start listening to see your favorites!');
-                return;
-            }
-            // Open in playlist modal
-            playlistStations = playedStations;
-            currentPlaylist = { id: 'played', name: 'Most Played Stations' };
-            lastOpenedModal = 'played';
-            playlistModalTitle.textContent = 'Most Played Stations';
-            renderPlaylistStations();
-            playlistModal.classList.add('active');
-        });
-        
+
         // Station display click - open overview modal
         stationDisplay.addEventListener('click', async () => {
             await loadOverviewModal();
             overviewModal.classList.add('active');
         });
-        
+
         // Close playlists modal
         closePlaylistsModal.addEventListener('click', () => {
             playlistsModal.classList.remove('active');
         });
-        
+
         // Close browse stations modal
         closeBrowseStationsModal.addEventListener('click', () => {
             browseStationsModal.classList.remove('active');
-        });
-        
-        // Open settings modal
-        settingsBtn.addEventListener('click', () => {
-            settingsModal.classList.add('active');
         });
         
         // Close overview modal
@@ -3219,6 +3203,13 @@
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
                 settingsModal.classList.remove('active');
+            }
+        });
+
+        // Close hamburger menu modal when clicking outside
+        hamburgerMenuModal.addEventListener('click', (e) => {
+            if (e.target === hamburgerMenuModal) {
+                hamburgerMenuModal.classList.remove('active');
             }
         });
 
