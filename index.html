@@ -4579,23 +4579,69 @@
                 }
 
                 let lyrics = '';
-                lyricsContainers.forEach(container => {
+
+                // Process each lyrics container
+                lyricsContainers.forEach((container, index) => {
                     // Clone the container to manipulate it
                     const clone = container.cloneNode(true);
 
-                    // Replace <br> tags with newlines
-                    clone.querySelectorAll('br').forEach(br => {
-                        br.replaceWith('\n');
-                    });
+                    // Process the DOM tree to extract formatted text
+                    function processNode(node) {
+                        let result = '';
 
-                    // Get text content (automatically decodes HTML entities)
-                    const text = clone.textContent || clone.innerText;
-                    lyrics += text + '\n';
+                        node.childNodes.forEach(child => {
+                            if (child.nodeType === Node.TEXT_NODE) {
+                                // Add text content
+                                result += child.textContent;
+                            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                                const tagName = child.tagName.toLowerCase();
+
+                                if (tagName === 'br') {
+                                    // Line break
+                                    result += '\n';
+                                } else if (tagName === 'a' && child.classList.contains('ReferentFragmentdesktop__ClickTarget')) {
+                                    // This is a regular lyrics line (Genius wraps lines in <a> tags)
+                                    result += processNode(child);
+                                } else if (tagName === 'span' || tagName === 'i' || tagName === 'b') {
+                                    // Inline elements - just get their content
+                                    result += processNode(child);
+                                } else if (tagName === 'div') {
+                                    // Check if this is a section header (like [Verse 1], [Chorus])
+                                    const text = child.textContent.trim();
+                                    if (text.match(/^\[.*\]$/)) {
+                                        // Section header - add extra spacing
+                                        result += '\n' + text + '\n';
+                                    } else {
+                                        // Regular div - process content and add line break
+                                        const content = processNode(child);
+                                        if (content.trim()) {
+                                            result += content + '\n';
+                                        }
+                                    }
+                                } else {
+                                    // Other elements - process recursively
+                                    result += processNode(child);
+                                }
+                            }
+                        });
+
+                        return result;
+                    }
+
+                    const containerText = processNode(clone);
+                    lyrics += containerText;
+
+                    // Add spacing between containers if there are multiple
+                    if (index < lyricsContainers.length - 1) {
+                        lyrics += '\n';
+                    }
                 });
 
-                // Clean up the lyrics
+                // Clean up excessive newlines while preserving intentional spacing
                 lyrics = lyrics
-                    .replace(/\n{3,}/g, '\n\n')
+                    .replace(/\n{4,}/g, '\n\n\n')  // Max 3 newlines (2 blank lines)
+                    .replace(/^\n+/, '')  // Remove leading newlines
+                    .replace(/\n+$/, '')  // Remove trailing newlines
                     .trim();
 
                 return lyrics || null;
