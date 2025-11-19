@@ -2007,6 +2007,22 @@
     font-style: italic;
 }
 
+.station-list-metadata-loading {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-style: italic;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 .station-list-artwork {
     width: 60px;
     height: 60px;

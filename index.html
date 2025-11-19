@@ -1453,98 +1453,121 @@
             }
         }
 
-        // Save station metadata (currently playing song)
-        async function saveStationMetadata(stationId, metadata) {
-            if (!stationId || !metadata) return;
+        // Fetch current metadata from a station's stream
+        async function fetchStationCurrentMetadata(station) {
+            return new Promise((resolve) => {
+                // Timeout after 10 seconds
+                const timeout = setTimeout(() => {
+                    if (tempPlayer) {
+                        try {
+                            tempPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping temp player:', e);
+                        }
+                    }
+                    resolve(null);
+                }, 10000);
 
-            const metadataRecord = {
-                station_id: stationId,
-                title: metadata.title,
-                artist: metadata.artist,
-                album: metadata.album,
-                artwork_url: metadata.artworkUrl,
-                last_updated: new Date().toISOString()
-            };
+                let tempPlayer = null;
+                let metadataReceived = false;
 
-            // Save to localStorage
-            try {
-                const stored = JSON.parse(localStorage.getItem('station_metadata') || '{}');
-                stored[stationId] = metadataRecord;
-                localStorage.setItem('station_metadata', JSON.stringify(stored));
-            } catch (error) {
-                console.error('Error saving station metadata to localStorage:', error);
-            }
-
-            // If authenticated, also save to Supabase
-            if (window.currentUser && !window.isGuestMode) {
                 try {
-                    const { error } = await supabase
-                        .from('station_metadata')
-                        .upsert({
-                            user_id: window.currentUser.id,
-                            station_id: stationId,
-                            title: metadata.title,
-                            artist: metadata.artist,
-                            album: metadata.album,
-                            artwork_url: metadata.artworkUrl,
-                            last_updated: new Date().toISOString()
-                        }, {
-                            onConflict: 'user_id,station_id'
+                    // Get the standard quality URL
+                    const rawUrl = station.url_standard || station.url;
+                    if (!rawUrl) {
+                        clearTimeout(timeout);
+                        resolve(null);
+                        return;
+                    }
+
+                    // Use CORS proxy
+                    const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
+                    tempPlayer = new IcecastMetadataPlayer(streamUrl, {
+                        metadataTypes: ['icy', 'ogg'],
+                        enableLogging: false,
+
+                        onMetadata: (metadata) => {
+                            if (metadataReceived) return; // Only process first metadata
+                            metadataReceived = true;
+
+                            clearTimeout(timeout);
+
+                            // Stop and cleanup the player
+                            if (tempPlayer) {
+                                try {
+                                    tempPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping temp player:', e);
+                                }
+                            }
+
+                            // Parse metadata
+                            if (metadata && metadata.StreamTitle) {
+                                const streamTitle = metadata.StreamTitle;
+                                let title = 'Unknown';
+                                let artist = '';
+
+                                // Check for structured format
+                                const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
+                                const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
+
+                                if (titleMatch || artistMatch) {
+                                    title = titleMatch ? titleMatch[1].trim() : 'Unknown';
+                                    artist = artistMatch ? artistMatch[1].trim() : '';
+                                } else if (streamTitle.includes(' - ')) {
+                                    const parts = streamTitle.split(' - ');
+                                    artist = parts[0].trim();
+                                    title = parts[1].trim();
+                                } else {
+                                    title = streamTitle;
+                                }
+
+                                resolve({ title, artist });
+                            } else {
+                                resolve(null);
+                            }
+                        },
+
+                        onError: (error) => {
+                            clearTimeout(timeout);
+                            if (tempPlayer) {
+                                try {
+                                    tempPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping temp player:', e);
+                                }
+                            }
+                            resolve(null);
+                        }
+                    });
+
+                    // Mute and start playback
+                    if (tempPlayer.audioElement) {
+                        tempPlayer.audioElement.volume = 0;
+                        tempPlayer.audioElement.muted = true;
+                        tempPlayer.play().catch(() => {
+                            clearTimeout(timeout);
+                            resolve(null);
                         });
-
-                    if (error) throw error;
-                } catch (error) {
-                    console.error('Error saving station metadata to database:', error);
-                }
-            }
-        }
-
-        // Get station metadata (last played song)
-        async function getStationMetadata(stationId) {
-            if (!stationId) return null;
-
-            // Try to get from Supabase if authenticated
-            if (window.currentUser && !window.isGuestMode) {
-                try {
-                    const { data, error } = await supabase
-                        .from('station_metadata')
-                        .select('*')
-                        .eq('user_id', window.currentUser.id)
-                        .eq('station_id', stationId)
-                        .single();
-
-                    if (!error && data) {
-                        return {
-                            title: data.title,
-                            artist: data.artist,
-                            album: data.album,
-                            artworkUrl: data.artwork_url,
-                            lastUpdated: data.last_updated
-                        };
+                    } else {
+                        setTimeout(() => {
+                            if (tempPlayer && tempPlayer.audioElement) {
+                                tempPlayer.audioElement.volume = 0;
+                                tempPlayer.audioElement.muted = true;
+                                tempPlayer.play().catch(() => {
+                                    clearTimeout(timeout);
+                                    resolve(null);
+                                });
+                            }
+                        }, 500);
                     }
                 } catch (error) {
-                    console.error('Error getting station metadata from database:', error);
+                    clearTimeout(timeout);
+                    console.log('Error fetching station metadata:', error);
+                    resolve(null);
                 }
-            }
-
-            // Fallback to localStorage
-            try {
-                const stored = JSON.parse(localStorage.getItem('station_metadata') || '{}');
-                const metadata = stored[stationId];
-                if (metadata) {
-                    return {
-                        title: metadata.title,
-                        artist: metadata.artist,
-                        album: metadata.album,
-                        artworkUrl: metadata.artwork_url,
-                        lastUpdated: metadata.last_updated
-                    };
-                }
-            } catch (error) {
-                console.error('Error getting station metadata from localStorage:', error);
-            }
-
-            return null;
+            });
         }
         
         // Load stations from Supabase
@@ -1765,20 +1788,8 @@
                 return;
             }
 
-            // Fetch metadata for all stations
-            const stationsWithMetadata = await Promise.all(stations.map(async (station) => {
-                const metadata = await getStationMetadata(station.id);
-                return {
-                    ...station,
-                    metadata
-                };
-            }));
-
-            // Render the list
-            listContainer.innerHTML = stationsWithMetadata.map(station => {
-                const metadata = station.metadata;
-                const hasMetadata = metadata && (metadata.title || metadata.artist);
-
+            // First render the list with loading states
+            listContainer.innerHTML = stations.map(station => {
                 return `
                     <div class="station-list-item" data-station-id="${station.id}">
                         <div class="station-list-icon">
@@ -1786,19 +1797,8 @@
                         </div>
                         <div class="station-list-content">
                             <div class="station-list-name">${escapeHtml(station.name)}</div>
-                            ${hasMetadata ? `
-                                <div class="station-list-metadata">
-                                    <div class="station-list-now-playing">
-                                        ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
-                                    </div>
-                                </div>
-                            ` : '<div class="station-list-metadata-empty">No recent track info</div>'}
+                            <div class="station-list-metadata-loading">Loading current track...</div>
                         </div>
-                        ${hasMetadata && metadata.artworkUrl ? `
-                            <div class="station-list-artwork">
-                                <img src="${escapeHtml(metadata.artworkUrl)}" alt="Album Art">
-                            </div>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -1813,6 +1813,42 @@
                         overviewModal.classList.remove('active');
                     }
                 });
+            });
+
+            // Fetch metadata for each station in parallel
+            stations.forEach(async (station, index) => {
+                const metadata = await fetchStationCurrentMetadata(station);
+
+                // Update the station's metadata display
+                const stationElement = listContainer.querySelector(`[data-station-id="${station.id}"]`);
+                if (!stationElement) return;
+
+                const contentDiv = stationElement.querySelector('.station-list-content');
+                if (!contentDiv) return;
+
+                // Remove loading message
+                const loadingDiv = contentDiv.querySelector('.station-list-metadata-loading');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                if (metadata && (metadata.title || metadata.artist)) {
+                    // Add metadata display
+                    const metadataDiv = document.createElement('div');
+                    metadataDiv.className = 'station-list-metadata';
+                    metadataDiv.innerHTML = `
+                        <div class="station-list-now-playing">
+                            ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                        </div>
+                    `;
+                    contentDiv.appendChild(metadataDiv);
+                } else {
+                    // No metadata available
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'station-list-metadata-empty';
+                    emptyDiv.textContent = 'No track info available';
+                    contentDiv.appendChild(emptyDiv);
+                }
             });
         }
 
@@ -4229,16 +4265,6 @@
             currentTrack.artist = artist;
             currentTrack.album = album;
 
-            // Save station metadata for later display
-            if (currentStation && currentStation.id) {
-                saveStationMetadata(currentStation.id, {
-                    title: title,
-                    artist: artist,
-                    album: album,
-                    artworkUrl: currentTrack.artworkUrl
-                });
-            }
-
             // Add to recent tracks
             window.addToRecentTracks({
                 title: title,
@@ -4322,15 +4348,6 @@
                                     station: currentStation ? currentStation.name : 'Unknown Station'
                                 });
                             }
-                            // Save updated metadata with artwork
-                            if (currentStation && currentStation.id) {
-                                saveStationMetadata(currentStation.id, {
-                                    title: currentTrack.title,
-                                    artist: currentTrack.artist,
-                                    album: currentTrack.album,
-                                    artworkUrl: artUrl
-                                });
-                            }
                         };
                         img.onerror = () => {
                             displayStationIcon();
@@ -4383,15 +4400,6 @@
                                     album: currentTrack.album,
                                     artworkUrl: artUrl,
                                     station: currentStation ? currentStation.name : 'Unknown Station'
-                                });
-                            }
-                            // Save updated metadata with artwork
-                            if (currentStation && currentStation.id) {
-                                saveStationMetadata(currentStation.id, {
-                                    title: currentTrack.title,
-                                    artist: currentTrack.artist,
-                                    album: currentTrack.album,
-                                    artworkUrl: artUrl
                                 });
                             }
                         };
