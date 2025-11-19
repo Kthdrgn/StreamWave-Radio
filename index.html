@@ -4308,6 +4308,8 @@
                 displayStationIcon();
                 // Reset current track
                 currentTrack = { title: null, artist: null, album: null, artworkUrl: null, lyrics: null, lyricsUrl: null, hasLyrics: false };
+                // Reset last fetched track to allow fresh artwork fetch when metadata returns
+                lastFetchedTrack = { title: null, artist: null };
                 updateLikeButton();
                 updateLyricsIndicator();
                 // Update media session with station info when no metadata
@@ -4398,14 +4400,25 @@
         }
         
         // Fetch album art from iTunes or MusicBrainz
+        let lastFetchedTrack = { title: null, artist: null }; // Track what we last fetched to avoid duplicates
+
         async function fetchAlbumArt(title, artist) {
             if (!artist || !title) {
                 displayStationIcon();
                 return;
             }
-            
+
+            // Check if we've already fetched artwork for this exact song
+            if (lastFetchedTrack.title === title && lastFetchedTrack.artist === artist) {
+                console.log('Skipping duplicate artwork fetch for:', `"${artist}" - "${title}"`);
+                return;
+            }
+
+            // Update the last fetched track
+            lastFetchedTrack = { title, artist };
+
             const useItunes = document.getElementById('useItunesApi').checked;
-            
+
             if (useItunes) {
                 await fetchAlbumArtItunes(title, artist);
             } else {
