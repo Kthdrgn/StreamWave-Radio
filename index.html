@@ -2428,7 +2428,10 @@
                     detailsParts.push(station.frequency);
                 }
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
-                
+
+                // Check if current user is admin
+                const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
+
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
                     ${station.icon_url ? 
@@ -2459,6 +2462,7 @@
                                 }
                             </div>
                         </div>
+                        ${isAdmin ? `
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item" data-action="edit-station" data-station-id="${station.id}">
                             <span>✏️</span> Edit Station
@@ -2466,6 +2470,7 @@
                         <div class="dropdown-item danger" data-action="delete-station" data-station-id="${station.id}">
                             <span>🗑️</span> Delete Station
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
