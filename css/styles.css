@@ -2448,6 +2448,12 @@ body[data-layout="landscape"] .player-container {
     flex: 1;
 }
 
+/* Specific icon styles for buttons with filled icons */
+#viewLikedTracksBtn svg {
+    fill: var(--text-primary);
+    stroke: none;
+}
+
 /* Menu Divider */
 .menu-divider {
     height: 1px;
