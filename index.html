@@ -238,6 +238,29 @@
                         <button class="carousel-btn carousel-next" id="playlistsNext">›</button>
                     </div>
                 </div>
+
+                <!-- Explore Section -->
+                <div id="exploreSection" style="display: none;">
+                    <!-- Because You Listened Carousel -->
+                    <div class="carousel-section" id="becauseListenedSection" style="display: none;">
+                        <h3 class="carousel-title" id="becauseListenedTitle">Because you listened to...</h3>
+                        <div class="carousel-container">
+                            <button class="carousel-btn carousel-prev" id="becauseListenedPrev">‹</button>
+                            <div class="carousel-track" id="becauseListenedTrack"></div>
+                            <button class="carousel-btn carousel-next" id="becauseListenedNext">›</button>
+                        </div>
+                    </div>
+
+                    <!-- Because You Like Carousel -->
+                    <div class="carousel-section" id="becauseLikeSection" style="display: none;">
+                        <h3 class="carousel-title" id="becauseLikeTitle">Because you like...</h3>
+                        <div class="carousel-container">
+                            <button class="carousel-btn carousel-prev" id="becauseLikePrev">‹</button>
+                            <div class="carousel-track" id="becauseLikeTrack"></div>
+                            <button class="carousel-btn carousel-next" id="becauseLikeNext">›</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1771,6 +1794,83 @@
             // Setup carousel navigation
             setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
             setupCarouselNavigation('playlists', 'playlistsTrack', 'playlistsPrev', 'playlistsNext');
+
+            // Load Explore section
+            await loadExploreSection(recentStations, playedStations);
+        }
+
+        // Load Explore section with genre-based recommendations
+        async function loadExploreSection(recentStations, playedStations) {
+            const exploreSection = document.getElementById('exploreSection');
+            const becauseListenedSection = document.getElementById('becauseListenedSection');
+            const becauseLikeSection = document.getElementById('becauseLikeSection');
+
+            let hasExploreContent = false;
+
+            // "Because you listened to" - based on most recent station
+            if (recentStations && recentStations.length > 0) {
+                const mostRecentStation = recentStations[0];
+                if (mostRecentStation.genres && mostRecentStation.genres.length > 0) {
+                    const genre = Array.isArray(mostRecentStation.genres) ? mostRecentStation.genres[0] : mostRecentStation.genres;
+
+                    // Find stations with the same genre (excluding the recent station itself)
+                    const sameGenreStations = stations.filter(station => {
+                        if (station.id === mostRecentStation.id) return false;
+                        if (!station.genres) return false;
+
+                        if (Array.isArray(station.genres)) {
+                            return station.genres.some(g =>
+                                g.toLowerCase() === genre.toLowerCase()
+                            );
+                        } else if (typeof station.genres === 'string') {
+                            return station.genres.toLowerCase().includes(genre.toLowerCase());
+                        }
+                        return false;
+                    }).slice(0, 10);
+
+                    if (sameGenreStations.length > 0) {
+                        document.getElementById('becauseListenedTitle').textContent = `Because you listened to ${genre}`;
+                        renderCarousel('becauseListenedTrack', sameGenreStations, 'station');
+                        setupCarouselNavigation('becauseListened', 'becauseListenedTrack', 'becauseListenedPrev', 'becauseListenedNext');
+                        becauseListenedSection.style.display = 'block';
+                        hasExploreContent = true;
+                    }
+                }
+            }
+
+            // "Because you like" - based on most played station
+            if (playedStations && playedStations.length > 0) {
+                const mostPlayedStation = playedStations[0];
+                if (mostPlayedStation.genres && mostPlayedStation.genres.length > 0) {
+                    const genre = Array.isArray(mostPlayedStation.genres) ? mostPlayedStation.genres[0] : mostPlayedStation.genres;
+
+                    // Find stations with the same genre (excluding the most played station itself and any from "Because you listened")
+                    const sameGenreStations = stations.filter(station => {
+                        if (station.id === mostPlayedStation.id) return false;
+                        if (!station.genres) return false;
+
+                        if (Array.isArray(station.genres)) {
+                            return station.genres.some(g =>
+                                g.toLowerCase() === genre.toLowerCase()
+                            );
+                        } else if (typeof station.genres === 'string') {
+                            return station.genres.toLowerCase().includes(genre.toLowerCase());
+                        }
+                        return false;
+                    }).slice(0, 10);
+
+                    if (sameGenreStations.length > 0) {
+                        document.getElementById('becauseLikeTitle').textContent = `Because you like ${genre}`;
+                        renderCarousel('becauseLikeTrack', sameGenreStations, 'station');
+                        setupCarouselNavigation('becauseLike', 'becauseLikeTrack', 'becauseLikePrev', 'becauseLikeNext');
+                        becauseLikeSection.style.display = 'block';
+                        hasExploreContent = true;
+                    }
+                }
+            }
+
+            // Show/hide the entire explore section based on whether we have any content
+            exploreSection.style.display = hasExploreContent ? 'block' : 'none';
         }
 
         // Render carousel items
