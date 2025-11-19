@@ -2444,6 +2444,18 @@ body[data-layout="landscape"] .player-container {
     fill: none;
 }
 
+.menu-option-btn span {
+    flex: 1;
+}
+
+/* Menu Divider */
+.menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+    opacity: 0.5;
+}
+
 /* Cast Menu Button - Override Google Cast SDK defaults */
 .cast-menu-btn {
     /* Cast SDK color variables */
