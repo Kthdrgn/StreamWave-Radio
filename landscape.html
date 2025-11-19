@@ -2719,7 +2719,12 @@
                 
                 const { data, error } = await supabase
                     .from('playlists')
-                    .insert([{ name, description, sort_order: maxSortOrder + 1 }])
+                    .insert([{
+                        name,
+                        description,
+                        sort_order: maxSortOrder + 1,
+                        user_id: window.currentUser.id
+                    }])
                     .select();
                 
                 if (error) {
