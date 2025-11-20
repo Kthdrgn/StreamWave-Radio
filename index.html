@@ -362,6 +362,14 @@
                         <span>Recently Played</span>
                     </button>
 
+                    <!-- Add Playlist Button -->
+                    <button class="menu-option-btn" id="createPlaylistMenuBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Add Playlist</span>
+                    </button>
+
                     <!-- Divider -->
                     <div class="menu-divider"></div>
 
@@ -4009,7 +4017,13 @@
         createPlaylistBtn.addEventListener('click', () => {
             showPlaylistForm();
         });
-        
+
+        // Create playlist menu button (from hamburger menu)
+        document.getElementById('createPlaylistMenuBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            showPlaylistForm();
+        });
+
         // Add station button
         document.getElementById('addStationBtn').addEventListener('click', () => {
             showStationForm();
