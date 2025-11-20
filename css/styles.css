@@ -2204,6 +2204,35 @@ body[data-layout="landscape"] .player-container {
     display: contents !important;
 }
 
+/* Landscape mode: Increase metadata font sizes by 50% */
+body[data-layout="landscape"] .now-playing-label {
+    font-size: 18px; /* 12px * 1.5 */
+}
+
+body[data-layout="landscape"] .song-title {
+    font-size: 30px; /* 20px * 1.5 */
+}
+
+body[data-layout="landscape"] .artist-name {
+    font-size: 24px; /* 16px * 1.5 */
+}
+
+body[data-layout="landscape"] .album-name {
+    font-size: 21px; /* 14px * 1.5 */
+}
+
+body[data-layout="landscape"] .no-metadata {
+    font-size: 24px; /* 16px * 1.5 */
+}
+
+body[data-layout="landscape"] .station-display-name {
+    font-size: 27px; /* 18px * 1.5 */
+}
+
+body[data-layout="landscape"] .station-display-details {
+    font-size: 19.5px; /* 13px * 1.5 */
+}
+
 /* Layout toggle styles (same as theme toggle) */
 .layout-toggle-container {
     margin-top: 10px;
