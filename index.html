@@ -3388,9 +3388,9 @@
         });
 
         // Station display click - open overview modal
-        stationDisplay.addEventListener('click', async () => {
-            await loadOverviewModal();
+        stationDisplay.addEventListener('click', () => {
             overviewModal.classList.add('active');
+            loadOverviewModal();
         });
 
         // Close playlists modal
