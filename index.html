@@ -213,6 +213,16 @@
                 <button class="modal-close" id="closeOverviewModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Playlists Carousel -->
+                <div class="carousel-section">
+                    <h3 class="carousel-title">Your Playlists</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="playlistsPrev">‹</button>
+                        <div class="carousel-track" id="playlistsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="playlistsNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Most Recent Stations Carousel -->
                 <div class="carousel-section">
                     <h3 class="carousel-title">Most Recent Stations</h3>
@@ -227,16 +237,6 @@
                 <div class="carousel-section">
                     <h3 class="carousel-title">Most Played Stations</h3>
                     <div class="stations-list" id="playedStationsList"></div>
-                </div>
-
-                <!-- Playlists Carousel -->
-                <div class="carousel-section">
-                    <h3 class="carousel-title">Your Playlists</h3>
-                    <div class="carousel-container">
-                        <button class="carousel-btn carousel-prev" id="playlistsPrev">‹</button>
-                        <div class="carousel-track" id="playlistsTrack"></div>
-                        <button class="carousel-btn carousel-next" id="playlistsNext">›</button>
-                    </div>
                 </div>
 
                 <!-- Explore Section -->
@@ -360,6 +360,22 @@
                             <circle cx="12" cy="12" r="9" stroke-width="2"/>
                         </svg>
                         <span>Recently Played</span>
+                    </button>
+
+                    <!-- My Playlists Button -->
+                    <button class="menu-option-btn" id="viewPlaylistsBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 6H21M8 12H21M8 18H21M3 6H3.01M3 12H3.01M3 18H3.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>My Playlists</span>
+                    </button>
+
+                    <!-- Add Playlist Button -->
+                    <button class="menu-option-btn" id="createPlaylistMenuBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Add Playlist</span>
                     </button>
 
                     <!-- Divider -->
@@ -2312,17 +2328,17 @@
         // ======================
         
         // Render playlists list
-        function renderPlaylistsList() {
+        async function renderPlaylistsList() {
             // Apply grid view class if in grid mode
             if (playlistViewMode === 'grid') {
                 playlistsList.classList.add('grid-view');
             } else {
                 playlistsList.classList.remove('grid-view');
             }
-            
+
             // Start with empty content (history buttons moved to main page)
             let htmlContent = '';
-            
+
             if (playlists.length === 0) {
                 htmlContent += `
                     <div class="empty-state">
@@ -2331,12 +2347,62 @@
                     </div>
                 `;
             } else {
-                htmlContent += playlists.map(playlist => {
+                // Load stations for each playlist (for artwork collage)
+                const playlistsWithStations = await Promise.all(playlists.map(async (playlist) => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('playlist_items')
+                            .select('*, radio_stations(*)')
+                            .eq('playlist_id', playlist.id)
+                            .order('created_at')
+                            .limit(4); // Only need first 4 for collage
+
+                        if (error) throw error;
+
+                        return {
+                            ...playlist,
+                            stations: data ? data.map(item => item.radio_stations) : []
+                        };
+                    } catch (error) {
+                        console.error('Error loading playlist stations:', error);
+                        return {
+                            ...playlist,
+                            stations: []
+                        };
+                    }
+                }));
+
+                htmlContent += playlistsWithStations.map(playlist => {
                     const count = playlist.playlist_items?.[0]?.count || 0;
+
+                    // Create a collage of station artworks (same logic as carousel)
+                    const stations = playlist.stations || [];
+                    const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                    let iconContent;
+                    if (stationIcons.length === 0) {
+                        // No stations with icons - show emoji
+                        iconContent = '🎵';
+                    } else if (stationIcons.length === 1) {
+                        // Single station - show its icon as image
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                    } else {
+                        // Multiple stations - create collage
+                        iconContent = `
+                            <div class="playlist-collage">
+                                ${stationIcons.map(s => `
+                                    <div class="playlist-collage-item">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
                     return `
                         <div class="playlist-item" data-id="${playlist.id}" draggable="true">
                             <div class="playlist-drag-handle">⋮⋮</div>
-                            <div class="playlist-icon">🎵</div>
+                            <div class="playlist-icon">${iconContent}</div>
                             <div class="playlist-info">
                                 <div class="playlist-name">${escapeHtml(playlist.name)}</div>
                                 <div class="playlist-count">${count} ${count === 1 ? 'station' : 'stations'}</div>
@@ -2358,7 +2424,7 @@
                     `;
                 }).join('');
             }
-            
+
             playlistsList.innerHTML = htmlContent;
             
             // Add event listeners for playlist items
@@ -3322,9 +3388,9 @@
         });
 
         // Station display click - open overview modal
-        stationDisplay.addEventListener('click', async () => {
-            await loadOverviewModal();
+        stationDisplay.addEventListener('click', () => {
             overviewModal.classList.add('active');
+            loadOverviewModal();
         });
 
         // Close playlists modal
@@ -4009,7 +4075,19 @@
         createPlaylistBtn.addEventListener('click', () => {
             showPlaylistForm();
         });
-        
+
+        // Create playlist menu button (from hamburger menu)
+        document.getElementById('createPlaylistMenuBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            showPlaylistForm();
+        });
+
+        // View playlists menu button (from hamburger menu)
+        document.getElementById('viewPlaylistsBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            playlistsModal.classList.add('active');
+        });
+
         // Add station button
         document.getElementById('addStationBtn').addEventListener('click', () => {
             showStationForm();
