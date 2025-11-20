@@ -919,7 +919,6 @@
         .search-input:focus {
             outline: none;
             border-color: var(--text-quaternary);
-            background: rgba(255, 255, 255, 0.08);
         }
         
         .search-input::placeholder {
@@ -1557,7 +1556,7 @@
             margin-bottom: 8px;
             font-size: 14px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--text-secondary);
         }
         
         .form-input,
@@ -1579,7 +1578,6 @@
         .form-select:focus {
             outline: none;
             border-color: #667eea;
-            background: rgba(255, 255, 255, 0.08);
         }
         
         .form-textarea {
