@@ -1120,6 +1120,25 @@
         .playlist-icon {
             font-size: 24px;
             flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .playlist-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .playlist-icon .playlist-collage {
+            width: 48px !important;
+            height: 48px !important;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .playlist-drag-handle {
@@ -1365,6 +1384,13 @@
         .playlists-list.grid-view .playlist-icon {
             font-size: 48px;
             margin-bottom: 8px;
+            width: 96px;
+            height: 96px;
+        }
+
+        .playlists-list.grid-view .playlist-icon .playlist-collage {
+            width: 96px !important;
+            height: 96px !important;
         }
         
         .playlists-list.grid-view .playlist-drag-handle {

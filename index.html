@@ -2328,17 +2328,17 @@
         // ======================
         
         // Render playlists list
-        function renderPlaylistsList() {
+        async function renderPlaylistsList() {
             // Apply grid view class if in grid mode
             if (playlistViewMode === 'grid') {
                 playlistsList.classList.add('grid-view');
             } else {
                 playlistsList.classList.remove('grid-view');
             }
-            
+
             // Start with empty content (history buttons moved to main page)
             let htmlContent = '';
-            
+
             if (playlists.length === 0) {
                 htmlContent += `
                     <div class="empty-state">
@@ -2347,12 +2347,62 @@
                     </div>
                 `;
             } else {
-                htmlContent += playlists.map(playlist => {
+                // Load stations for each playlist (for artwork collage)
+                const playlistsWithStations = await Promise.all(playlists.map(async (playlist) => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('playlist_items')
+                            .select('*, radio_stations(*)')
+                            .eq('playlist_id', playlist.id)
+                            .order('created_at')
+                            .limit(4); // Only need first 4 for collage
+
+                        if (error) throw error;
+
+                        return {
+                            ...playlist,
+                            stations: data ? data.map(item => item.radio_stations) : []
+                        };
+                    } catch (error) {
+                        console.error('Error loading playlist stations:', error);
+                        return {
+                            ...playlist,
+                            stations: []
+                        };
+                    }
+                }));
+
+                htmlContent += playlistsWithStations.map(playlist => {
                     const count = playlist.playlist_items?.[0]?.count || 0;
+
+                    // Create a collage of station artworks (same logic as carousel)
+                    const stations = playlist.stations || [];
+                    const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                    let iconContent;
+                    if (stationIcons.length === 0) {
+                        // No stations with icons - show emoji
+                        iconContent = '🎵';
+                    } else if (stationIcons.length === 1) {
+                        // Single station - show its icon as image
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                    } else {
+                        // Multiple stations - create collage
+                        iconContent = `
+                            <div class="playlist-collage">
+                                ${stationIcons.map(s => `
+                                    <div class="playlist-collage-item">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
                     return `
                         <div class="playlist-item" data-id="${playlist.id}" draggable="true">
                             <div class="playlist-drag-handle">⋮⋮</div>
-                            <div class="playlist-icon">🎵</div>
+                            <div class="playlist-icon">${iconContent}</div>
                             <div class="playlist-info">
                                 <div class="playlist-name">${escapeHtml(playlist.name)}</div>
                                 <div class="playlist-count">${count} ${count === 1 ? 'station' : 'stations'}</div>
@@ -2374,7 +2424,7 @@
                     `;
                 }).join('');
             }
-            
+
             playlistsList.innerHTML = htmlContent;
             
             // Add event listeners for playlist items
