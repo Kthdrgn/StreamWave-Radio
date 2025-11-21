@@ -2308,20 +2308,17 @@ body[data-layout="landscape"] .station-display-details {
     position: absolute;
     width: calc(50% - 4px);
     height: calc(100% - 8px);
-    background: var(--button-bg);
+    background: var(--card-hover);
     border-radius: 50px;
     top: 4px;
     left: 4px;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease;
     z-index: 0;
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-.layout-option:first-of-type.active ~ .layout-slider {
-    left: 4px;
-}
-
-.layout-option:last-of-type.active ~ .layout-slider {
-    left: calc(50% + 0px);
+body[data-layout="landscape"] .layout-slider {
+    transform: translateX(calc(100% + 4px));
 }
 
 /* ======================
