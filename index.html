@@ -241,6 +241,14 @@
 
                 <!-- Explore Section -->
                 <div id="exploreSection" style="display: none;">
+                    <!-- Explore Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: 10px;">
+                        <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin: 0;">Explore new stations</h2>
+                        <button id="playRandomStationBtn" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                            🎲 Play Random Station
+                        </button>
+                    </div>
+
                     <!-- Because You Listened Carousel -->
                     <div class="carousel-section" id="becauseListenedSection" style="display: none;">
                         <h3 class="carousel-title" id="becauseListenedTitle">Because you listened to...</h3>
@@ -3408,6 +3416,27 @@
             overviewModal.classList.remove('active');
         });
 
+        // Play random station button
+        document.getElementById('playRandomStationBtn').addEventListener('click', () => {
+            if (stations.length === 0) {
+                alert('No stations available');
+                return;
+            }
+
+            // Select a random station from all available stations
+            const randomIndex = Math.floor(Math.random() * stations.length);
+            const randomStation = stations[randomIndex];
+
+            // Close the overview modal
+            overviewModal.classList.remove('active');
+
+            // Select and play the random station
+            selectStation(randomStation);
+            setTimeout(() => {
+                playPauseBtn.click();
+            }, 100);
+        });
+
         // Close settings modal
         closeSettingsModal.addEventListener('click', () => {
             settingsModal.classList.remove('active');
@@ -3958,10 +3987,34 @@
         const layoutToggle = document.getElementById('layoutToggle');
         const body = document.body;
 
+        // Helper function to lock/unlock screen orientation
+        async function setScreenOrientation(layout) {
+            // Check if Screen Orientation API is supported
+            if ('orientation' in screen && 'lock' in screen.orientation) {
+                try {
+                    if (layout === 'landscape') {
+                        // Lock to landscape orientation
+                        await screen.orientation.lock('landscape');
+                        console.log('Screen orientation locked to landscape');
+                    } else {
+                        // Unlock orientation for portrait mode
+                        screen.orientation.unlock();
+                        console.log('Screen orientation unlocked');
+                    }
+                } catch (error) {
+                    // Orientation lock may fail if not in fullscreen or PWA
+                    console.log('Screen orientation lock not available:', error.message);
+                }
+            } else {
+                console.log('Screen Orientation API not supported');
+            }
+        }
+
         // Get saved layout or default to portrait
         const savedLayout = localStorage.getItem('layout') || 'portrait';
         body.setAttribute('data-layout', savedLayout);
         updateLayoutToggleUI(savedLayout);
+        setScreenOrientation(savedLayout);
 
         // Layout toggle click handler
         layoutToggle.addEventListener('click', () => {
@@ -3971,6 +4024,7 @@
             body.setAttribute('data-layout', newLayout);
             localStorage.setItem('layout', newLayout);
             updateLayoutToggleUI(newLayout);
+            setScreenOrientation(newLayout);
         });
 
         // Update layout toggle UI based on current layout
