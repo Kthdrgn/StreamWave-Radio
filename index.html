@@ -5180,7 +5180,75 @@
                 }
             }
         }
-        
+
+        // Helper function to parse ID3 frames from HLS metadata
+        function parseID3Frames(data) {
+            const frames = {};
+
+            try {
+                // ID3 tags in HLS are typically in ID3v2 format
+                const view = new DataView(data.buffer || data);
+                let offset = 0;
+
+                // Check for ID3 header
+                if (view.byteLength < 10) return frames;
+
+                const header = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2));
+                if (header !== 'ID3') return frames;
+
+                // Skip version and flags
+                offset = 10;
+
+                // Parse frames
+                while (offset < view.byteLength - 10) {
+                    // Get frame ID (4 bytes)
+                    const frameId = String.fromCharCode(
+                        view.getUint8(offset),
+                        view.getUint8(offset + 1),
+                        view.getUint8(offset + 2),
+                        view.getUint8(offset + 3)
+                    );
+
+                    if (frameId === '\0\0\0\0') break;
+
+                    // Get frame size (4 bytes, synchsafe integer)
+                    const size = (view.getUint8(offset + 4) << 21) |
+                                (view.getUint8(offset + 5) << 14) |
+                                (view.getUint8(offset + 6) << 7) |
+                                view.getUint8(offset + 7);
+
+                    // Skip frame flags (2 bytes)
+                    offset += 10;
+
+                    if (size === 0 || offset + size > view.byteLength) break;
+
+                    // Extract frame data (skip encoding byte)
+                    const encoding = view.getUint8(offset);
+                    let text = '';
+
+                    try {
+                        // Skip encoding byte and extract text
+                        const textData = new Uint8Array(view.buffer, offset + 1, size - 1);
+                        const decoder = new TextDecoder(encoding === 1 ? 'utf-16' : 'utf-8');
+                        text = decoder.decode(textData).replace(/\0/g, '').trim();
+                    } catch (e) {
+                        console.warn('Error decoding ID3 text:', e);
+                    }
+
+                    if (text && (frameId === 'TIT2' || frameId === 'TPE1' || frameId === 'TALB' || frameId === 'TCON')) {
+                        frames[frameId] = text;
+                        console.log(`ID3 ${frameId}:`, text);
+                    }
+
+                    offset += size;
+                }
+            } catch (error) {
+                console.error('Error parsing ID3 frames:', error);
+            }
+
+            return frames;
+        }
+
         // Helper function to play HLS stream
         async function playHLSStream(streamUrl) {
             return new Promise((resolve, reject) => {
@@ -5300,7 +5368,66 @@
                     hlsPlayer.on(Hls.Events.MEDIA_ATTACHED, () => {
                         console.log('✅ HLS media attached to audio element');
                     });
-                    
+
+                    // Listen for ID3 metadata from HLS stream
+                    hlsPlayer.on(Hls.Events.FRAG_PARSING_METADATA, (event, data) => {
+                        console.log('📻 HLS metadata received:', data);
+
+                        if (data.samples && data.samples.length > 0) {
+                            data.samples.forEach(sample => {
+                                try {
+                                    // Parse ID3 frames
+                                    const frames = parseID3Frames(sample.data);
+
+                                    if (frames.TIT2 || frames.TPE1) {
+                                        const title = frames.TIT2 || 'Unknown Track';
+                                        const artist = frames.TPE1 || '';
+                                        const album = frames.TALB || '';
+
+                                        console.log('🎵 HLS Track Info:', { title, artist, album });
+
+                                        // Update the metadata display
+                                        metadataDiv.innerHTML = `
+                                            <div class="now-playing-label">NOW PLAYING</div>
+                                            <div class="song-title">${escapeHtml(title)}</div>
+                                            ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
+                                            ${album ? `<div class="album-name">${escapeHtml(album)}</div>` : ''}
+                                            <button class="like-btn" id="likeBtn" onclick="toggleLikeTrack()">♡</button>
+                                        `;
+
+                                        // Update current track info
+                                        currentTrack = {
+                                            title: title,
+                                            artist: artist,
+                                            album: album,
+                                            artworkUrl: null,
+                                            lyrics: null,
+                                            lyricsUrl: null,
+                                            hasLyrics: false
+                                        };
+
+                                        // Update like button
+                                        updateLikeButton();
+
+                                        // Fetch album art
+                                        fetchAlbumArt(title, artist);
+
+                                        // Fetch lyrics
+                                        fetchLyricsForCurrentTrack();
+
+                                        // Update media session
+                                        updateMediaSession(title, artist, album, null);
+
+                                        // Track the song play
+                                        trackSongPlay(title, artist);
+                                    }
+                                } catch (error) {
+                                    console.error('Error parsing HLS ID3 metadata:', error);
+                                }
+                            });
+                        }
+                    });
+
                     console.log('Loading HLS source...');
                     hlsPlayer.loadSource(streamUrl);
                     hlsPlayer.attachMedia(audioElement);
@@ -5309,25 +5436,102 @@
                     console.log('✅ Native HLS support detected (Safari)');
                     // Native HLS support (Safari)
                     audioElement.src = streamUrl;
+
+                    // Listen for metadata tracks (Safari native HLS)
+                    audioElement.textTracks.addEventListener('addtrack', (e) => {
+                        const track = e.track;
+                        if (track.kind === 'metadata') {
+                            console.log('📻 Metadata track added (native HLS)');
+                            track.mode = 'hidden';
+
+                            track.addEventListener('cuechange', () => {
+                                if (track.activeCues && track.activeCues.length > 0) {
+                                    const cue = track.activeCues[0];
+                                    console.log('📻 Native HLS metadata cue:', cue);
+
+                                    if (cue.value) {
+                                        try {
+                                            // Parse metadata from cue
+                                            const value = cue.value;
+                                            let title, artist, album;
+
+                                            // Check for common metadata formats
+                                            if (value.data) {
+                                                const frames = parseID3Frames(value.data);
+                                                title = frames.TIT2;
+                                                artist = frames.TPE1;
+                                                album = frames.TALB;
+                                            } else if (value.info) {
+                                                // Alternative format
+                                                title = value.info;
+                                            }
+
+                                            if (title || artist) {
+                                                console.log('🎵 Native HLS Track Info:', { title, artist, album });
+
+                                                // Update metadata display
+                                                metadataDiv.innerHTML = `
+                                                    <div class="now-playing-label">NOW PLAYING</div>
+                                                    <div class="song-title">${escapeHtml(title || 'Unknown Track')}</div>
+                                                    ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
+                                                    ${album ? `<div class="album-name">${escapeHtml(album)}</div>` : ''}
+                                                    <button class="like-btn" id="likeBtn" onclick="toggleLikeTrack()">♡</button>
+                                                `;
+
+                                                // Update current track
+                                                currentTrack = {
+                                                    title: title || 'Unknown Track',
+                                                    artist: artist || '',
+                                                    album: album || '',
+                                                    artworkUrl: null,
+                                                    lyrics: null,
+                                                    lyricsUrl: null,
+                                                    hasLyrics: false
+                                                };
+
+                                                // Update like button
+                                                updateLikeButton();
+
+                                                // Fetch album art
+                                                fetchAlbumArt(title || 'Unknown Track', artist || '');
+
+                                                // Fetch lyrics
+                                                fetchLyricsForCurrentTrack();
+
+                                                // Update media session
+                                                updateMediaSession(title || 'Unknown Track', artist || '', album || '', null);
+
+                                                // Track the song play
+                                                trackSongPlay(title || 'Unknown Track', artist || '');
+                                            }
+                                        } catch (error) {
+                                            console.error('Error parsing native HLS metadata:', error);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+
                     audioElement.play()
                         .then(() => {
                             console.log('✅ Native HLS playback started');
                             isPlaying = true;
                             updateStatus('Playing (HLS Stream)', 'playing');
-                            
+
                             // Display station icon as artwork for HLS streams
                             if (currentStation && currentStation.icon_url) {
                                 updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
                             } else {
                                 updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
                             }
-                            
+
                             metadataDiv.innerHTML = `
                                 <div class="now-playing-label">NOW PLAYING</div>
                                 <div class="song-title">${escapeHtml(currentStation ? currentStation.name : 'HLS Stream')}</div>
                                 <div class="artist-name">Live Stream</div>
                             `;
-                            
+
                             // Update media session with station info for HLS streams
                             if (currentStation) {
                                 updateMediaSession(
