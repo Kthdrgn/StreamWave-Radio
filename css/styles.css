@@ -2328,8 +2328,8 @@ body[data-layout="landscape"] .layout-slider {
 /* Lyrics Indicator on Artwork */
 .lyrics-indicator {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    bottom: 12px;
+    left: 12px;
     width: 40px;
     height: 40px;
     background: rgba(0, 0, 0, 0.7);
