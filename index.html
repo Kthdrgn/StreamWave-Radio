@@ -1651,8 +1651,8 @@
                 const newStation = {
                     name: station.name,
                     url: station.url_resolved || station.url,
-                    url_standard: station.url_resolved || station.url,
-                    url_high: station.url_resolved || station.url,
+                    url_low: null,
+                    url_high: null,
                     icon_url: station.favicon || '',
                     genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
                     call_letters: '',
