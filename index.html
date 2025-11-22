@@ -405,6 +405,16 @@
                         <span>Add Station</span>
                     </button>
 
+                    <!-- Radio Database Button -->
+                    <button class="menu-option-btn" id="radioDatabaseBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
+                            <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
+                            <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span>Radio Database</span>
+                    </button>
+
                     <!-- Auth Button -->
                     <button class="menu-option-btn" id="authBtn">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="authIcon">
@@ -809,6 +819,59 @@
         </div>
     </div>
 
+    <!-- Radio Database Modal -->
+    <div id="radioDatabaseModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Radio Database Search</h2>
+                <button class="modal-close" id="closeRadioDatabaseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Search Interface -->
+                <div style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <input
+                            type="text"
+                            id="radioDatabaseSearchInput"
+                            class="form-input"
+                            placeholder="Search by station name, country, language, or tag..."
+                        >
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <select id="radioDatabaseCountry" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Countries</option>
+                        </select>
+                        <select id="radioDatabaseLanguage" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Languages</option>
+                        </select>
+                        <select id="radioDatabaseTag" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Tags</option>
+                        </select>
+                        <button id="radioDatabaseSearchBtn" class="form-btn form-btn-primary" style="padding: 0 20px;">
+                            Search
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="radioDatabaseLoading" style="display: none; text-align: center; padding: 40px;">
+                    <div style="font-size: 18px; color: var(--text-secondary);">Searching...</div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="radioDatabaseError" style="display: none; padding: 20px; background: var(--error-bg, #fee); border-radius: 12px; color: var(--error-text, #c00); margin-bottom: 20px;">
+                </div>
+
+                <!-- Results Container -->
+                <div id="radioDatabaseResults" style="max-height: 500px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        Enter search criteria and click Search to find radio stations from around the world
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ======================
         // GLOBAL VARIABLES
@@ -945,7 +1008,20 @@
         const closeLikedTracksModal = document.getElementById('closeLikedTracksModal');
         const likedTracksList = document.getElementById('likedTracksList');
         const clearAllLikesBtn = document.getElementById('clearAllLikesBtn');
-        
+
+        // Radio Database elements
+        const radioDatabaseBtn = document.getElementById('radioDatabaseBtn');
+        const radioDatabaseModal = document.getElementById('radioDatabaseModal');
+        const closeRadioDatabaseModal = document.getElementById('closeRadioDatabaseModal');
+        const radioDatabaseSearchInput = document.getElementById('radioDatabaseSearchInput');
+        const radioDatabaseCountry = document.getElementById('radioDatabaseCountry');
+        const radioDatabaseLanguage = document.getElementById('radioDatabaseLanguage');
+        const radioDatabaseTag = document.getElementById('radioDatabaseTag');
+        const radioDatabaseSearchBtn = document.getElementById('radioDatabaseSearchBtn');
+        const radioDatabaseLoading = document.getElementById('radioDatabaseLoading');
+        const radioDatabaseError = document.getElementById('radioDatabaseError');
+        const radioDatabaseResults = document.getElementById('radioDatabaseResults');
+
         // ======================
         // LIKED TRACKS FUNCTIONS
         // ======================
@@ -1375,7 +1451,237 @@
         if (window.checkAuth) {
             window.checkAuth();
         }
-        
+
+        // ======================
+        // RADIO BROWSER API FUNCTIONS
+        // ======================
+
+        const RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
+
+        // Load countries, languages, and tags for the dropdowns
+        async function loadRadioBrowserFilters() {
+            try {
+                // Load top countries
+                const countriesRes = await fetch(`${RADIO_BROWSER_API_BASE}/countries?order=stationcount&reverse=true&limit=50`);
+                const countries = await countriesRes.json();
+
+                countries.forEach(country => {
+                    if (country.name && country.stationcount > 0) {
+                        const option = document.createElement('option');
+                        option.value = country.name;
+                        option.textContent = `${country.name} (${country.stationcount})`;
+                        radioDatabaseCountry.appendChild(option);
+                    }
+                });
+
+                // Load top languages
+                const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`);
+                const languages = await languagesRes.json();
+
+                languages.forEach(lang => {
+                    if (lang.name && lang.stationcount > 0) {
+                        const option = document.createElement('option');
+                        option.value = lang.name;
+                        option.textContent = `${lang.name} (${lang.stationcount})`;
+                        radioDatabaseLanguage.appendChild(option);
+                    }
+                });
+
+                // Load top tags
+                const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`);
+                const tags = await tagsRes.json();
+
+                tags.forEach(tag => {
+                    if (tag.name && tag.stationcount > 0) {
+                        const option = document.createElement('option');
+                        option.value = tag.name;
+                        option.textContent = `${tag.name} (${tag.stationcount})`;
+                        radioDatabaseTag.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading Radio Browser filters:', error);
+            }
+        }
+
+        // Search Radio Browser API
+        async function searchRadioBrowser() {
+            const searchTerm = radioDatabaseSearchInput.value.trim();
+            const country = radioDatabaseCountry.value;
+            const language = radioDatabaseLanguage.value;
+            const tag = radioDatabaseTag.value;
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (searchTerm) params.append('name', searchTerm);
+            if (country) params.append('country', country);
+            if (language) params.append('language', language);
+            if (tag) params.append('tag', tag);
+            params.append('limit', '100');
+            params.append('order', 'votes');
+            params.append('reverse', 'true');
+            params.append('hidebroken', 'true');
+
+            // Show loading
+            radioDatabaseLoading.style.display = 'block';
+            radioDatabaseError.style.display = 'none';
+            radioDatabaseResults.innerHTML = '';
+
+            try {
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch stations');
+                }
+
+                const results = await response.json();
+
+                // Hide loading
+                radioDatabaseLoading.style.display = 'none';
+
+                if (results.length === 0) {
+                    radioDatabaseResults.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            No stations found. Try different search criteria.
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render results
+                renderRadioBrowserResults(results);
+            } catch (error) {
+                console.error('Error searching Radio Browser:', error);
+                radioDatabaseLoading.style.display = 'none';
+                radioDatabaseError.style.display = 'block';
+                radioDatabaseError.textContent = 'Error searching radio stations. Please try again.';
+            }
+        }
+
+        // Render Radio Browser search results
+        function renderRadioBrowserResults(results) {
+            radioDatabaseResults.innerHTML = results.map(station => {
+                const favicon = station.favicon || '';
+                const country = station.country || 'Unknown';
+                const language = station.language || 'Unknown';
+                const tags = station.tags ? station.tags.split(',').slice(0, 3).join(', ') : '';
+                const votes = station.votes || 0;
+                const bitrate = station.bitrate || 0;
+
+                return `
+                    <div class="station-card" style="margin-bottom: 12px; padding: 16px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer;">
+                        <div style="display: flex; align-items: start; gap: 12px;">
+                            <div style="flex-shrink: 0; width: 50px; height: 50px; border-radius: 8px; overflow: hidden; background: var(--input-bg); display: flex; align-items: center; justify-content: center;">
+                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='📻'">` : '📻'}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">${station.name}</div>
+                                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">
+                                    ${country} ${language !== 'Unknown' ? `• ${language}` : ''} ${bitrate > 0 ? `• ${bitrate}kbps` : ''}
+                                </div>
+                                ${tags ? `<div style="font-size: 12px; color: var(--text-secondary);">${tags}</div>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button
+                                    class="radio-db-play-btn"
+                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
+                                    title="Play Station"
+                                    style="padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); cursor: pointer; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 4px;"
+                                >
+                                    ▶️ Play
+                                </button>
+                                <button
+                                    class="radio-db-add-btn"
+                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
+                                    title="Add to My Stations"
+                                    style="padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); cursor: pointer; font-size: 14px; color: var(--text-primary);"
+                                >
+                                    ➕
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add event listeners to play and add buttons
+            document.querySelectorAll('.radio-db-play-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const station = JSON.parse(btn.getAttribute('data-station'));
+                    playRadioBrowserStation(station);
+                });
+            });
+
+            document.querySelectorAll('.radio-db-add-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const station = JSON.parse(btn.getAttribute('data-station'));
+                    addRadioBrowserStationToDatabase(station);
+                });
+            });
+        }
+
+        // Play a station from Radio Browser
+        function playRadioBrowserStation(station) {
+            // Convert Radio Browser station to our station format
+            const ourStation = {
+                id: null, // Temporary station, not in our database
+                name: station.name,
+                url: station.url_resolved || station.url,
+                icon_url: station.favicon || '',
+                genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
+                call_letters: '',
+                frequency: ''
+            };
+
+            // Close the radio database modal
+            radioDatabaseModal.classList.remove('active');
+
+            // Select and play the station
+            selectStation(ourStation);
+            setTimeout(() => {
+                playPauseBtn.click();
+            }, 100);
+        }
+
+        // Add a Radio Browser station to our database
+        async function addRadioBrowserStationToDatabase(station) {
+            try {
+                const newStation = {
+                    name: station.name,
+                    url: station.url_resolved || station.url,
+                    url_standard: station.url_resolved || station.url,
+                    url_high: station.url_resolved || station.url,
+                    icon_url: station.favicon || '',
+                    genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                    call_letters: '',
+                    frequency: '',
+                    description: `${station.country || ''} ${station.language ? `• ${station.language}` : ''}`.trim(),
+                    user_id: window.currentUser?.id || null
+                };
+
+                const { data, error } = await supabase
+                    .from('radio_stations')
+                    .insert([newStation])
+                    .select();
+
+                if (error) {
+                    console.error('Error adding station:', error);
+                    alert('Error adding station to database. Please try again.');
+                    return;
+                }
+
+                // Reload stations
+                await loadStations(true);
+
+                alert(`Successfully added "${station.name}" to your stations!`);
+            } catch (error) {
+                console.error('Error adding station:', error);
+                alert('Error adding station. Please try again.');
+            }
+        }
+
         // ======================
         // DATABASE FUNCTIONS
         // ======================
@@ -3446,6 +3752,40 @@
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
                 settingsModal.classList.remove('active');
+            }
+        });
+
+        // Radio Database button - opens radio database modal
+        radioDatabaseBtn.addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            radioDatabaseModal.classList.add('active');
+            // Load filters if not already loaded
+            if (radioDatabaseCountry.options.length === 1) {
+                loadRadioBrowserFilters();
+            }
+        });
+
+        // Close Radio Database modal
+        closeRadioDatabaseModal.addEventListener('click', () => {
+            radioDatabaseModal.classList.remove('active');
+        });
+
+        // Close Radio Database modal when clicking outside
+        radioDatabaseModal.addEventListener('click', (e) => {
+            if (e.target === radioDatabaseModal) {
+                radioDatabaseModal.classList.remove('active');
+            }
+        });
+
+        // Radio Database search button
+        radioDatabaseSearchBtn.addEventListener('click', () => {
+            searchRadioBrowser();
+        });
+
+        // Radio Database search on Enter key
+        radioDatabaseSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchRadioBrowser();
             }
         });
 
