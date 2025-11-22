@@ -1521,13 +1521,6 @@
             params.append('reverse', 'true');
             params.append('hidebroken', 'true');
 
-            // When on HTTPS, prefer HTTPS streams to avoid mixed content issues
-            // Note: Some streams might only be available via HTTP
-            if (window.location.protocol === 'https:') {
-                console.log('On HTTPS page - prioritizing HTTPS streams');
-                // We'll filter results client-side to show HTTPS first
-            }
-
             // Show loading
             radioDatabaseLoading.style.display = 'block';
             radioDatabaseError.style.display = 'none';
@@ -1540,7 +1533,7 @@
                     throw new Error('Failed to fetch stations');
                 }
 
-                let results = await response.json();
+                const results = await response.json();
 
                 // Hide loading
                 radioDatabaseLoading.style.display = 'none';
@@ -1552,22 +1545,6 @@
                         </div>
                     `;
                     return;
-                }
-
-                // When on HTTPS, sort results to prioritize HTTPS streams
-                if (window.location.protocol === 'https:') {
-                    results = results.sort((a, b) => {
-                        const aUrl = a.url_resolved || a.url || '';
-                        const bUrl = b.url_resolved || b.url || '';
-                        const aIsHttps = aUrl.startsWith('https://');
-                        const bIsHttps = bUrl.startsWith('https://');
-
-                        if (aIsHttps && !bIsHttps) return -1;  // HTTPS first
-                        if (!aIsHttps && bIsHttps) return 1;   // HTTP last
-                        return 0;  // Keep original order for same protocol
-                    });
-
-                    console.log(`Sorted ${results.length} stations - HTTPS streams shown first`);
                 }
 
                 // Render results
@@ -1582,44 +1559,13 @@
 
         // Render Radio Browser search results
         function renderRadioBrowserResults(results) {
-            const isOnHttps = window.location.protocol === 'https:';
-
-            // Add warning banner if on HTTPS and some stations are HTTP-only
-            let warningBanner = '';
-            if (isOnHttps) {
-                const httpOnlyCount = results.filter(s => {
-                    const url = s.url_resolved || s.url || '';
-                    return url.startsWith('http://');
-                }).length;
-
-                if (httpOnlyCount > 0) {
-                    warningBanner = `
-                        <div style="margin-bottom: 16px; padding: 12px; border-radius: 8px; background: rgba(255, 193, 7, 0.1); border: 2px solid rgba(255, 193, 7, 0.3); color: var(--text-primary);">
-                            <div style="font-weight: 600; margin-bottom: 4px;">⚠️ Mixed Content Warning</div>
-                            <div style="font-size: 13px; line-height: 1.5;">
-                                ${httpOnlyCount} of ${results.length} stations use HTTP-only streams, which may not work on this HTTPS page due to browser security restrictions.
-                                Look for stations with the 🔒 badge for best compatibility.
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-
-            radioDatabaseResults.innerHTML = warningBanner + results.map(station => {
+            radioDatabaseResults.innerHTML = results.map(station => {
                 const favicon = station.favicon || '';
                 const country = station.country || 'Unknown';
                 const language = station.language || 'Unknown';
                 const tags = station.tags ? station.tags.split(',').slice(0, 3).join(', ') : '';
                 const votes = station.votes || 0;
                 const bitrate = station.bitrate || 0;
-
-                // Check if stream URL is HTTPS
-                const streamUrl = station.url_resolved || station.url || '';
-                const isHttps = streamUrl.startsWith('https://');
-                const protocolBadge = isOnHttps ? (isHttps
-                    ? '<span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(76, 175, 80, 0.2); color: #4CAF50; font-weight: 600;">🔒 HTTPS</span>'
-                    : '<span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(244, 67, 54, 0.2); color: #f44336; font-weight: 600;">⚠️ HTTP</span>'
-                ) : '';
 
                 return `
                     <div class="station-card" style="margin-bottom: 12px; padding: 16px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer;">
@@ -1628,10 +1574,7 @@
                                 ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='📻'">` : '📻'}
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                    <div style="font-weight: 600; font-size: 16px; color: var(--text-primary);">${station.name}</div>
-                                    ${protocolBadge}
-                                </div>
+                                <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">${station.name}</div>
                                 <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">
                                     ${country} ${language !== 'Unknown' ? `• ${language}` : ''} ${bitrate > 0 ? `• ${bitrate}kbps` : ''}
                                 </div>
@@ -6131,35 +6074,21 @@
             const useCorsProxy = document.getElementById('globalCorsProxy').checked;
 
             // Define multiple CORS proxy services for fallback
-            // ⚠️ IMPORTANT: Public CORS proxies are unreliable and often blocked/rate-limited
-            //
-            // For production use, consider:
-            // 1. Prefer HTTPS radio streams (use Radio Browser search with 🔒 badge)
-            // 2. Self-host a CORS proxy (see: https://github.com/Rob--W/cors-anywhere)
-            // 3. Deploy your own simple proxy on Cloudflare Workers, Vercel, or similar
-            //
-            // To add a self-hosted proxy:
-            // - Add it as the first item in this array with your proxy URL
-            // - Example: { name: 'my-proxy', url: (streamUrl) => `https://my-proxy.com/${streamUrl}` }
-            //
             const corsProxies = [
                 { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
-                { name: 'cors.eu.org', url: (streamUrl) => `https://cors.eu.org/${streamUrl}` },
-                { name: 'api.codetabs.com', url: (streamUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(streamUrl)}` },
-                { name: 'thingproxy.freeboard.io', url: (streamUrl) => `https://thingproxy.freeboard.io/fetch/${streamUrl}` }
+                { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
+                { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
             ];
 
-            // Prioritize direct connections first, then fall back to CORS proxies
+            // Prioritize most successful combinations
             // For HTTPS pages with HTTP streams, include multiple CORS proxy attempts
             const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
             let attempts = [
-                // Try direct connections first - works if server has proper CORS headers
-                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
-                { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
-                // Then try CORS proxies
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
+                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
+                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
             ];
 
@@ -6240,16 +6169,13 @@
                         // Create HTML5 audio player directly
                         const testAudio = new Audio();
 
-                        // Determine stream URL - use CORS proxy only if specified in attempt
+                        // Use CORS proxy for HTTP URLs when on HTTPS page (mixed content fix)
                         let simpleUrl = rawUrl;
-                        if (attempt.corsProxyIndex !== undefined) {
-                            // This attempt specifies a CORS proxy to use
-                            const proxy = corsProxies[attempt.corsProxyIndex];
-                            console.log(`Using ${proxy.name} for simple mode stream`);
+                        if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
+                            const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
+                            const proxy = corsProxies[proxyIndex];
+                            console.log(`🔒 Mixed content detected: using ${proxy.name} for HTTP stream on HTTPS page`);
                             simpleUrl = proxy.url(rawUrl);
-                        } else if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
-                            // Direct attempt on mixed content - let browser decide
-                            console.log(`⚠️ Attempting direct HTTP stream on HTTPS page - may be blocked by browser`);
                         }
 
                         testAudio.src = simpleUrl;
@@ -6372,20 +6298,19 @@
                 }
                 
                 // Regular IcecastMetadataPlayer attempts
+                // Force CORS proxy for HTTP URLs on HTTPS pages to avoid mixed content errors
                 let streamUrl;
                 const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
                 const proxy = corsProxies[proxyIndex];
 
                 if (attempt.cors) {
-                    // Explicitly using CORS proxy
                     streamUrl = proxy.url(attempt.url);
                     console.log(`Using ${proxy.name} for stream`);
+                } else if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
+                    console.log(`🔒 Mixed content detected: forcing ${proxy.name} for HTTP stream on HTTPS page`);
+                    streamUrl = proxy.url(attempt.url);
                 } else {
-                    // Direct connection - let browser handle mixed content
                     streamUrl = attempt.url;
-                    if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
-                        console.log(`⚠️ Attempting direct HTTP stream on HTTPS page - may be blocked by browser`);
-                    }
                 }
                 
                 console.log(`Attempting connection ${i + 1}/${attempts.length} - ${attempt.description}`);
