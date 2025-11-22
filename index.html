@@ -1657,8 +1657,8 @@
                     genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
                     call_letters: '',
                     frequency: '',
-                    description: `${station.country || ''} ${station.language ? `• ${station.language}` : ''}`.trim(),
-                    user_id: window.currentUser?.id || null
+                    website_url: station.homepage || null,
+                    description: `${station.country || ''} ${station.language ? `• ${station.language}` : ''}`.trim()
                 };
 
                 const { data, error } = await supabase
