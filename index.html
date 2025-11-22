@@ -6074,21 +6074,25 @@
             const useCorsProxy = document.getElementById('globalCorsProxy').checked;
 
             // Define multiple CORS proxy services for fallback
+            // Note: Public CORS proxies are unreliable. Consider self-hosting for production use.
             const corsProxies = [
                 { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
-                { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
-                { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
+                { name: 'cors.eu.org', url: (streamUrl) => `https://cors.eu.org/${streamUrl}` },
+                { name: 'api.codetabs.com', url: (streamUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(streamUrl)}` },
+                { name: 'thingproxy.freeboard.io', url: (streamUrl) => `https://thingproxy.freeboard.io/fetch/${streamUrl}` }
             ];
 
-            // Prioritize most successful combinations
+            // Prioritize direct connections first, then fall back to CORS proxies
             // For HTTPS pages with HTTP streams, include multiple CORS proxy attempts
             const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
             let attempts = [
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
+                // Try direct connections first - works if server has proper CORS headers
                 { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
+                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
+                { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
+                // Then try CORS proxies
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
             ];
 
@@ -6169,13 +6173,16 @@
                         // Create HTML5 audio player directly
                         const testAudio = new Audio();
 
-                        // Use CORS proxy for HTTP URLs when on HTTPS page (mixed content fix)
+                        // Determine stream URL - use CORS proxy only if specified in attempt
                         let simpleUrl = rawUrl;
-                        if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
-                            const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
-                            const proxy = corsProxies[proxyIndex];
-                            console.log(`🔒 Mixed content detected: using ${proxy.name} for HTTP stream on HTTPS page`);
+                        if (attempt.corsProxyIndex !== undefined) {
+                            // This attempt specifies a CORS proxy to use
+                            const proxy = corsProxies[attempt.corsProxyIndex];
+                            console.log(`Using ${proxy.name} for simple mode stream`);
                             simpleUrl = proxy.url(rawUrl);
+                        } else if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
+                            // Direct attempt on mixed content - let browser decide
+                            console.log(`⚠️ Attempting direct HTTP stream on HTTPS page - may be blocked by browser`);
                         }
 
                         testAudio.src = simpleUrl;
@@ -6298,19 +6305,20 @@
                 }
                 
                 // Regular IcecastMetadataPlayer attempts
-                // Force CORS proxy for HTTP URLs on HTTPS pages to avoid mixed content errors
                 let streamUrl;
                 const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
                 const proxy = corsProxies[proxyIndex];
 
                 if (attempt.cors) {
+                    // Explicitly using CORS proxy
                     streamUrl = proxy.url(attempt.url);
                     console.log(`Using ${proxy.name} for stream`);
-                } else if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
-                    console.log(`🔒 Mixed content detected: forcing ${proxy.name} for HTTP stream on HTTPS page`);
-                    streamUrl = proxy.url(attempt.url);
                 } else {
+                    // Direct connection - let browser handle mixed content
                     streamUrl = attempt.url;
+                    if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
+                        console.log(`⚠️ Attempting direct HTTP stream on HTTPS page - may be blocked by browser`);
+                    }
                 }
                 
                 console.log(`Attempting connection ${i + 1}/${attempts.length} - ${attempt.description}`);
