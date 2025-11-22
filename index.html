@@ -5488,10 +5488,13 @@
         // Helper function to play HLS stream
         async function playHLSStream(streamUrl) {
             return new Promise((resolve, reject) => {
-                // Upgrade HTTP to HTTPS if we're on an HTTPS page (mixed content fix)
+                // Handle mixed content: HTTP streams on HTTPS pages
                 if (window.location.protocol === 'https:' && streamUrl.startsWith('http://')) {
+                    // Try to upgrade to HTTPS first (works for domains with SSL)
+                    // But for IP addresses, we'll need CORS proxy (handled in retry logic)
                     const httpsUrl = streamUrl.replace('http://', 'https://');
-                    console.log('🔒 Upgrading HTTP stream to HTTPS:', streamUrl, '→', httpsUrl);
+                    console.log('🔒 Attempting to upgrade HTTP stream to HTTPS:', streamUrl, '→', httpsUrl);
+                    console.log('Note: If this fails (e.g., IP address), fallback methods will use CORS proxy');
                     streamUrl = httpsUrl;
                 }
                 
@@ -5895,9 +5898,17 @@
                 
                 // Check if CORS proxy should be used
                 const useCorsProxy = document.getElementById('globalCorsProxy').checked;
-                const streamUrl = useCorsProxy 
+
+                // Force CORS proxy for HTTP URLs on HTTPS pages (mixed content fix)
+                const needsCorsForMixedContent = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
+
+                const streamUrl = (useCorsProxy || needsCorsForMixedContent)
                     ? `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
                     : rawUrl;
+
+                if (needsCorsForMixedContent && !useCorsProxy) {
+                    console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
+                }
                 
                 playPauseBtn.disabled = true;
                 updateStatus('Connecting...', 'loading');
@@ -6104,10 +6115,18 @@
                     try {
                         updateStatus(`Attempting ${i + 1}/${attempts.length}: ${attempt.description}`, 'loading');
                         displayStationIcon();
-                        
+
                         // Create HTML5 audio player directly
                         const testAudio = new Audio();
-                        testAudio.src = rawUrl;
+
+                        // Use CORS proxy for HTTP URLs when on HTTPS page (mixed content fix)
+                        let simpleUrl = rawUrl;
+                        if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
+                            console.log('🔒 Mixed content detected: using CORS proxy for HTTP stream on HTTPS page');
+                            simpleUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+                        }
+
+                        testAudio.src = simpleUrl;
                         testAudio.preload = 'auto';
                         
                         // Wait for it to load and play
@@ -6208,9 +6227,16 @@
                 }
                 
                 // Regular IcecastMetadataPlayer attempts
-                const streamUrl = attempt.cors 
-                    ? `https://corsproxy.io/?${encodeURIComponent(attempt.url)}`
-                    : attempt.url;
+                // Force CORS proxy for HTTP URLs on HTTPS pages to avoid mixed content errors
+                let streamUrl;
+                if (attempt.cors) {
+                    streamUrl = `https://corsproxy.io/?${encodeURIComponent(attempt.url)}`;
+                } else if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
+                    console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
+                    streamUrl = `https://corsproxy.io/?${encodeURIComponent(attempt.url)}`;
+                } else {
+                    streamUrl = attempt.url;
+                }
                 
                 console.log(`Attempting connection ${i + 1}/${attempts.length} - ${attempt.description}`);
                 
