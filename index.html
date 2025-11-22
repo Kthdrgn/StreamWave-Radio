@@ -6072,25 +6072,75 @@
             
             // Regular Icecast/Shoutcast stream handling
             const useCorsProxy = document.getElementById('globalCorsProxy').checked;
-            
-            // Prioritize most successful combinations
-            let attempts = [
-                { url: rawUrl, cors: true, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
-                { url: rawUrl, cors: true, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
-                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                { url: rawUrl, cors: true, metadata: [], description: 'CORS Proxy (No Metadata)' }
+
+            // Define multiple CORS proxy services for fallback
+            const corsProxies = [
+                { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
+                { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
+                { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
             ];
-            
+
+            // Prioritize most successful combinations
+            // For HTTPS pages with HTTP streams, include multiple CORS proxy attempts
+            const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
+
+            let attempts = [
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
+                { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
+                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
+            ];
+
+            // If mixed content fix is needed, add fallback attempts with alternative CORS proxies
+            if (needsMixedContentFix) {
+                // Add simple mode attempts with different CORS proxies
+                const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
+                if (simpleModeIndex !== -1) {
+                    // Insert alternative proxy attempts after the first simple mode attempt
+                    for (let j = 1; j < corsProxies.length; j++) {
+                        attempts.splice(simpleModeIndex + j, 0, {
+                            url: rawUrl,
+                            cors: false,
+                            corsProxyIndex: j,
+                            metadata: [],
+                            description: `Simple Mode (${corsProxies[j].name})`
+                        });
+                    }
+                }
+
+                // Add metadata attempts with alternative proxies
+                attempts.push(
+                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` },
+                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: [], description: `${corsProxies[1].name} (No Metadata)` }
+                );
+            }
+
             if (!useCorsProxy) {
                 // If CORS proxy is disabled, try direct connections first
                 attempts = [
                     { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
                     { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
                     { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
-                    { url: rawUrl, cors: true, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                    { url: rawUrl, cors: true, metadata: [], description: 'CORS Proxy (No Metadata)' }
+                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
+                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
                 ];
+
+                // Even with CORS proxy disabled, add fallbacks if mixed content fix is needed
+                if (needsMixedContentFix) {
+                    const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
+                    if (simpleModeIndex !== -1) {
+                        for (let j = 1; j < corsProxies.length; j++) {
+                            attempts.splice(simpleModeIndex + j, 0, {
+                                url: rawUrl,
+                                cors: false,
+                                corsProxyIndex: j,
+                                metadata: [],
+                                description: `Simple Mode (${corsProxies[j].name})`
+                            });
+                        }
+                    }
+                }
             }
             
             let lastError = null;
@@ -6099,9 +6149,9 @@
                 const attempt = attempts[i];
                 
                 // Special handling for Simple Mode attempt
-                if (attempt.description === 'Simple Mode (Direct)') {
+                if (attempt.description.startsWith('Simple Mode')) {
                     console.log(`Attempting connection ${i + 1}/${attempts.length} - ${attempt.description}`);
-                    
+
                     // Update metadata area with current attempt
                     metadataDiv.innerHTML = `
                         <div class="now-playing-label">CONNECTING</div>
@@ -6111,7 +6161,7 @@
                             <div class="track-artist" style="font-size: 11px; opacity: 0.6; margin-top: 4px;">Testing HTML5 audio compatibility</div>
                         </div>
                     `;
-                    
+
                     try {
                         updateStatus(`Attempting ${i + 1}/${attempts.length}: ${attempt.description}`, 'loading');
                         displayStationIcon();
@@ -6122,8 +6172,10 @@
                         // Use CORS proxy for HTTP URLs when on HTTPS page (mixed content fix)
                         let simpleUrl = rawUrl;
                         if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
-                            console.log('🔒 Mixed content detected: using CORS proxy for HTTP stream on HTTPS page');
-                            simpleUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+                            const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
+                            const proxy = corsProxies[proxyIndex];
+                            console.log(`🔒 Mixed content detected: using ${proxy.name} for HTTP stream on HTTPS page`);
+                            simpleUrl = proxy.url(rawUrl);
                         }
 
                         testAudio.src = simpleUrl;
@@ -6201,11 +6253,30 @@
                                 }).catch(reject);
                             }, { once: true });
                             
-                            testAudio.addEventListener('error', () => {
+                            testAudio.addEventListener('error', (e) => {
                                 clearTimeout(timeoutTimer);
+                                const audioError = testAudio.error;
+                                let errorMsg = 'Simple mode failed to load';
+
+                                if (audioError) {
+                                    const errorTypes = {
+                                        1: 'MEDIA_ERR_ABORTED - Loading was aborted',
+                                        2: 'MEDIA_ERR_NETWORK - Network error occurred',
+                                        3: 'MEDIA_ERR_DECODE - Decoding error occurred',
+                                        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
+                                    };
+                                    errorMsg += ` (${errorTypes[audioError.code] || 'Unknown error code: ' + audioError.code})`;
+                                    if (audioError.message) {
+                                        errorMsg += `: ${audioError.message}`;
+                                    }
+                                }
+
+                                console.error('Simple mode error details:', errorMsg);
+                                console.error('Stream URL:', simpleUrl);
+
                                 testAudio.pause();
                                 testAudio.src = '';
-                                reject(new Error('Simple mode failed to load'));
+                                reject(new Error(errorMsg));
                             }, { once: true });
                             
                             // Start loading
@@ -6229,11 +6300,15 @@
                 // Regular IcecastMetadataPlayer attempts
                 // Force CORS proxy for HTTP URLs on HTTPS pages to avoid mixed content errors
                 let streamUrl;
+                const proxyIndex = attempt.corsProxyIndex !== undefined ? attempt.corsProxyIndex : 0;
+                const proxy = corsProxies[proxyIndex];
+
                 if (attempt.cors) {
-                    streamUrl = `https://corsproxy.io/?${encodeURIComponent(attempt.url)}`;
+                    streamUrl = proxy.url(attempt.url);
+                    console.log(`Using ${proxy.name} for stream`);
                 } else if (window.location.protocol === 'https:' && attempt.url.startsWith('http://')) {
-                    console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
-                    streamUrl = `https://corsproxy.io/?${encodeURIComponent(attempt.url)}`;
+                    console.log(`🔒 Mixed content detected: forcing ${proxy.name} for HTTP stream on HTTPS page`);
+                    streamUrl = proxy.url(attempt.url);
                 } else {
                     streamUrl = attempt.url;
                 }
