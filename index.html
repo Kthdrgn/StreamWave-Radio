@@ -877,8 +877,7 @@
         // GLOBAL VARIABLES
         // ======================
 
-        // Genius API Configuration
-        const GENIUS_ACCESS_TOKEN = 'waKyhAKycvCTd9xm6Chzy-ZpSO65OWt8QEGE7qH0QkVxLYuLG3CfoP-eqPlanDUn';
+        // LrcLib API - No access token needed
 
         let supabase;
         let player = null;
@@ -5144,136 +5143,51 @@
         }
 
         // ======================
-        // GENIUS LYRICS API
+        // LRCLIB LYRICS API
         // ======================
 
-        // Search for lyrics using Genius API
-        async function searchGeniusLyrics(title, artist) {
+        // Fetch lyrics using LrcLib API
+        async function fetchLrcLibLyrics(title, artist) {
             if (!title || !artist) {
                 return null;
             }
 
             try {
-                const searchQuery = encodeURIComponent(`${artist} ${title}`);
-                // Use CORS proxy for the API request and pass token as query parameter
-                const corsProxy = 'https://corsproxy.io/?';
-                const searchUrl = `https://api.genius.com/search?q=${searchQuery}&access_token=${GENIUS_ACCESS_TOKEN}`;
-                const proxiedUrl = corsProxy + encodeURIComponent(searchUrl);
+                const params = new URLSearchParams({
+                    artist_name: artist,
+                    track_name: title
+                });
 
-                const response = await fetch(proxiedUrl);
+                const url = `https://lrclib.net/api/get?${params}`;
+                console.log(`Fetching lyrics from LrcLib: "${artist}" - "${title}"`);
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
-                    console.error('Genius API search failed:', response.status);
+                    if (response.status === 404) {
+                        console.log('No lyrics found on LrcLib');
+                    } else {
+                        console.error('LrcLib API request failed:', response.status);
+                    }
                     return null;
                 }
 
                 const data = await response.json();
 
-                if (data.response.hits && data.response.hits.length > 0) {
-                    // Get the first hit (most relevant)
-                    const hit = data.response.hits[0];
+                // LrcLib returns plainLyrics and syncedLyrics
+                // We'll use plainLyrics for radio streams since we can't sync
+                if (data.plainLyrics) {
                     return {
-                        url: hit.result.url,
-                        title: hit.result.title,
-                        artist: hit.result.primary_artist.name,
-                        thumbnail: hit.result.song_art_image_thumbnail_url
+                        lyrics: data.plainLyrics,
+                        trackName: data.trackName,
+                        artistName: data.artistName,
+                        albumName: data.albumName
                     };
                 }
 
                 return null;
             } catch (error) {
-                console.error('Error searching Genius lyrics:', error);
-                return null;
-            }
-        }
-
-        // Fetch lyrics from Genius song page
-        async function fetchGeniusLyrics(geniusUrl) {
-            try {
-                // Use a CORS proxy to fetch the lyrics page
-                const corsProxy = 'https://corsproxy.io/?';
-                const response = await fetch(corsProxy + encodeURIComponent(geniusUrl));
-                const html = await response.text();
-
-                // Parse lyrics from the HTML
-                // Genius uses data-lyrics-container attribute for lyrics divs
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const lyricsContainers = doc.querySelectorAll('[data-lyrics-container="true"]');
-
-                if (lyricsContainers.length === 0) {
-                    return null;
-                }
-
-                let lyrics = '';
-
-                // Process each lyrics container
-                lyricsContainers.forEach((container, index) => {
-                    // Clone the container to manipulate it
-                    const clone = container.cloneNode(true);
-
-                    // Process the DOM tree to extract formatted text
-                    function processNode(node) {
-                        let result = '';
-
-                        node.childNodes.forEach(child => {
-                            if (child.nodeType === Node.TEXT_NODE) {
-                                // Add text content
-                                result += child.textContent;
-                            } else if (child.nodeType === Node.ELEMENT_NODE) {
-                                const tagName = child.tagName.toLowerCase();
-
-                                if (tagName === 'br') {
-                                    // Line break
-                                    result += '\n';
-                                } else if (tagName === 'a' && child.classList.contains('ReferentFragmentdesktop__ClickTarget')) {
-                                    // This is a regular lyrics line (Genius wraps lines in <a> tags)
-                                    result += processNode(child);
-                                } else if (tagName === 'span' || tagName === 'i' || tagName === 'b') {
-                                    // Inline elements - just get their content
-                                    result += processNode(child);
-                                } else if (tagName === 'div') {
-                                    // Check if this is a section header (like [Verse 1], [Chorus])
-                                    const text = child.textContent.trim();
-                                    if (text.match(/^\[.*\]$/)) {
-                                        // Section header - add extra spacing
-                                        result += '\n' + text + '\n';
-                                    } else {
-                                        // Regular div - process content and add line break
-                                        const content = processNode(child);
-                                        if (content.trim()) {
-                                            result += content + '\n';
-                                        }
-                                    }
-                                } else {
-                                    // Other elements - process recursively
-                                    result += processNode(child);
-                                }
-                            }
-                        });
-
-                        return result;
-                    }
-
-                    const containerText = processNode(clone);
-                    lyrics += containerText;
-
-                    // Add spacing between containers if there are multiple
-                    if (index < lyricsContainers.length - 1) {
-                        lyrics += '\n';
-                    }
-                });
-
-                // Clean up excessive newlines while preserving intentional spacing
-                lyrics = lyrics
-                    .replace(/\n{4,}/g, '\n\n\n')  // Max 3 newlines (2 blank lines)
-                    .replace(/^\n+/, '')  // Remove leading newlines
-                    .replace(/\n+$/, '')  // Remove trailing newlines
-                    .trim();
-
-                return lyrics || null;
-            } catch (error) {
-                console.error('Error fetching Genius lyrics:', error);
+                console.error('Error fetching LrcLib lyrics:', error);
                 return null;
             }
         }
@@ -5296,32 +5210,27 @@
             lastFetchedLyrics = { title: currentTrack.title, artist: currentTrack.artist };
 
             try {
-                console.log(`Searching Genius for lyrics: "${currentTrack.artist}" - "${currentTrack.title}"`);
+                // Fetch lyrics from LrcLib
+                const result = await fetchLrcLibLyrics(currentTrack.title, currentTrack.artist);
 
-                // Search for the song on Genius
-                const geniusResult = await searchGeniusLyrics(currentTrack.title, currentTrack.artist);
-
-                if (geniusResult) {
-                    currentTrack.lyricsUrl = geniusResult.url;
+                if (result && result.lyrics) {
+                    currentTrack.lyrics = result.lyrics;
+                    currentTrack.lyricsUrl = 'https://lrclib.net'; // Link to LrcLib homepage
                     currentTrack.hasLyrics = true;
-
-                    // Fetch the actual lyrics
-                    const lyrics = await fetchGeniusLyrics(geniusResult.url);
-                    if (lyrics) {
-                        currentTrack.lyrics = lyrics;
-                    }
-
-                    // Update artwork to show lyrics indicator
-                    updateLyricsIndicator();
+                    console.log('Lyrics fetched successfully from LrcLib');
                 } else {
                     currentTrack.hasLyrics = false;
                     currentTrack.lyrics = null;
                     currentTrack.lyricsUrl = null;
-                    updateLyricsIndicator();
                 }
+
+                // Update artwork to show lyrics indicator
+                updateLyricsIndicator();
             } catch (error) {
                 console.error('Error fetching lyrics:', error);
                 currentTrack.hasLyrics = false;
+                currentTrack.lyrics = null;
+                currentTrack.lyricsUrl = null;
                 updateLyricsIndicator();
             }
         }
@@ -5380,23 +5289,10 @@
 
                 // Add attribution link
                 if (currentTrack.lyricsUrl) {
-                    lyricsContent.innerHTML += `<div class="lyrics-attribution">Lyrics from <a href="${currentTrack.lyricsUrl}" target="_blank" rel="noopener noreferrer">Genius</a></div>`;
+                    lyricsContent.innerHTML += `<div class="lyrics-attribution">Lyrics from <a href="${currentTrack.lyricsUrl}" target="_blank" rel="noopener noreferrer">LrcLib</a></div>`;
                 }
             } else {
-                lyricsContent.innerHTML = '<div class="lyrics-loading">Loading lyrics...</div>';
-
-                // Try to fetch lyrics if not already loaded
-                fetchGeniusLyrics(currentTrack.lyricsUrl).then(lyrics => {
-                    if (lyrics) {
-                        currentTrack.lyrics = lyrics;
-                        lyricsContent.innerHTML = `<pre class="lyrics-text">${escapeHtml(lyrics)}</pre>`;
-                        if (currentTrack.lyricsUrl) {
-                            lyricsContent.innerHTML += `<div class="lyrics-attribution">Lyrics from <a href="${currentTrack.lyricsUrl}" target="_blank" rel="noopener noreferrer">Genius</a></div>`;
-                        }
-                    } else {
-                        lyricsContent.innerHTML = '<div class="lyrics-error">Failed to load lyrics. Please try again later.</div>';
-                    }
-                });
+                lyricsContent.innerHTML = '<div class="lyrics-error">Lyrics not available for this track.</div>';
             }
 
             modal.classList.add('active');
