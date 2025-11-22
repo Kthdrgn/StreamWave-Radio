@@ -5851,6 +5851,7 @@
                 if (isPlaying && simpleAudioPlayer && !simpleAudioPlayer.paused) {
                     simpleAudioPlayer.pause();
                     isPlaying = false;
+                    isPaused = true;
                     updateStatus('Paused', 'stopped');
                     updatePlayPauseButton(false);
                     return;
@@ -5874,6 +5875,7 @@
                             updateStatus('Error: Unable to resume stream', 'error');
                         });
                         isPlaying = true;
+                        isPaused = false;
                         updateStatus('Playing', 'playing');
                         updatePlayPauseButton(true);
                         return;
