@@ -6135,14 +6135,30 @@
             //
             // For production use, consider:
             // 1. Prefer HTTPS radio streams (use Radio Browser search with 🔒 badge)
-            // 2. Self-host a CORS proxy (see: https://github.com/Rob--W/cors-anywhere)
+            // 2. Self-host a CORS proxy (see: cors-proxy/README.md in this repository)
             // 3. Deploy your own simple proxy on Cloudflare Workers, Vercel, or similar
             //
-            // To add a self-hosted proxy:
-            // - Add it as the first item in this array with your proxy URL
-            // - Example: { name: 'my-proxy', url: (streamUrl) => `https://my-proxy.com/${streamUrl}` }
+            // ═══════════════════════════════════════════════════════════════════════
+            // SELF-HOSTED PROXY SETUP (Recommended for reliability!)
+            // ═══════════════════════════════════════════════════════════════════════
+            // This repository includes a ready-to-deploy CORS proxy in /cors-proxy
+            //
+            // Quick Setup:
+            // 1. cd cors-proxy && npm install
+            // 2. Deploy to Heroku/Railway/Render (see cors-proxy/README.md)
+            // 3. Add your proxy URL below as the FIRST item (highest priority)
+            //
+            // Example after deploying to https://my-proxy.herokuapp.com:
+            // const corsProxies = [
+            //     { name: 'my-proxy', url: (streamUrl) => `https://my-proxy.herokuapp.com/${streamUrl}` },
+            //     ...rest of proxies below as fallbacks
+            // ];
             //
             const corsProxies = [
+                // 👇 ADD YOUR SELF-HOSTED PROXY HERE (uncomment and update URL):
+                // { name: 'my-proxy', url: (streamUrl) => `https://my-proxy.herokuapp.com/${streamUrl}` },
+
+                // Public fallback proxies (may be unreliable or rate-limited)
                 { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
                 { name: 'cors.eu.org', url: (streamUrl) => `https://cors.eu.org/${streamUrl}` },
                 { name: 'api.codetabs.com', url: (streamUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(streamUrl)}` },
