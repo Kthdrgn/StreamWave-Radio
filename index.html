@@ -6098,8 +6098,8 @@
             // ];
             //
             const corsProxies = [
-                // 👇 ADD YOUR SELF-HOSTED PROXY HERE (uncomment and update URL):
-                // { name: 'my-proxy', url: (streamUrl) => `https://my-proxy.herokuapp.com/${streamUrl}` },
+                // 👇 Self-hosted CORS proxy (highest priority):
+                { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
 
                 // Public fallback proxies (may be unreliable or rate-limited)
                 { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
