@@ -6113,7 +6113,13 @@
             // ];
             //
             const corsProxies = [
-                // 👇 Self-hosted CORS proxy (highest priority):
+                // 👇 Self-hosted CORS proxies (highest priority):
+
+                // Cloudflare Worker (recommended - fastest, global edge deployment)
+                // After deploying your worker, uncomment and replace YOUR-SUBDOMAIN:
+                // { name: 'cloudflare-worker', url: (streamUrl) => `https://streamwave-cors-proxy.YOUR-SUBDOMAIN.workers.dev/${streamUrl}` },
+
+                // Render.com (fallback - free tier with cold starts)
                 { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
 
                 // Public fallback proxies (may be unreliable or rate-limited)

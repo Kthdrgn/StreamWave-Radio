@@ -1,0 +1,29 @@
+# Cloudflare Worker Configuration for StreamWave Radio CORS Proxy
+
+name = "streamwave-cors-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Account ID - Replace with your Cloudflare account ID
+# Find it at: https://dash.cloudflare.com/ (in the URL or sidebar)
+# account_id = "your-account-id-here"
+
+# Workers Free Tier includes:
+# - 100,000 requests/day
+# - 10ms CPU time per request
+# - No custom domains on free tier (use *.workers.dev subdomain)
+
+# Upgrade to Paid ($5/month) for:
+# - 10 million requests/month included
+# - Custom domains
+# - Higher CPU limits
+
+[env.production]
+name = "streamwave-cors-proxy"
+# Optionally configure a custom domain on paid plan:
+# routes = [
+#   { pattern = "proxy.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+[env.staging]
+name = "streamwave-cors-proxy-staging"
