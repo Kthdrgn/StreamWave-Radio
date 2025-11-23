@@ -885,6 +885,7 @@
         let audioElement = null;
         let simpleAudioPlayer = null;
         let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
+        let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
         let currentStation = null;
@@ -6046,7 +6047,14 @@
             // Stop any existing players (reset pause state)
             isPaused = false;
             stopAllPlayers();
-            
+
+            // Cancel any ongoing connection attempts from previous station
+            if (currentPlaybackAbortController) {
+                currentPlaybackAbortController.abort();
+                console.log('Cancelled previous connection attempts');
+            }
+            currentPlaybackAbortController = new AbortController();
+
             playPauseBtn.disabled = true;
             updateStatus('Connecting...', 'loading');
             updateArtwork(`<div class="album-art-placeholder">🔄</div>`);
@@ -6174,7 +6182,13 @@
             
             for (let i = 0; i < attempts.length; i++) {
                 const attempt = attempts[i];
-                
+
+                // Check if we should abort (user switched to a different station)
+                if (currentPlaybackAbortController.signal.aborted) {
+                    console.log('Connection attempts aborted - user switched stations');
+                    return;
+                }
+
                 // Special handling for Simple Mode attempt
                 if (attempt.description.startsWith('Simple Mode')) {
                     console.log(`Attempting connection ${i + 1}/${attempts.length} - ${attempt.description}`);
