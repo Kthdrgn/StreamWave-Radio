@@ -1,0 +1,24 @@
+{
+  "name": "streamwave-cors-proxy",
+  "version": "1.0.0",
+  "description": "CORS proxy server for StreamWave Radio to handle HTTP streams",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "cors",
+    "proxy",
+    "radio",
+    "streaming"
+  ],
+  "author": "StreamWave Radio",
+  "license": "MIT",
+  "dependencies": {
+    "cors-anywhere": "^0.4.4"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
