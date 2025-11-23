@@ -888,6 +888,7 @@
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
+        let simplePlayerReloading = false; // Flag to suppress errors during stream switching
         let currentStation = null;
         let stations = [];
         let filteredStations = [];
@@ -1693,6 +1694,12 @@
         // Generate a simple anonymous user ID for tracking
         // Track station click (works in both guest and authenticated mode)
         async function trackStationClick(stationId) {
+            // Skip tracking for temporary stations (Radio Browser, etc.) that don't have an ID
+            if (!stationId) {
+                console.log('Skipping tracking for temporary station (no ID)');
+                return;
+            }
+
             if (window.isGuestMode) {
                 // Guest mode - use localStorage only
                 trackStationClickLocal(stationId);
