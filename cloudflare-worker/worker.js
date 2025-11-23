@@ -9,8 +9,8 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Range',
-  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Range, Icy-MetaData',
+  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Content-Type, Icy-Name, Icy-Genre, Icy-Br, Icy-Sr, Icy-Url, Icy-MetaInt',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -100,7 +100,8 @@ function filterHeaders(headers) {
     'accept-encoding',
     'accept-language',
     'range',
-    'user-agent'
+    'user-agent',
+    'icy-metadata'
   ];
 
   for (const [key, value] of headers.entries()) {
