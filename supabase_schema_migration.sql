@@ -61,6 +61,10 @@ CREATE POLICY "Allow authenticated users to insert external stations"
 ALTER TABLE public.playlist_items
 ADD COLUMN IF NOT EXISTS external_station_id UUID REFERENCES public.external_stations(id) ON DELETE CASCADE;
 
+-- Make station_id nullable (since external stations don't use it)
+ALTER TABLE public.playlist_items
+ALTER COLUMN station_id DROP NOT NULL;
+
 -- Add constraint: either station_id OR external_station_id must be set, but not both
 ALTER TABLE public.playlist_items
 DROP CONSTRAINT IF EXISTS playlist_items_station_check;
@@ -82,6 +86,10 @@ ON public.playlist_items(external_station_id);
 -- Add external_station_id column
 ALTER TABLE public.station_history
 ADD COLUMN IF NOT EXISTS external_station_id UUID REFERENCES public.external_stations(id) ON DELETE CASCADE;
+
+-- Make station_id nullable (since external stations don't use it)
+ALTER TABLE public.station_history
+ALTER COLUMN station_id DROP NOT NULL;
 
 -- Add constraint: either station_id OR external_station_id must be set, but not both
 ALTER TABLE public.station_history
