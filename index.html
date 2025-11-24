@@ -2517,10 +2517,10 @@
                 return;
             }
 
-            track.innerHTML = items.map(item => {
+            track.innerHTML = items.map((item, index) => {
                 if (type === 'station') {
                     return `
-                        <div class="carousel-item" data-station-id="${item.id}">
+                        <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
                             <div class="carousel-item-image">
                                 ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}">` : '<span class="carousel-item-icon">📻</span>'}
                             </div>
@@ -2571,8 +2571,8 @@
             track.querySelectorAll('.carousel-item').forEach(item => {
                 item.addEventListener('click', () => {
                     if (type === 'station') {
-                        const stationId = parseInt(item.dataset.stationId);
-                        const station = stations.find(s => s.id === stationId);
+                        const stationIndex = parseInt(item.dataset.stationIndex);
+                        const station = items[stationIndex];
                         if (station) {
                             selectStation(station);
                             overviewModal.classList.remove('active');
@@ -2596,9 +2596,9 @@
             }
 
             // First render the list with loading states
-            listContainer.innerHTML = stations.map(station => {
+            listContainer.innerHTML = stations.map((station, index) => {
                 return `
-                    <div class="station-list-item" data-station-id="${station.id}">
+                    <div class="station-list-item" data-station-id="${station.id}" data-station-index="${index}">
                         <div class="station-list-icon">
                             ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}">` : '<span class="station-list-icon-emoji">📻</span>'}
                         </div>
@@ -2613,8 +2613,8 @@
             // Add click handlers
             listContainer.querySelectorAll('.station-list-item').forEach(item => {
                 item.addEventListener('click', () => {
-                    const stationId = parseInt(item.dataset.stationId);
-                    const station = stations.find(s => s.id === stationId);
+                    const stationIndex = parseInt(item.dataset.stationIndex);
+                    const station = stations[stationIndex];
                     if (station) {
                         selectStation(station);
                         overviewModal.classList.remove('active');
@@ -3365,7 +3365,7 @@
                 return;
             }
 
-            playlistStationList.innerHTML = playlistStations.map(station => {
+            playlistStationList.innerHTML = playlistStations.map((station, index) => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
@@ -3382,7 +3382,7 @@
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
 
                 return `
-                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
+                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
                     ${station.icon_url ?
                         `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
                         `<div class="station-icon">📻</div>`
@@ -3406,10 +3406,12 @@
             document.querySelectorAll('#playlistStationList .station-item').forEach(item => {
                 item.addEventListener('click', (e) => {
                     if (!e.target.closest('.station-menu-btn') && !e.target.closest('.station-dropdown')) {
-                        const id = parseInt(item.dataset.id);
-                        const station = playlistStations.find(s => s.id === id);
-                        selectStation(station);
-                        closePlaylistModal.click();
+                        const stationIndex = parseInt(item.dataset.stationIndex);
+                        const station = playlistStations[stationIndex];
+                        if (station) {
+                            selectStation(station);
+                            closePlaylistModal.click();
+                        }
                     }
                 });
             });
@@ -3493,7 +3495,7 @@
         // Select station
         function selectStation(station) {
             currentStation = station;
-            
+
             // Reset fallback attempt flag for new station
             hasFallbackAttempted = false;
 
@@ -3502,9 +3504,13 @@
                 playbackMode = 'live';
                 if (currentModeText) currentModeText.textContent = 'Live';
             }
-            
-            // Track the station click
-            trackStationClick(station.id);
+
+            // Track the station click - handle both internal and external stations
+            if (station.is_external) {
+                trackStationClick(null, station.id); // For external stations, id is the external_station_id
+            } else {
+                trackStationClick(station.id);
+            }
             
             // Update display - keep it visible along with buttons
             stationDisplay.style.display = 'flex';
