@@ -1643,7 +1643,7 @@
                     <div class="station-card" style="margin-bottom: 12px; padding: 16px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer;">
                         <div style="display: flex; align-items: start; gap: 12px;">
                             <div style="flex-shrink: 0; width: 50px; height: 50px; border-radius: 8px; overflow: hidden; background: var(--input-bg); display: flex; align-items: center; justify-content: center;">
-                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='📻'">` : '📻'}
+                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<img src="icons/icon-512x512.png" alt="Radio" style="width: 100%; height: 100%; object-fit: cover;">'}
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">${station.name}</div>
@@ -2522,7 +2522,7 @@
                     return `
                         <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
                             <div class="carousel-item-image">
-                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}">` : '<span class="carousel-item-icon">📻</span>'}
+                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="carousel-item-icon">📻</span>'}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
@@ -2540,14 +2540,14 @@
                         imageContent = '<span class="carousel-item-icon">📋</span>';
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon
-                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
                         // Multiple stations - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -2600,7 +2600,7 @@
                 return `
                     <div class="station-list-item" data-station-id="${station.id}" data-station-index="${index}">
                         <div class="station-list-icon">
-                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}">` : '<span class="station-list-icon-emoji">📻</span>'}
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="station-list-icon-emoji">📻</span>'}
                         </div>
                         <div class="station-list-content">
                             <div class="station-list-name">${escapeHtml(station.name)}</div>
@@ -3004,14 +3004,14 @@
                         iconContent = '🎵';
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon as image
-                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
                         // Multiple stations - create collage
                         iconContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -3233,8 +3233,8 @@
 
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
-                    ${station.icon_url ? 
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
+                    ${station.icon_url ?
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
@@ -3384,7 +3384,7 @@
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
@@ -3518,6 +3518,11 @@
             // stationSelectorButtons.style.display = 'none';
             stationDisplayIcon.src = station.icon_url || '';
             stationDisplayIcon.style.display = station.icon_url ? 'block' : 'none';
+            // Add error handler to fallback to StreamWave logo
+            stationDisplayIcon.onerror = function() {
+                this.onerror = null;
+                this.src = 'icons/icon-512x512.png';
+            };
             stationDisplayName.textContent = station.name;
             
             
@@ -5228,7 +5233,7 @@
         // Helper function to display station icon
         function displayStationIcon() {
             if (currentStation && currentStation.icon_url) {
-                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
             } else {
                 updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
             }
@@ -5866,7 +5871,7 @@
                                 
                                 // Display station icon as artwork for HLS streams
                                 if (currentStation && currentStation.icon_url) {
-                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
                                 } else {
                                     updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
                                 }
