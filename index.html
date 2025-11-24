@@ -350,7 +350,17 @@
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span>Browse Stations</span>
+                        <span>Curated Stations</span>
+                    </button>
+
+                    <!-- Radio Database Button -->
+                    <button class="menu-option-btn" id="radioDatabaseBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
+                            <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
+                            <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span>Radio Browser Database</span>
                     </button>
 
                     <!-- Liked Tracks Button -->
@@ -403,16 +413,6 @@
                             <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span>Add Station</span>
-                    </button>
-
-                    <!-- Radio Database Button -->
-                    <button class="menu-option-btn" id="radioDatabaseBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
-                            <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
-                            <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        <span>Radio Database</span>
                     </button>
 
                     <!-- Auth Button -->
@@ -549,7 +549,7 @@
     <div id="browseStationsModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Browse Stations</h2>
+                <h2 class="modal-title">Curated Stations</h2>
                 <button class="modal-close" id="closeBrowseStationsModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -847,6 +847,13 @@
                         <select id="radioDatabaseTag" class="form-input" style="flex: 1; min-width: 150px;">
                             <option value="">All Tags</option>
                         </select>
+                        <select id="radioDatabaseSort" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="votes">Most Popular</option>
+                            <option value="name">Name (A-Z)</option>
+                            <option value="clickcount">Most Clicked</option>
+                            <option value="bitrate">Highest Bitrate</option>
+                            <option value="changetimestamp">Recently Updated</option>
+                        </select>
                         <button id="radioDatabaseSearchBtn" class="form-btn form-btn-primary" style="padding: 0 20px;">
                             Search
                         </button>
@@ -867,6 +874,19 @@
                     <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
                         Enter search criteria and click Search to find radio stations from around the world
                     </div>
+                </div>
+
+                <!-- Pagination Controls -->
+                <div id="radioDatabasePagination" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); justify-content: space-between; align-items: center;">
+                    <button id="radioDatabasePrevBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;" disabled>
+                        ← Previous
+                    </button>
+                    <div id="radioDatabasePageInfo" style="color: var(--text-secondary); font-size: 14px;">
+                        Page 1
+                    </div>
+                    <button id="radioDatabaseNextBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;">
+                        Next →
+                    </button>
                 </div>
             </div>
         </div>
@@ -895,6 +915,11 @@
         let playlists = [];
         let currentPlaylist = null;
         let lastOpenedModal = null;
+
+        // Radio Database pagination
+        let radioDatabaseCurrentPage = 1;
+        let radioDatabaseItemsPerPage = 50;
+        let radioDatabaseTotalResults = 0;
         let currentTrack = {
             title: null,
             artist: null,
@@ -1018,10 +1043,15 @@
         const radioDatabaseCountry = document.getElementById('radioDatabaseCountry');
         const radioDatabaseLanguage = document.getElementById('radioDatabaseLanguage');
         const radioDatabaseTag = document.getElementById('radioDatabaseTag');
+        const radioDatabaseSort = document.getElementById('radioDatabaseSort');
         const radioDatabaseSearchBtn = document.getElementById('radioDatabaseSearchBtn');
         const radioDatabaseLoading = document.getElementById('radioDatabaseLoading');
         const radioDatabaseError = document.getElementById('radioDatabaseError');
         const radioDatabaseResults = document.getElementById('radioDatabaseResults');
+        const radioDatabasePagination = document.getElementById('radioDatabasePagination');
+        const radioDatabasePrevBtn = document.getElementById('radioDatabasePrevBtn');
+        const radioDatabaseNextBtn = document.getElementById('radioDatabaseNextBtn');
+        const radioDatabasePageInfo = document.getElementById('radioDatabasePageInfo');
 
         // ======================
         // LIKED TRACKS FUNCTIONS
@@ -1506,11 +1536,15 @@
         }
 
         // Search Radio Browser API
-        async function searchRadioBrowser() {
+        async function searchRadioBrowser(page = 1) {
             const searchTerm = radioDatabaseSearchInput.value.trim();
             const country = radioDatabaseCountry.value;
             const language = radioDatabaseLanguage.value;
             const tag = radioDatabaseTag.value;
+            const sortBy = radioDatabaseSort.value;
+
+            // Update current page
+            radioDatabaseCurrentPage = page;
 
             // Build query parameters
             const params = new URLSearchParams();
@@ -1518,8 +1552,13 @@
             if (country) params.append('country', country);
             if (language) params.append('language', language);
             if (tag) params.append('tag', tag);
-            params.append('limit', '100');
-            params.append('order', 'votes');
+
+            // Pagination
+            params.append('limit', radioDatabaseItemsPerPage.toString());
+            params.append('offset', ((page - 1) * radioDatabaseItemsPerPage).toString());
+
+            // Sorting
+            params.append('order', sortBy);
             params.append('reverse', 'true');
             params.append('hidebroken', 'true');
 
@@ -1527,6 +1566,7 @@
             radioDatabaseLoading.style.display = 'block';
             radioDatabaseError.style.display = 'none';
             radioDatabaseResults.innerHTML = '';
+            radioDatabasePagination.style.display = 'none';
 
             try {
                 const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
@@ -1546,17 +1586,47 @@
                             No stations found. Try different search criteria.
                         </div>
                     `;
+                    radioDatabasePagination.style.display = 'none';
                     return;
                 }
 
+                // Update total results (estimate based on returned results)
+                radioDatabaseTotalResults = results.length;
+
                 // Render results
                 renderRadioBrowserResults(results);
+
+                // Update pagination controls
+                updateRadioDatabasePagination(results.length);
             } catch (error) {
                 console.error('Error searching Radio Browser:', error);
                 radioDatabaseLoading.style.display = 'none';
                 radioDatabaseError.style.display = 'block';
                 radioDatabaseError.textContent = 'Error searching radio stations. Please try again.';
+                radioDatabasePagination.style.display = 'none';
             }
+        }
+
+        // Update pagination controls
+        function updateRadioDatabasePagination(resultsCount) {
+            if (resultsCount === 0) {
+                radioDatabasePagination.style.display = 'none';
+                return;
+            }
+
+            radioDatabasePagination.style.display = 'flex';
+
+            // Update page info
+            radioDatabasePageInfo.textContent = `Page ${radioDatabaseCurrentPage}`;
+
+            // Update Previous button
+            radioDatabasePrevBtn.disabled = radioDatabaseCurrentPage === 1;
+
+            // Update Next button - disable if we got fewer results than the limit (meaning we're on the last page)
+            radioDatabaseNextBtn.disabled = resultsCount < radioDatabaseItemsPerPage;
+
+            // Scroll results container to top
+            radioDatabaseResults.scrollTop = 0;
         }
 
         // Render Radio Browser search results
@@ -1573,7 +1643,7 @@
                     <div class="station-card" style="margin-bottom: 12px; padding: 16px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer;">
                         <div style="display: flex; align-items: start; gap: 12px;">
                             <div style="flex-shrink: 0; width: 50px; height: 50px; border-radius: 8px; overflow: hidden; background: var(--input-bg); display: flex; align-items: center; justify-content: center;">
-                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='📻'">` : '📻'}
+                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<img src="icons/icon-512x512.png" alt="Radio" style="width: 100%; height: 100%; object-fit: cover;">'}
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">${station.name}</div>
@@ -1618,123 +1688,266 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const station = JSON.parse(btn.getAttribute('data-station'));
-                    addRadioBrowserStationToDatabase(station);
+                    showPlaylistSelectorForRadioBrowser(station);
                 });
             });
         }
 
         // Play a station from Radio Browser
-        function playRadioBrowserStation(station) {
-            // Convert Radio Browser station to our station format
-            const ourStation = {
-                id: null, // Temporary station, not in our database
-                name: station.name,
-                url: station.url_resolved || station.url,
-                icon_url: station.favicon || '',
-                genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
-                call_letters: '',
-                frequency: ''
-            };
-
-            // Close the radio database modal
-            radioDatabaseModal.classList.remove('active');
-
-            // Select and play the station
-            selectStation(ourStation);
-            setTimeout(() => {
-                playPauseBtn.click();
-            }, 100);
-        }
-
-        // Add a Radio Browser station to our database
-        async function addRadioBrowserStationToDatabase(station) {
+        async function playRadioBrowserStation(station) {
             try {
-                const newStation = {
+                // Add station to external_stations table (or get existing ID)
+                const externalStationId = await addExternalStation(station);
+
+                // Convert Radio Browser station to our station format
+                const ourStation = {
+                    id: null, // Temporary ID for backwards compatibility
                     name: station.name,
                     url: station.url_resolved || station.url,
-                    url_low: null,
-                    url_high: null,
                     icon_url: station.favicon || '',
-                    genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                    genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
                     call_letters: '',
                     frequency: '',
-                    website_url: station.homepage || null,
-                    description: `${station.country || ''} ${station.language ? `• ${station.language}` : ''}`.trim()
+                    is_external: true,
+                    external_id: externalStationId
                 };
 
-                const { data, error } = await supabase
-                    .from('radio_stations')
-                    .insert([newStation])
-                    .select();
+                // Close the radio database modal
+                radioDatabaseModal.classList.remove('active');
 
-                if (error) {
-                    console.error('Error adding station:', error);
-                    alert('Error adding station to database. Please try again.');
+                // Select and play the station
+                selectStation(ourStation);
+                setTimeout(() => {
+                    playPauseBtn.click();
+                }, 100);
+
+                // Track the station play in history
+                await trackStationClick(null, externalStationId);
+            } catch (error) {
+                console.error('Error playing radio browser station:', error);
+                alert('Failed to play station. Please try again.');
+            }
+        }
+
+        // Show playlist selector for adding a Radio Browser station
+        async function showPlaylistSelectorForRadioBrowser(station) {
+            if (!window.currentUser || !window.currentUser.id) {
+                alert('Please sign in to add stations to playlists');
+                return;
+            }
+
+            try {
+                // Ensure playlists are loaded
+                if (playlists.length === 0) {
+                    await loadPlaylists();
+                }
+
+                if (playlists.length === 0) {
+                    alert('You have no playlists. Create a playlist first!');
                     return;
                 }
 
-                // Reload stations
-                await loadStations(true);
+                // Create a simple playlist selector
+                const playlistOptions = playlists.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+                const selection = prompt(`Select a playlist to add "${station.name}" to:\n\n${playlistOptions}\n\nEnter the number:`);
 
-                alert(`Successfully added "${station.name}" to your stations!`);
+                if (!selection) return; // User cancelled
+
+                const playlistIndex = parseInt(selection) - 1;
+                if (isNaN(playlistIndex) || playlistIndex < 0 || playlistIndex >= playlists.length) {
+                    alert('Invalid selection');
+                    return;
+                }
+
+                const selectedPlaylist = playlists[playlistIndex];
+
+                // Add station to external_stations table first
+                const externalStationId = await addExternalStation(station);
+
+                // Add to the selected playlist
+                await addStationToPlaylist(selectedPlaylist.id, null, externalStationId);
+
+                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
             } catch (error) {
-                console.error('Error adding station:', error);
-                alert('Error adding station. Please try again.');
+                console.error('Error adding station to playlist:', error);
+                alert('Failed to add station to playlist. Please try again.');
             }
+        }
+
+        // Legacy function - kept for backwards compatibility if needed
+        async function addRadioBrowserStationToDatabase(station) {
+            console.warn('addRadioBrowserStationToDatabase is deprecated. Use showPlaylistSelectorForRadioBrowser instead.');
+            showPlaylistSelectorForRadioBrowser(station);
         }
 
         // ======================
         // DATABASE FUNCTIONS
         // ======================
-        
+
+        // ======================
+        // EXTERNAL STATIONS (RADIO-BROWSER.INFO)
+        // ======================
+
+        // Add a Radio Browser station to external_stations table
+        async function addExternalStation(station) {
+            try {
+                const externalStation = {
+                    source: 'radio-browser',
+                    external_id: station.stationuuid,
+                    name: station.name,
+                    url: station.url,
+                    url_resolved: station.url_resolved,
+                    favicon: station.favicon,
+                    genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                    country: station.country || null,
+                    country_code: station.countrycode || null,
+                    language: station.language || null,
+                    bitrate: station.bitrate || null,
+                    votes: station.votes || 0,
+                    click_count: station.clickcount || 0,
+                    codec: station.codec || null,
+                    homepage: station.homepage || null,
+                    metadata: {
+                        state: station.state,
+                        hls: station.hls,
+                        lastcheckok: station.lastcheckok,
+                        lastchecktime: station.lastchecktime
+                    }
+                };
+
+                // Check if station already exists
+                const { data: existing, error: checkError } = await supabase
+                    .from('external_stations')
+                    .select('id')
+                    .eq('source', 'radio-browser')
+                    .eq('external_id', station.stationuuid)
+                    .maybeSingle();
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    console.error('Error checking existing station:', checkError);
+                    throw checkError;
+                }
+
+                if (existing) {
+                    console.log('External station already exists, returning existing ID:', existing.id);
+                    return existing.id;
+                }
+
+                // Insert new external station
+                const { data, error } = await supabase
+                    .from('external_stations')
+                    .insert([externalStation])
+                    .select('id')
+                    .single();
+
+                if (error) {
+                    console.error('Error adding external station:', error);
+                    throw error;
+                }
+
+                console.log('External station added successfully:', data.id);
+                return data.id;
+            } catch (error) {
+                console.error('Error in addExternalStation:', error);
+                throw error;
+            }
+        }
+
+        // Get external station by ID
+        async function getExternalStation(externalStationId) {
+            try {
+                const { data, error } = await supabase
+                    .from('external_stations')
+                    .select('*')
+                    .eq('id', externalStationId)
+                    .single();
+
+                if (error) throw error;
+
+                // Convert to station format
+                return {
+                    id: data.id,
+                    name: data.name,
+                    url: data.url_resolved || data.url,
+                    icon_url: data.icon_url || data.favicon || '',
+                    genres: data.genres || [],
+                    call_letters: '',
+                    frequency: '',
+                    country: data.country,
+                    is_external: true,
+                    external_id: data.id
+                };
+            } catch (error) {
+                console.error('Error getting external station:', error);
+                return null;
+            }
+        }
+
         // ======================
         // STATION HISTORY TRACKING
         // ======================
         
         // Generate a simple anonymous user ID for tracking
         // Track station click (works in both guest and authenticated mode)
-        async function trackStationClick(stationId) {
-            // Skip tracking for temporary stations (Radio Browser, etc.) that don't have an ID
-            if (!stationId) {
+        // Supports both internal stations (numeric ID) and external stations (UUID or object)
+        async function trackStationClick(stationId, externalStationId = null) {
+            // Skip tracking for temporary stations that don't have an ID
+            if (!stationId && !externalStationId) {
                 console.log('Skipping tracking for temporary station (no ID)');
                 return;
             }
 
             if (window.isGuestMode) {
                 // Guest mode - use localStorage only
-                trackStationClickLocal(stationId);
+                trackStationClickLocal(stationId, externalStationId);
             } else {
                 // Authenticated - save to Supabase
                 try {
+                    const insertData = {
+                        user_id: window.currentUser.id,
+                        clicked_at: new Date().toISOString()
+                    };
+
+                    // Add either station_id or external_station_id
+                    if (externalStationId) {
+                        insertData.external_station_id = externalStationId;
+                    } else {
+                        insertData.station_id = stationId;
+                    }
+
                     const { error } = await supabase
                         .from('station_history')
-                        .insert({
-                            station_id: stationId,
-                            user_id: window.currentUser.id,
-                            clicked_at: new Date().toISOString()
-                        });
+                        .insert(insertData);
 
                     if (error) {
                         console.error('Error tracking station click:', error);
-                        trackStationClickLocal(stationId); // Fallback to local
+                        trackStationClickLocal(stationId, externalStationId); // Fallback to local
                     } else {
                         console.log('Station click tracked successfully');
                     }
                 } catch (error) {
                     console.error('Error tracking station click:', error);
-                    trackStationClickLocal(stationId); // Fallback to local
+                    trackStationClickLocal(stationId, externalStationId); // Fallback to local
                 }
             }
         }
 
         // Track station click in local storage (guest mode or fallback)
-        function trackStationClickLocal(stationId) {
+        function trackStationClickLocal(stationId, externalStationId = null) {
             try {
                 let history = JSON.parse(localStorage.getItem('station_history') || '[]');
-                history.push({
-                    station_id: stationId,
+                const record = {
                     clicked_at: new Date().toISOString()
-                });
+                };
+
+                // Add either station_id or external_station_id
+                if (externalStationId) {
+                    record.external_station_id = externalStationId;
+                } else {
+                    record.station_id = stationId;
+                }
+
+                history.push(record);
                 if (history.length > 500) {
                     history = history.slice(-500);
                 }
@@ -1745,6 +1958,7 @@
         }
         
         // Get most recent stations (works in both guest and authenticated mode)
+        // Includes both internal and external (radio-browser) stations
         async function getMostRecentStations(limit = 10) {
             if (window.isGuestMode || !window.currentUser) {
                 // Guest mode or not authenticated - use localStorage
@@ -1754,26 +1968,54 @@
                 try {
                     const { data, error } = await supabase
                         .from('station_history')
-                        .select('station_id, clicked_at')
+                        .select('station_id, external_station_id, clicked_at, external_stations(*), radio_stations(*)')
                         .eq('user_id', window.currentUser.id)
                         .order('clicked_at', { ascending: false })
                         .limit(limit * 3);
 
                     if (error) throw error;
 
-                    const uniqueStationIds = [];
-                    const seenIds = new Set();
+                    const recentStations = [];
+                    const seenKeys = new Set();
 
                     for (const record of data) {
-                        if (!seenIds.has(record.station_id)) {
-                            seenIds.add(record.station_id);
-                            uniqueStationIds.push(record.station_id);
-                            if (uniqueStationIds.length >= limit) break;
+                        // Create unique key for internal or external station
+                        const key = record.external_station_id
+                            ? `ext-${record.external_station_id}`
+                            : `int-${record.station_id}`;
+
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+
+                            let station = null;
+                            if (record.external_station_id && record.external_stations) {
+                                // External station from radio-browser
+                                const ext = record.external_stations;
+                                station = {
+                                    id: ext.id,
+                                    name: ext.name,
+                                    url: ext.url_resolved || ext.url,
+                                    icon_url: ext.icon_url || ext.favicon || '',
+                                    genres: ext.genres || [],
+                                    call_letters: '',
+                                    frequency: '',
+                                    country: ext.country,
+                                    is_external: true,
+                                    external_id: ext.id
+                                };
+                            } else if (record.station_id) {
+                                // Internal station
+                                station = stations.find(s => s.id === record.station_id);
+                            }
+
+                            if (station) {
+                                recentStations.push(station);
+                                if (recentStations.length >= limit) break;
+                            }
                         }
                     }
 
-                    return stations.filter(s => uniqueStationIds.includes(s.id))
-                        .sort((a, b) => uniqueStationIds.indexOf(a.id) - uniqueStationIds.indexOf(b.id));
+                    return recentStations;
 
                 } catch (error) {
                     console.error('Error getting recent stations from database:', error);
@@ -2069,20 +2311,40 @@
             }
         }
         
-        // Load playlist stations
+        // Load playlist stations (includes both internal and external stations)
         async function loadPlaylistStations(playlistId) {
             try {
                 const { data, error } = await supabase
                     .from('playlist_items')
-                    .select('*, radio_stations(*)')
+                    .select('*, radio_stations(*), external_stations(*)')
                     .eq('playlist_id', playlistId)
                     .order('created_at');
-                
+
                 if (error) throw error;
-                
-                playlistStations = data.map(item => item.radio_stations);
+
+                playlistStations = data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else {
+                        // Internal station
+                        return item.radio_stations;
+                    }
+                });
                 renderPlaylistStations();
-                
+
             } catch (error) {
                 console.error('Error loading playlist stations:', error);
             }
@@ -2106,16 +2368,38 @@
                 try {
                     const { data, error } = await supabase
                         .from('playlist_items')
-                        .select('*, radio_stations(*)')
+                        .select('*, radio_stations(*), external_stations(*)')
                         .eq('playlist_id', playlist.id)
                         .order('created_at')
                         .limit(4); // Only need first 4 for collage
 
                     if (error) throw error;
 
+                    const stationsData = data ? data.map(item => {
+                        if (item.external_stations) {
+                            // External station from radio-browser
+                            const ext = item.external_stations;
+                            return {
+                                id: ext.id,
+                                name: ext.name,
+                                url: ext.url_resolved || ext.url,
+                                icon_url: ext.icon_url || ext.favicon || '',
+                                genres: ext.genres || [],
+                                call_letters: '',
+                                frequency: '',
+                                country: ext.country,
+                                is_external: true,
+                                external_id: ext.id
+                            };
+                        } else {
+                            // Internal station
+                            return item.radio_stations;
+                        }
+                    }) : [];
+
                     return {
                         ...playlist,
-                        stations: data ? data.map(item => item.radio_stations) : []
+                        stations: stationsData
                     };
                 } catch (error) {
                     console.error('Error loading playlist stations:', error);
@@ -2233,12 +2517,12 @@
                 return;
             }
 
-            track.innerHTML = items.map(item => {
+            track.innerHTML = items.map((item, index) => {
                 if (type === 'station') {
                     return `
-                        <div class="carousel-item" data-station-id="${item.id}">
+                        <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
                             <div class="carousel-item-image">
-                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}">` : '<span class="carousel-item-icon">📻</span>'}
+                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="carousel-item-icon">📻</span>'}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
@@ -2256,14 +2540,14 @@
                         imageContent = '<span class="carousel-item-icon">📋</span>';
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon
-                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
                         // Multiple stations - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -2287,8 +2571,8 @@
             track.querySelectorAll('.carousel-item').forEach(item => {
                 item.addEventListener('click', () => {
                     if (type === 'station') {
-                        const stationId = parseInt(item.dataset.stationId);
-                        const station = stations.find(s => s.id === stationId);
+                        const stationIndex = parseInt(item.dataset.stationIndex);
+                        const station = items[stationIndex];
                         if (station) {
                             selectStation(station);
                             overviewModal.classList.remove('active');
@@ -2312,11 +2596,11 @@
             }
 
             // First render the list with loading states
-            listContainer.innerHTML = stations.map(station => {
+            listContainer.innerHTML = stations.map((station, index) => {
                 return `
-                    <div class="station-list-item" data-station-id="${station.id}">
+                    <div class="station-list-item" data-station-id="${station.id}" data-station-index="${index}">
                         <div class="station-list-icon">
-                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}">` : '<span class="station-list-icon-emoji">📻</span>'}
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="station-list-icon-emoji">📻</span>'}
                         </div>
                         <div class="station-list-content">
                             <div class="station-list-name">${escapeHtml(station.name)}</div>
@@ -2329,8 +2613,8 @@
             // Add click handlers
             listContainer.querySelectorAll('.station-list-item').forEach(item => {
                 item.addEventListener('click', () => {
-                    const stationId = parseInt(item.dataset.stationId);
-                    const station = stations.find(s => s.id === stationId);
+                    const stationIndex = parseInt(item.dataset.stationIndex);
+                    const station = stations[stationIndex];
                     if (station) {
                         selectStation(station);
                         overviewModal.classList.remove('active');
@@ -2510,30 +2794,44 @@
             }
         }
         
-        // Add station to playlist
-        async function addStationToPlaylist(playlistId, stationId) {
+        // Add station to playlist (supports both internal and external stations)
+        async function addStationToPlaylist(playlistId, stationId, externalStationId = null) {
             try {
                 // Check if station is already in playlist
-                const { data: existing } = await supabase
+                let existingQuery = supabase
                     .from('playlist_items')
                     .select('id')
-                    .eq('playlist_id', playlistId)
-                    .eq('station_id', stationId)
-                    .single();
-                
+                    .eq('playlist_id', playlistId);
+
+                if (externalStationId) {
+                    existingQuery = existingQuery.eq('external_station_id', externalStationId);
+                } else {
+                    existingQuery = existingQuery.eq('station_id', stationId);
+                }
+
+                const { data: existing } = await existingQuery.maybeSingle();
+
                 if (existing) {
                     alert('Station is already in this playlist');
                     return;
                 }
-                
+
+                // Insert with either station_id or external_station_id
+                const insertData = { playlist_id: playlistId };
+                if (externalStationId) {
+                    insertData.external_station_id = externalStationId;
+                } else {
+                    insertData.station_id = stationId;
+                }
+
                 const { error } = await supabase
                     .from('playlist_items')
-                    .insert([{ playlist_id: playlistId, station_id: stationId }]);
-                
+                    .insert([insertData]);
+
                 if (error) throw error;
-                
+
                 await loadPlaylists(true); // Force refresh to bypass cache
-                
+
             } catch (error) {
                 console.error('Error adding station to playlist:', error);
                 alert('Failed to add station to playlist');
@@ -2706,14 +3004,14 @@
                         iconContent = '🎵';
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon as image
-                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist">`;
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
                         // Multiple stations - create collage
                         iconContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -2935,8 +3233,8 @@
 
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
-                    ${station.icon_url ? 
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
+                    ${station.icon_url ?
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
@@ -3067,7 +3365,7 @@
                 return;
             }
 
-            playlistStationList.innerHTML = playlistStations.map(station => {
+            playlistStationList.innerHTML = playlistStations.map((station, index) => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
@@ -3084,9 +3382,9 @@
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
 
                 return `
-                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
+                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}">` :
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
@@ -3108,10 +3406,12 @@
             document.querySelectorAll('#playlistStationList .station-item').forEach(item => {
                 item.addEventListener('click', (e) => {
                     if (!e.target.closest('.station-menu-btn') && !e.target.closest('.station-dropdown')) {
-                        const id = parseInt(item.dataset.id);
-                        const station = playlistStations.find(s => s.id === id);
-                        selectStation(station);
-                        closePlaylistModal.click();
+                        const stationIndex = parseInt(item.dataset.stationIndex);
+                        const station = playlistStations[stationIndex];
+                        if (station) {
+                            selectStation(station);
+                            closePlaylistModal.click();
+                        }
                     }
                 });
             });
@@ -3195,7 +3495,7 @@
         // Select station
         function selectStation(station) {
             currentStation = station;
-            
+
             // Reset fallback attempt flag for new station
             hasFallbackAttempted = false;
 
@@ -3204,9 +3504,13 @@
                 playbackMode = 'live';
                 if (currentModeText) currentModeText.textContent = 'Live';
             }
-            
-            // Track the station click
-            trackStationClick(station.id);
+
+            // Track the station click - handle both internal and external stations
+            if (station.is_external) {
+                trackStationClick(null, station.id); // For external stations, id is the external_station_id
+            } else {
+                trackStationClick(station.id);
+            }
             
             // Update display - keep it visible along with buttons
             stationDisplay.style.display = 'flex';
@@ -3214,6 +3518,11 @@
             // stationSelectorButtons.style.display = 'none';
             stationDisplayIcon.src = station.icon_url || '';
             stationDisplayIcon.style.display = station.icon_url ? 'block' : 'none';
+            // Add error handler to fallback to StreamWave logo
+            stationDisplayIcon.onerror = function() {
+                this.onerror = null;
+                this.src = 'icons/icon-512x512.png';
+            };
             stationDisplayName.textContent = station.name;
             
             
@@ -3794,6 +4103,25 @@
             if (e.key === 'Enter') {
                 searchRadioBrowser();
             }
+        });
+
+        // Radio Database sort change - restart search from page 1
+        radioDatabaseSort.addEventListener('change', () => {
+            if (radioDatabaseResults.children.length > 0 && !radioDatabaseResults.textContent.includes('Enter search criteria')) {
+                searchRadioBrowser(1);
+            }
+        });
+
+        // Radio Database pagination - Previous button
+        radioDatabasePrevBtn.addEventListener('click', () => {
+            if (radioDatabaseCurrentPage > 1) {
+                searchRadioBrowser(radioDatabaseCurrentPage - 1);
+            }
+        });
+
+        // Radio Database pagination - Next button
+        radioDatabaseNextBtn.addEventListener('click', () => {
+            searchRadioBrowser(radioDatabaseCurrentPage + 1);
         });
 
         // Close hamburger menu modal when clicking outside
@@ -4905,7 +5233,7 @@
         // Helper function to display station icon
         function displayStationIcon() {
             if (currentStation && currentStation.icon_url) {
-                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
             } else {
                 updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
             }
@@ -5243,38 +5571,29 @@
             }
         }
 
-        // Update lyrics indicator on artwork
+        // Update lyrics button in metadata section
         function updateLyricsIndicator() {
-            const artworkContainer = document.getElementById('artworkContainer');
-            const artworkContainerPortrait = document.getElementById('artworkContainerPortrait');
+            const metadataSection = document.getElementById('metadataSection');
 
-            // Remove existing indicators
-            const existingIndicators = document.querySelectorAll('.lyrics-indicator');
-            existingIndicators.forEach(indicator => indicator.remove());
+            // Remove existing lyrics buttons
+            const existingButtons = document.querySelectorAll('.lyrics-btn');
+            existingButtons.forEach(button => button.remove());
 
-            if (currentTrack.hasLyrics) {
-                // Add lyrics indicator to both artwork containers
-                [artworkContainer, artworkContainerPortrait].forEach(container => {
-                    if (container) {
-                        const indicator = document.createElement('div');
-                        indicator.className = 'lyrics-indicator';
-                        indicator.innerHTML = '♪';
-                        indicator.title = 'Lyrics available - Click artwork to view';
-                        container.appendChild(indicator);
-                    }
-                });
+            // Only add button if we have track metadata
+            if (currentTrack.title && currentTrack.artist && metadataSection) {
+                const lyricsBtn = document.createElement('button');
+                lyricsBtn.className = 'lyrics-btn';
+                lyricsBtn.id = 'lyricsBtn';
+                lyricsBtn.innerHTML = '♪';
+                lyricsBtn.title = currentTrack.hasLyrics ? 'View Lyrics' : 'No lyrics available';
 
-                // Make artwork clickable
-                artworkContainer.style.cursor = 'pointer';
-                artworkContainerPortrait.style.cursor = 'pointer';
-                artworkContainer.onclick = showLyricsModal;
-                artworkContainerPortrait.onclick = showLyricsModal;
-            } else {
-                // Remove click functionality if no lyrics
-                artworkContainer.style.cursor = 'default';
-                artworkContainerPortrait.style.cursor = 'default';
-                artworkContainer.onclick = null;
-                artworkContainerPortrait.onclick = null;
+                if (currentTrack.hasLyrics) {
+                    lyricsBtn.onclick = showLyricsModal;
+                } else {
+                    lyricsBtn.classList.add('disabled');
+                }
+
+                metadataSection.appendChild(lyricsBtn);
             }
         }
 
@@ -5552,7 +5871,7 @@
                                 
                                 // Display station icon as artwork for HLS streams
                                 if (currentStation && currentStation.icon_url) {
-                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
                                 } else {
                                     updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
                                 }

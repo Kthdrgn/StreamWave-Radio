@@ -2349,30 +2349,35 @@ body[data-layout="landscape"] .layout-slider {
    LYRICS FEATURES
    ====================== */
 
-/* Lyrics Indicator on Artwork */
-.lyrics-indicator {
+/* Lyrics Button (matches like-btn style) */
+.lyrics-btn {
     position: absolute;
-    bottom: 12px;
-    left: 12px;
-    width: 40px;
-    height: 40px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    border-radius: 50%;
-    display: flex;
+    top: 0;
+    left: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--card-bg);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: #fff;
-    box-shadow: 0 4px 12px var(--shadow-color);
-    z-index: 10;
-    animation: fadeInScale 0.3s ease;
-    transition: all 0.3s ease;
+    gap: 4px;
+    color: var(--text-secondary);
+    backdrop-filter: blur(10px);
 }
 
-.lyrics-indicator:hover {
-    transform: scale(1.1);
-    background: rgba(0, 0, 0, 0.85);
+.lyrics-btn:hover:not(.disabled) {
+    background: var(--button-hover);
+    border-color: var(--text-quaternary);
+    transform: scale(1.05);
+}
+
+.lyrics-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 @keyframes fadeInScale {
