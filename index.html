@@ -5332,38 +5332,29 @@
             }
         }
 
-        // Update lyrics indicator on artwork
+        // Update lyrics button in metadata section
         function updateLyricsIndicator() {
-            const artworkContainer = document.getElementById('artworkContainer');
-            const artworkContainerPortrait = document.getElementById('artworkContainerPortrait');
+            const metadataSection = document.getElementById('metadataSection');
 
-            // Remove existing indicators
-            const existingIndicators = document.querySelectorAll('.lyrics-indicator');
-            existingIndicators.forEach(indicator => indicator.remove());
+            // Remove existing lyrics buttons
+            const existingButtons = document.querySelectorAll('.lyrics-btn');
+            existingButtons.forEach(button => button.remove());
 
-            if (currentTrack.hasLyrics) {
-                // Add lyrics indicator to both artwork containers
-                [artworkContainer, artworkContainerPortrait].forEach(container => {
-                    if (container) {
-                        const indicator = document.createElement('div');
-                        indicator.className = 'lyrics-indicator';
-                        indicator.innerHTML = '♪';
-                        indicator.title = 'Lyrics available - Click artwork to view';
-                        container.appendChild(indicator);
-                    }
-                });
+            // Only add button if we have track metadata
+            if (currentTrack.title && currentTrack.artist && metadataSection) {
+                const lyricsBtn = document.createElement('button');
+                lyricsBtn.className = 'lyrics-btn';
+                lyricsBtn.id = 'lyricsBtn';
+                lyricsBtn.innerHTML = '♪';
+                lyricsBtn.title = currentTrack.hasLyrics ? 'View Lyrics' : 'No lyrics available';
 
-                // Make artwork clickable
-                artworkContainer.style.cursor = 'pointer';
-                artworkContainerPortrait.style.cursor = 'pointer';
-                artworkContainer.onclick = showLyricsModal;
-                artworkContainerPortrait.onclick = showLyricsModal;
-            } else {
-                // Remove click functionality if no lyrics
-                artworkContainer.style.cursor = 'default';
-                artworkContainerPortrait.style.cursor = 'default';
-                artworkContainer.onclick = null;
-                artworkContainerPortrait.onclick = null;
+                if (currentTrack.hasLyrics) {
+                    lyricsBtn.onclick = showLyricsModal;
+                } else {
+                    lyricsBtn.classList.add('disabled');
+                }
+
+                metadataSection.appendChild(lyricsBtn);
             }
         }
 
