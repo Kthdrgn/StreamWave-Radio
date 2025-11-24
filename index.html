@@ -1688,123 +1688,266 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const station = JSON.parse(btn.getAttribute('data-station'));
-                    addRadioBrowserStationToDatabase(station);
+                    showPlaylistSelectorForRadioBrowser(station);
                 });
             });
         }
 
         // Play a station from Radio Browser
-        function playRadioBrowserStation(station) {
-            // Convert Radio Browser station to our station format
-            const ourStation = {
-                id: null, // Temporary station, not in our database
-                name: station.name,
-                url: station.url_resolved || station.url,
-                icon_url: station.favicon || '',
-                genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
-                call_letters: '',
-                frequency: ''
-            };
-
-            // Close the radio database modal
-            radioDatabaseModal.classList.remove('active');
-
-            // Select and play the station
-            selectStation(ourStation);
-            setTimeout(() => {
-                playPauseBtn.click();
-            }, 100);
-        }
-
-        // Add a Radio Browser station to our database
-        async function addRadioBrowserStationToDatabase(station) {
+        async function playRadioBrowserStation(station) {
             try {
-                const newStation = {
+                // Add station to external_stations table (or get existing ID)
+                const externalStationId = await addExternalStation(station);
+
+                // Convert Radio Browser station to our station format
+                const ourStation = {
+                    id: null, // Temporary ID for backwards compatibility
                     name: station.name,
                     url: station.url_resolved || station.url,
-                    url_low: null,
-                    url_high: null,
                     icon_url: station.favicon || '',
-                    genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                    genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
                     call_letters: '',
                     frequency: '',
-                    website_url: station.homepage || null,
-                    description: `${station.country || ''} ${station.language ? `• ${station.language}` : ''}`.trim()
+                    is_external: true,
+                    external_id: externalStationId
                 };
 
-                const { data, error } = await supabase
-                    .from('radio_stations')
-                    .insert([newStation])
-                    .select();
+                // Close the radio database modal
+                radioDatabaseModal.classList.remove('active');
 
-                if (error) {
-                    console.error('Error adding station:', error);
-                    alert('Error adding station to database. Please try again.');
+                // Select and play the station
+                selectStation(ourStation);
+                setTimeout(() => {
+                    playPauseBtn.click();
+                }, 100);
+
+                // Track the station play in history
+                await trackStationClick(null, externalStationId);
+            } catch (error) {
+                console.error('Error playing radio browser station:', error);
+                alert('Failed to play station. Please try again.');
+            }
+        }
+
+        // Show playlist selector for adding a Radio Browser station
+        async function showPlaylistSelectorForRadioBrowser(station) {
+            if (!window.currentUser || !window.currentUser.id) {
+                alert('Please sign in to add stations to playlists');
+                return;
+            }
+
+            try {
+                // Ensure playlists are loaded
+                if (playlists.length === 0) {
+                    await loadPlaylists();
+                }
+
+                if (playlists.length === 0) {
+                    alert('You have no playlists. Create a playlist first!');
                     return;
                 }
 
-                // Reload stations
-                await loadStations(true);
+                // Create a simple playlist selector
+                const playlistOptions = playlists.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+                const selection = prompt(`Select a playlist to add "${station.name}" to:\n\n${playlistOptions}\n\nEnter the number:`);
 
-                alert(`Successfully added "${station.name}" to your stations!`);
+                if (!selection) return; // User cancelled
+
+                const playlistIndex = parseInt(selection) - 1;
+                if (isNaN(playlistIndex) || playlistIndex < 0 || playlistIndex >= playlists.length) {
+                    alert('Invalid selection');
+                    return;
+                }
+
+                const selectedPlaylist = playlists[playlistIndex];
+
+                // Add station to external_stations table first
+                const externalStationId = await addExternalStation(station);
+
+                // Add to the selected playlist
+                await addStationToPlaylist(selectedPlaylist.id, null, externalStationId);
+
+                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
             } catch (error) {
-                console.error('Error adding station:', error);
-                alert('Error adding station. Please try again.');
+                console.error('Error adding station to playlist:', error);
+                alert('Failed to add station to playlist. Please try again.');
             }
+        }
+
+        // Legacy function - kept for backwards compatibility if needed
+        async function addRadioBrowserStationToDatabase(station) {
+            console.warn('addRadioBrowserStationToDatabase is deprecated. Use showPlaylistSelectorForRadioBrowser instead.');
+            showPlaylistSelectorForRadioBrowser(station);
         }
 
         // ======================
         // DATABASE FUNCTIONS
         // ======================
-        
+
+        // ======================
+        // EXTERNAL STATIONS (RADIO-BROWSER.INFO)
+        // ======================
+
+        // Add a Radio Browser station to external_stations table
+        async function addExternalStation(station) {
+            try {
+                const externalStation = {
+                    source: 'radio-browser',
+                    external_id: station.stationuuid,
+                    name: station.name,
+                    url: station.url,
+                    url_resolved: station.url_resolved,
+                    favicon: station.favicon,
+                    genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                    country: station.country || null,
+                    country_code: station.countrycode || null,
+                    language: station.language || null,
+                    bitrate: station.bitrate || null,
+                    votes: station.votes || 0,
+                    click_count: station.clickcount || 0,
+                    codec: station.codec || null,
+                    homepage: station.homepage || null,
+                    metadata: {
+                        state: station.state,
+                        hls: station.hls,
+                        lastcheckok: station.lastcheckok,
+                        lastchecktime: station.lastchecktime
+                    }
+                };
+
+                // Check if station already exists
+                const { data: existing, error: checkError } = await supabase
+                    .from('external_stations')
+                    .select('id')
+                    .eq('source', 'radio-browser')
+                    .eq('external_id', station.stationuuid)
+                    .maybeSingle();
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    console.error('Error checking existing station:', checkError);
+                    throw checkError;
+                }
+
+                if (existing) {
+                    console.log('External station already exists, returning existing ID:', existing.id);
+                    return existing.id;
+                }
+
+                // Insert new external station
+                const { data, error } = await supabase
+                    .from('external_stations')
+                    .insert([externalStation])
+                    .select('id')
+                    .single();
+
+                if (error) {
+                    console.error('Error adding external station:', error);
+                    throw error;
+                }
+
+                console.log('External station added successfully:', data.id);
+                return data.id;
+            } catch (error) {
+                console.error('Error in addExternalStation:', error);
+                throw error;
+            }
+        }
+
+        // Get external station by ID
+        async function getExternalStation(externalStationId) {
+            try {
+                const { data, error } = await supabase
+                    .from('external_stations')
+                    .select('*')
+                    .eq('id', externalStationId)
+                    .single();
+
+                if (error) throw error;
+
+                // Convert to station format
+                return {
+                    id: data.id,
+                    name: data.name,
+                    url: data.url_resolved || data.url,
+                    icon_url: data.icon_url || data.favicon || '',
+                    genres: data.genres || [],
+                    call_letters: '',
+                    frequency: '',
+                    country: data.country,
+                    is_external: true,
+                    external_id: data.id
+                };
+            } catch (error) {
+                console.error('Error getting external station:', error);
+                return null;
+            }
+        }
+
         // ======================
         // STATION HISTORY TRACKING
         // ======================
         
         // Generate a simple anonymous user ID for tracking
         // Track station click (works in both guest and authenticated mode)
-        async function trackStationClick(stationId) {
-            // Skip tracking for temporary stations (Radio Browser, etc.) that don't have an ID
-            if (!stationId) {
+        // Supports both internal stations (numeric ID) and external stations (UUID or object)
+        async function trackStationClick(stationId, externalStationId = null) {
+            // Skip tracking for temporary stations that don't have an ID
+            if (!stationId && !externalStationId) {
                 console.log('Skipping tracking for temporary station (no ID)');
                 return;
             }
 
             if (window.isGuestMode) {
                 // Guest mode - use localStorage only
-                trackStationClickLocal(stationId);
+                trackStationClickLocal(stationId, externalStationId);
             } else {
                 // Authenticated - save to Supabase
                 try {
+                    const insertData = {
+                        user_id: window.currentUser.id,
+                        clicked_at: new Date().toISOString()
+                    };
+
+                    // Add either station_id or external_station_id
+                    if (externalStationId) {
+                        insertData.external_station_id = externalStationId;
+                    } else {
+                        insertData.station_id = stationId;
+                    }
+
                     const { error } = await supabase
                         .from('station_history')
-                        .insert({
-                            station_id: stationId,
-                            user_id: window.currentUser.id,
-                            clicked_at: new Date().toISOString()
-                        });
+                        .insert(insertData);
 
                     if (error) {
                         console.error('Error tracking station click:', error);
-                        trackStationClickLocal(stationId); // Fallback to local
+                        trackStationClickLocal(stationId, externalStationId); // Fallback to local
                     } else {
                         console.log('Station click tracked successfully');
                     }
                 } catch (error) {
                     console.error('Error tracking station click:', error);
-                    trackStationClickLocal(stationId); // Fallback to local
+                    trackStationClickLocal(stationId, externalStationId); // Fallback to local
                 }
             }
         }
 
         // Track station click in local storage (guest mode or fallback)
-        function trackStationClickLocal(stationId) {
+        function trackStationClickLocal(stationId, externalStationId = null) {
             try {
                 let history = JSON.parse(localStorage.getItem('station_history') || '[]');
-                history.push({
-                    station_id: stationId,
+                const record = {
                     clicked_at: new Date().toISOString()
-                });
+                };
+
+                // Add either station_id or external_station_id
+                if (externalStationId) {
+                    record.external_station_id = externalStationId;
+                } else {
+                    record.station_id = stationId;
+                }
+
+                history.push(record);
                 if (history.length > 500) {
                     history = history.slice(-500);
                 }
@@ -1815,6 +1958,7 @@
         }
         
         // Get most recent stations (works in both guest and authenticated mode)
+        // Includes both internal and external (radio-browser) stations
         async function getMostRecentStations(limit = 10) {
             if (window.isGuestMode || !window.currentUser) {
                 // Guest mode or not authenticated - use localStorage
@@ -1824,26 +1968,54 @@
                 try {
                     const { data, error } = await supabase
                         .from('station_history')
-                        .select('station_id, clicked_at')
+                        .select('station_id, external_station_id, clicked_at, external_stations(*), radio_stations(*)')
                         .eq('user_id', window.currentUser.id)
                         .order('clicked_at', { ascending: false })
                         .limit(limit * 3);
 
                     if (error) throw error;
 
-                    const uniqueStationIds = [];
-                    const seenIds = new Set();
+                    const recentStations = [];
+                    const seenKeys = new Set();
 
                     for (const record of data) {
-                        if (!seenIds.has(record.station_id)) {
-                            seenIds.add(record.station_id);
-                            uniqueStationIds.push(record.station_id);
-                            if (uniqueStationIds.length >= limit) break;
+                        // Create unique key for internal or external station
+                        const key = record.external_station_id
+                            ? `ext-${record.external_station_id}`
+                            : `int-${record.station_id}`;
+
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+
+                            let station = null;
+                            if (record.external_station_id && record.external_stations) {
+                                // External station from radio-browser
+                                const ext = record.external_stations;
+                                station = {
+                                    id: ext.id,
+                                    name: ext.name,
+                                    url: ext.url_resolved || ext.url,
+                                    icon_url: ext.icon_url || ext.favicon || '',
+                                    genres: ext.genres || [],
+                                    call_letters: '',
+                                    frequency: '',
+                                    country: ext.country,
+                                    is_external: true,
+                                    external_id: ext.id
+                                };
+                            } else if (record.station_id) {
+                                // Internal station
+                                station = stations.find(s => s.id === record.station_id);
+                            }
+
+                            if (station) {
+                                recentStations.push(station);
+                                if (recentStations.length >= limit) break;
+                            }
                         }
                     }
 
-                    return stations.filter(s => uniqueStationIds.includes(s.id))
-                        .sort((a, b) => uniqueStationIds.indexOf(a.id) - uniqueStationIds.indexOf(b.id));
+                    return recentStations;
 
                 } catch (error) {
                     console.error('Error getting recent stations from database:', error);
@@ -2139,20 +2311,40 @@
             }
         }
         
-        // Load playlist stations
+        // Load playlist stations (includes both internal and external stations)
         async function loadPlaylistStations(playlistId) {
             try {
                 const { data, error } = await supabase
                     .from('playlist_items')
-                    .select('*, radio_stations(*)')
+                    .select('*, radio_stations(*), external_stations(*)')
                     .eq('playlist_id', playlistId)
                     .order('created_at');
-                
+
                 if (error) throw error;
-                
-                playlistStations = data.map(item => item.radio_stations);
+
+                playlistStations = data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else {
+                        // Internal station
+                        return item.radio_stations;
+                    }
+                });
                 renderPlaylistStations();
-                
+
             } catch (error) {
                 console.error('Error loading playlist stations:', error);
             }
@@ -2176,16 +2368,38 @@
                 try {
                     const { data, error } = await supabase
                         .from('playlist_items')
-                        .select('*, radio_stations(*)')
+                        .select('*, radio_stations(*), external_stations(*)')
                         .eq('playlist_id', playlist.id)
                         .order('created_at')
                         .limit(4); // Only need first 4 for collage
 
                     if (error) throw error;
 
+                    const stationsData = data ? data.map(item => {
+                        if (item.external_stations) {
+                            // External station from radio-browser
+                            const ext = item.external_stations;
+                            return {
+                                id: ext.id,
+                                name: ext.name,
+                                url: ext.url_resolved || ext.url,
+                                icon_url: ext.icon_url || ext.favicon || '',
+                                genres: ext.genres || [],
+                                call_letters: '',
+                                frequency: '',
+                                country: ext.country,
+                                is_external: true,
+                                external_id: ext.id
+                            };
+                        } else {
+                            // Internal station
+                            return item.radio_stations;
+                        }
+                    }) : [];
+
                     return {
                         ...playlist,
-                        stations: data ? data.map(item => item.radio_stations) : []
+                        stations: stationsData
                     };
                 } catch (error) {
                     console.error('Error loading playlist stations:', error);
@@ -2580,30 +2794,44 @@
             }
         }
         
-        // Add station to playlist
-        async function addStationToPlaylist(playlistId, stationId) {
+        // Add station to playlist (supports both internal and external stations)
+        async function addStationToPlaylist(playlistId, stationId, externalStationId = null) {
             try {
                 // Check if station is already in playlist
-                const { data: existing } = await supabase
+                let existingQuery = supabase
                     .from('playlist_items')
                     .select('id')
-                    .eq('playlist_id', playlistId)
-                    .eq('station_id', stationId)
-                    .single();
-                
+                    .eq('playlist_id', playlistId);
+
+                if (externalStationId) {
+                    existingQuery = existingQuery.eq('external_station_id', externalStationId);
+                } else {
+                    existingQuery = existingQuery.eq('station_id', stationId);
+                }
+
+                const { data: existing } = await existingQuery.maybeSingle();
+
                 if (existing) {
                     alert('Station is already in this playlist');
                     return;
                 }
-                
+
+                // Insert with either station_id or external_station_id
+                const insertData = { playlist_id: playlistId };
+                if (externalStationId) {
+                    insertData.external_station_id = externalStationId;
+                } else {
+                    insertData.station_id = stationId;
+                }
+
                 const { error } = await supabase
                     .from('playlist_items')
-                    .insert([{ playlist_id: playlistId, station_id: stationId }]);
-                
+                    .insert([insertData]);
+
                 if (error) throw error;
-                
+
                 await loadPlaylists(true); // Force refresh to bypass cache
-                
+
             } catch (error) {
                 console.error('Error adding station to playlist:', error);
                 alert('Failed to add station to playlist');
