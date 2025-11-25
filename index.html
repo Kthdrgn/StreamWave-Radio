@@ -4631,6 +4631,19 @@
                             // Attempt to restart the metadata player if we have a current station
                             if (currentStation) {
                                 console.log('🔄 Attempting to restart metadata player...');
+
+                                // Clean up the stopped player first
+                                try {
+                                    if (metadataOnlyPlayer) {
+                                        metadataOnlyPlayer.stop();
+                                    }
+                                } catch (e) {
+                                    console.log('Error stopping old metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+
+                                // Now restart with a fresh player
                                 setTimeout(() => {
                                     if (currentStation) {
                                         startMetadataOnlyPlayer();
@@ -4798,10 +4811,22 @@
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
                                 console.log('🔄 Attempting to restart metadata player...');
-                                setTimeout(() => {
-                                    if (metadataOnlyPlayerUrl) {
-                                        startMetadataOnlyPlayerForSimpleMode(metadataOnlyPlayerUrl);
+                                const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
+
+                                // Clean up the stopped player first
+                                try {
+                                    if (metadataOnlyPlayer) {
+                                        metadataOnlyPlayer.stop();
                                     }
+                                } catch (e) {
+                                    console.log('Error stopping old metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+
+                                // Now restart with a fresh player
+                                setTimeout(() => {
+                                    startMetadataOnlyPlayerForSimpleMode(urlToRestart);
                                 }, 2000); // Wait 2 seconds before restarting
                             }
                         }
@@ -4924,10 +4949,22 @@
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
                                 console.log('🔄 Attempting to restart metadata player...');
-                                setTimeout(() => {
-                                    if (metadataOnlyPlayerUrl) {
-                                        startMetadataOnlyPlayerDirect(metadataOnlyPlayerUrl);
+                                const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
+
+                                // Clean up the stopped player first
+                                try {
+                                    if (metadataOnlyPlayer) {
+                                        metadataOnlyPlayer.stop();
                                     }
+                                } catch (e) {
+                                    console.log('Error stopping old metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+
+                                // Now restart with a fresh player
+                                setTimeout(() => {
+                                    startMetadataOnlyPlayerDirect(urlToRestart);
                                 }, 2000); // Wait 2 seconds before restarting
                             }
                         }
