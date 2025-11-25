@@ -919,6 +919,21 @@
         </div>
     </div>
 
+    <!-- Playlist Selector Modal for Radio Browser -->
+    <div id="playlistSelectorModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="playlistSelectorTitle">Add to Playlist</h2>
+                <button class="modal-close" id="closePlaylistSelectorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="playlistSelectorList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Playlists will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ======================
         // GLOBAL VARIABLES
@@ -1082,6 +1097,12 @@
         const radioDatabasePrevBtn = document.getElementById('radioDatabasePrevBtn');
         const radioDatabaseNextBtn = document.getElementById('radioDatabaseNextBtn');
         const radioDatabasePageInfo = document.getElementById('radioDatabasePageInfo');
+
+        // Playlist Selector Modal elements
+        const playlistSelectorModal = document.getElementById('playlistSelectorModal');
+        const closePlaylistSelectorModal = document.getElementById('closePlaylistSelectorModal');
+        const playlistSelectorTitle = document.getElementById('playlistSelectorTitle');
+        const playlistSelectorList = document.getElementById('playlistSelectorList');
 
         // ======================
         // LIKED TRACKS FUNCTIONS
@@ -1769,30 +1790,54 @@
                     return;
                 }
 
-                // Create a simple playlist selector
-                const playlistOptions = playlists.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
-                const selection = prompt(`Select a playlist to add "${station.name}" to:\n\n${playlistOptions}\n\nEnter the number:`);
+                // Update modal title
+                playlistSelectorTitle.textContent = `Add "${station.name}" to Playlist`;
 
-                if (!selection) return; // User cancelled
+                // Render playlist options
+                playlistSelectorList.innerHTML = playlists.map(playlist => `
+                    <div
+                        class="playlist-selector-item"
+                        data-playlist-id="${playlist.id}"
+                        data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
+                        style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--text-primary);">${playlist.name}</div>
+                        ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
+                    </div>
+                `).join('');
 
-                const playlistIndex = parseInt(selection) - 1;
-                if (isNaN(playlistIndex) || playlistIndex < 0 || playlistIndex >= playlists.length) {
-                    alert('Invalid selection');
-                    return;
-                }
+                // Add click listeners to playlist items
+                document.querySelectorAll('.playlist-selector-item').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const playlistId = parseInt(item.getAttribute('data-playlist-id'));
+                        const stationData = JSON.parse(item.getAttribute('data-station'));
 
-                const selectedPlaylist = playlists[playlistIndex];
+                        try {
+                            // Add station to external_stations table first
+                            const externalStationId = await addExternalStation(stationData);
 
-                // Add station to external_stations table first
-                const externalStationId = await addExternalStation(station);
+                            // Add to the selected playlist
+                            await addStationToPlaylist(playlistId, null, externalStationId);
 
-                // Add to the selected playlist
-                await addStationToPlaylist(selectedPlaylist.id, null, externalStationId);
+                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                            alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
 
-                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            // Close modal
+                            playlistSelectorModal.classList.remove('active');
+                        } catch (error) {
+                            console.error('Error adding station to playlist:', error);
+                            alert('Failed to add station to playlist. Please try again.');
+                        }
+                    });
+                });
+
+                // Show modal
+                playlistSelectorModal.classList.add('active');
             } catch (error) {
-                console.error('Error adding station to playlist:', error);
-                alert('Failed to add station to playlist. Please try again.');
+                console.error('Error showing playlist selector:', error);
+                alert('Failed to load playlists. Please try again.');
             }
         }
 
@@ -4116,6 +4161,18 @@
         radioDatabaseModal.addEventListener('click', (e) => {
             if (e.target === radioDatabaseModal) {
                 radioDatabaseModal.classList.remove('active');
+            }
+        });
+
+        // Close Playlist Selector modal
+        closePlaylistSelectorModal.addEventListener('click', () => {
+            playlistSelectorModal.classList.remove('active');
+        });
+
+        // Close Playlist Selector modal when clicking outside
+        playlistSelectorModal.addEventListener('click', (e) => {
+            if (e.target === playlistSelectorModal) {
+                playlistSelectorModal.classList.remove('active');
             }
         });
 
