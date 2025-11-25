@@ -5612,7 +5612,7 @@
         }
 
         // Fetch and display lyrics for current track
-        let lastFetchedLyrics = { title: null, artist: null }; // Track what we last fetched to avoid duplicates
+        let lastFetchedLyrics = { title: null, artist: null, lyrics: null, lyricsUrl: null, hasLyrics: false }; // Track what we last fetched to avoid duplicates
 
         async function fetchLyricsForCurrentTrack() {
             if (!currentTrack.title || !currentTrack.artist) {
@@ -5622,11 +5622,14 @@
             // Check if we've already fetched lyrics for this exact song
             if (lastFetchedLyrics.title === currentTrack.title && lastFetchedLyrics.artist === currentTrack.artist) {
                 console.log('Skipping duplicate lyrics fetch for:', `"${currentTrack.artist}" - "${currentTrack.title}"`);
+                // Restore previously fetched lyrics data
+                currentTrack.lyrics = lastFetchedLyrics.lyrics;
+                currentTrack.lyricsUrl = lastFetchedLyrics.lyricsUrl;
+                currentTrack.hasLyrics = lastFetchedLyrics.hasLyrics;
+                // Update the lyrics indicator to show the button
+                updateLyricsIndicator();
                 return;
             }
-
-            // Update the last fetched lyrics track
-            lastFetchedLyrics = { title: currentTrack.title, artist: currentTrack.artist };
 
             try {
                 // Fetch lyrics from LrcLib
@@ -5643,6 +5646,15 @@
                     currentTrack.lyricsUrl = null;
                 }
 
+                // Store the fetched lyrics data to avoid duplicate fetches
+                lastFetchedLyrics = {
+                    title: currentTrack.title,
+                    artist: currentTrack.artist,
+                    lyrics: currentTrack.lyrics,
+                    lyricsUrl: currentTrack.lyricsUrl,
+                    hasLyrics: currentTrack.hasLyrics
+                };
+
                 // Update artwork to show lyrics indicator
                 updateLyricsIndicator();
             } catch (error) {
@@ -5650,6 +5662,16 @@
                 currentTrack.hasLyrics = false;
                 currentTrack.lyrics = null;
                 currentTrack.lyricsUrl = null;
+
+                // Store the failed fetch result
+                lastFetchedLyrics = {
+                    title: currentTrack.title,
+                    artist: currentTrack.artist,
+                    lyrics: null,
+                    lyricsUrl: null,
+                    hasLyrics: false
+                };
+
                 updateLyricsIndicator();
             }
         }
