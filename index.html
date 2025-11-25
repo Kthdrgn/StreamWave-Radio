@@ -947,6 +947,7 @@
         let audioElement = null;
         let simpleAudioPlayer = null;
         let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
+        let metadataOnlyPlayerUrl = null; // Track the URL currently being used by metadata-only player
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
@@ -4575,6 +4576,7 @@
 
             // Try with CORS proxy first for best metadata compatibility
             const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+            metadataOnlyPlayerUrl = rawUrl; // Track the current URL
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
@@ -4652,6 +4654,7 @@
             } catch (error) {
                 console.log('Failed to start metadata-only player:', error);
                 metadataOnlyPlayer = null;
+                metadataOnlyPlayerUrl = null;
             }
         }
 
@@ -4665,17 +4668,33 @@
                     console.log('Error stopping metadata-only player:', e);
                 }
                 metadataOnlyPlayer = null;
+                metadataOnlyPlayerUrl = null; // Reset URL tracker
                 console.log('✅ Metadata-only player stopped');
             }
         }
 
         // Start metadata-only player for Simple Mode
         function startMetadataOnlyPlayerForSimpleMode(rawUrl) {
-            if (!rawUrl || metadataOnlyPlayer) {
-                return; // Already running or no URL
+            if (!rawUrl) {
+                return; // No URL provided
+            }
+
+            // If metadata-only player exists but URL has changed, stop it and restart
+            if (metadataOnlyPlayer) {
+                if (metadataOnlyPlayerUrl === rawUrl) {
+                    console.log('Metadata-only player already running with same URL, keeping it');
+                    return; // Already running with same URL
+                } else {
+                    console.log('Metadata-only player URL changed, restarting...', {
+                        old: metadataOnlyPlayerUrl,
+                        new: rawUrl
+                    });
+                    stopMetadataOnlyPlayer();
+                }
             }
 
             console.log('🎵 Starting metadata-only player for Simple Mode...');
+            metadataOnlyPlayerUrl = rawUrl; // Track the current URL
 
             // Skip HLS streams - they don't support Icecast metadata
             if (isHLSStream(rawUrl)) {
@@ -4728,6 +4747,7 @@
                                 metadataOnlyPlayer.stop();
                             } catch (e) {}
                             metadataOnlyPlayer = null;
+                            metadataOnlyPlayerUrl = null;
                         }
                         console.log('🔄 Retrying metadata-only player with direct URL...');
                         startMetadataOnlyPlayerDirect(rawUrl);
@@ -4753,6 +4773,7 @@
             } catch (error) {
                 console.log('Failed to start metadata-only player (Simple Mode):', error);
                 metadataOnlyPlayer = null;
+                metadataOnlyPlayerUrl = null;
             }
         }
 
@@ -4763,6 +4784,7 @@
             }
 
             console.log('🎵 Starting metadata-only player with direct URL...');
+            metadataOnlyPlayerUrl = rawUrl; // Track the current URL
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(rawUrl, {
@@ -4798,6 +4820,7 @@
                                 metadataOnlyPlayer.stop();
                             } catch (e) {}
                             metadataOnlyPlayer = null;
+                            metadataOnlyPlayerUrl = null;
                         }
                     });
                 } else {
@@ -4814,6 +4837,7 @@
             } catch (error) {
                 console.log('Failed to start metadata-only player (Direct):', error);
                 metadataOnlyPlayer = null;
+                metadataOnlyPlayerUrl = null;
             }
         }
 
@@ -5374,15 +5398,20 @@
                 
                 // Close modal
                 qualityModal.classList.remove('active');
-                
+
                 // If player was playing, stop and restart with new quality
-                if (wasPlaying && currentStation && player) {
+                if (wasPlaying && currentStation) {
                     console.log(`Switching to ${newQuality} quality...`);
                     updateStatus(`Switching to ${newQuality} quality...`, 'loading');
-                    
-                    // Stop the current stream
-                    player.stop();
-                    
+
+                    // Stop the current stream (works for both Live Mode and Simple Mode)
+                    if (player) {
+                        player.stop();
+                    }
+
+                    // Stop metadata-only player so it restarts with new quality URL
+                    stopMetadataOnlyPlayer();
+
                     // Wait a moment for the stop to complete, then start new stream
                     setTimeout(() => {
                         playPauseBtn.click();
@@ -6571,7 +6600,10 @@
                     'Simple Mode - No Metadata',
                     currentStation.icon_url
                 );
-                
+
+                // Start metadata-only player in background to get live metadata
+                startMetadataOnlyPlayerForSimpleMode(rawUrl);
+
                 // Try to play and handle the promise
                 simpleAudioPlayer.play().catch(error => {
                     console.error('Play failed:', error);
