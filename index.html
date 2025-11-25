@@ -3614,7 +3614,7 @@
             if (player) {
                 player.stop();
             }
-            
+
             // Stop and clean up simple audio player if it's playing
             if (simpleAudioPlayer) {
                 simpleAudioPlayer.pause();
@@ -3624,7 +3624,10 @@
                 simpleAudioPlayer = oldPlayer.cloneNode(true);
                 oldPlayer.remove();
             }
-            
+
+            // Stop metadata-only player when switching stations
+            stopMetadataOnlyPlayer();
+
             // Reset playing state
             isPlaying = false;
             isPaused = false;
@@ -4663,6 +4666,154 @@
                 }
                 metadataOnlyPlayer = null;
                 console.log('✅ Metadata-only player stopped');
+            }
+        }
+
+        // Start metadata-only player for Simple Mode
+        function startMetadataOnlyPlayerForSimpleMode(rawUrl) {
+            if (!rawUrl || metadataOnlyPlayer) {
+                return; // Already running or no URL
+            }
+
+            console.log('🎵 Starting metadata-only player for Simple Mode...');
+
+            // Skip HLS streams - they don't support Icecast metadata
+            if (isHLSStream(rawUrl)) {
+                console.log('HLS streams do not support Icecast metadata, skipping metadata-only player');
+                return;
+            }
+
+            // Try with CORS proxy for best metadata compatibility
+            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
+            try {
+                metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
+                    metadataTypes: ['icy', 'ogg'],
+                    enableLogging: false,
+
+                    onMetadata: (metadata) => {
+                        console.log('📻 Metadata received (Simple Mode):', metadata);
+                        displayMetadata(metadata);
+                    },
+
+                    onPlay: () => {
+                        console.log('✅ Metadata-only player is playing (Simple Mode)');
+                    },
+
+                    onError: (error) => {
+                        console.log('⚠️ Metadata-only player error (Simple Mode):', error);
+                        // Don't show errors to user - this is a background process
+                        // If it fails, we just won't have metadata during playback
+                    },
+
+                    onStop: () => {
+                        console.log('⏹️ Metadata-only player stopped (Simple Mode)');
+                    }
+                });
+
+                // Mute the audio element so it plays silently, then start playback
+                if (metadataOnlyPlayer.audioElement) {
+                    metadataOnlyPlayer.audioElement.volume = 0;
+                    metadataOnlyPlayer.audioElement.muted = true;
+                    console.log('✅ Metadata-only player created and muted (Simple Mode)');
+
+                    // Start playing to receive metadata
+                    metadataOnlyPlayer.play().then(() => {
+                        console.log('✅ Metadata-only player playback started (Simple Mode)');
+                    }).catch(error => {
+                        console.log('⚠️ Failed to start metadata-only player playback (Simple Mode):', error);
+                        // Try fallback with direct URL if CORS proxy fails
+                        if (metadataOnlyPlayer) {
+                            try {
+                                metadataOnlyPlayer.stop();
+                            } catch (e) {}
+                            metadataOnlyPlayer = null;
+                        }
+                        console.log('🔄 Retrying metadata-only player with direct URL...');
+                        startMetadataOnlyPlayerDirect(rawUrl);
+                    });
+                } else {
+                    console.log('⚠️ Metadata-only player created, waiting for audio element...');
+                    // Set volume when it becomes available
+                    setTimeout(() => {
+                        if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                            metadataOnlyPlayer.audioElement.volume = 0;
+                            metadataOnlyPlayer.audioElement.muted = true;
+                            console.log('✅ Metadata-only player audio element muted (delayed, Simple Mode)');
+
+                            // Start playing to receive metadata
+                            metadataOnlyPlayer.play().then(() => {
+                                console.log('✅ Metadata-only player playback started (delayed, Simple Mode)');
+                            }).catch(error => {
+                                console.log('⚠️ Failed to start metadata-only player playback (delayed, Simple Mode):', error);
+                            });
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                console.log('Failed to start metadata-only player (Simple Mode):', error);
+                metadataOnlyPlayer = null;
+            }
+        }
+
+        // Fallback: Start metadata-only player with direct URL (no CORS proxy)
+        function startMetadataOnlyPlayerDirect(rawUrl) {
+            if (!rawUrl || metadataOnlyPlayer) {
+                return;
+            }
+
+            console.log('🎵 Starting metadata-only player with direct URL...');
+
+            try {
+                metadataOnlyPlayer = new IcecastMetadataPlayer(rawUrl, {
+                    metadataTypes: ['icy', 'ogg'],
+                    enableLogging: false,
+
+                    onMetadata: (metadata) => {
+                        console.log('📻 Metadata received (Direct):', metadata);
+                        displayMetadata(metadata);
+                    },
+
+                    onPlay: () => {
+                        console.log('✅ Metadata-only player is playing (Direct)');
+                    },
+
+                    onError: (error) => {
+                        console.log('⚠️ Metadata-only player error (Direct):', error);
+                    },
+
+                    onStop: () => {
+                        console.log('⏹️ Metadata-only player stopped (Direct)');
+                    }
+                });
+
+                if (metadataOnlyPlayer.audioElement) {
+                    metadataOnlyPlayer.audioElement.volume = 0;
+                    metadataOnlyPlayer.audioElement.muted = true;
+
+                    metadataOnlyPlayer.play().catch(error => {
+                        console.log('⚠️ Failed to start metadata-only player (Direct):', error);
+                        if (metadataOnlyPlayer) {
+                            try {
+                                metadataOnlyPlayer.stop();
+                            } catch (e) {}
+                            metadataOnlyPlayer = null;
+                        }
+                    });
+                } else {
+                    setTimeout(() => {
+                        if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                            metadataOnlyPlayer.audioElement.volume = 0;
+                            metadataOnlyPlayer.audioElement.muted = true;
+                            metadataOnlyPlayer.play().catch(error => {
+                                console.log('⚠️ Failed to start metadata-only player (Direct, delayed):', error);
+                            });
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                console.log('Failed to start metadata-only player (Direct):', error);
+                metadataOnlyPlayer = null;
             }
         }
 
@@ -6552,13 +6703,13 @@
                 { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
             ];
 
-            // Prioritize most successful combinations
-            // For HTTPS pages with HTTP streams, include multiple CORS proxy attempts
+            // Prioritize Simple Mode for fastest, most reliable playback
+            // Metadata will be fetched separately in the background
             const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
             let attempts = [
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
                 { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
+                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
                 { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
@@ -6589,10 +6740,10 @@
             }
 
             if (!useCorsProxy) {
-                // If CORS proxy is disabled, try direct connections first
+                // If CORS proxy is disabled, prioritize Simple Mode for fastest playback
                 attempts = [
-                    { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
                     { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
+                    { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
                     { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
                     { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
                     { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
@@ -6713,20 +6864,24 @@
                                         <div class="now-playing-label">NOW PLAYING</div>
                                         <div class="track-info">
                                             <div class="track-title">${escapeHtml(currentStation.name)}</div>
+                                            <div class="track-artist" style="font-size: 12px; opacity: 0.6;">Fetching metadata...</div>
                                         </div>
                                     `;
                                     isPlaying = true;
                                     updatePlayPauseButton(true);
                                     playPauseBtn.disabled = false;
-                                    
+
                                     // Update Media Session for notification shade
                                     updateMediaSession(
                                         currentStation.name,
                                         '',
-                                        'Simple Mode - No Metadata',
+                                        'Simple Mode',
                                         currentStation.icon_url
                                     );
-                                    
+
+                                    // Start metadata-only player in background to get live metadata
+                                    startMetadataOnlyPlayerForSimpleMode(rawUrl);
+
                                     resolve();
                                 }).catch(reject);
                             }, { once: true });
