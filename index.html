@@ -4627,6 +4627,16 @@
                                     currentSrc: audio.currentSrc
                                 });
                             }
+
+                            // Attempt to restart the metadata player if we have a current station
+                            if (currentStation) {
+                                console.log('🔄 Attempting to restart metadata player...');
+                                setTimeout(() => {
+                                    if (currentStation) {
+                                        startMetadataOnlyPlayer();
+                                    }
+                                }, 2000); // Wait 2 seconds before restarting
+                            }
                         }
                     }
                 });
@@ -4784,6 +4794,16 @@
                                     currentSrc: audio.currentSrc
                                 });
                             }
+
+                            // Attempt to restart the metadata player if we still have a URL
+                            if (metadataOnlyPlayerUrl) {
+                                console.log('🔄 Attempting to restart metadata player...');
+                                setTimeout(() => {
+                                    if (metadataOnlyPlayerUrl) {
+                                        startMetadataOnlyPlayerForSimpleMode(metadataOnlyPlayerUrl);
+                                    }
+                                }, 2000); // Wait 2 seconds before restarting
+                            }
                         }
                     }
                 });
@@ -4899,6 +4919,16 @@
                                     } : null,
                                     currentSrc: audio.currentSrc
                                 });
+                            }
+
+                            // Attempt to restart the metadata player if we still have a URL
+                            if (metadataOnlyPlayerUrl) {
+                                console.log('🔄 Attempting to restart metadata player...');
+                                setTimeout(() => {
+                                    if (metadataOnlyPlayerUrl) {
+                                        startMetadataOnlyPlayerDirect(metadataOnlyPlayerUrl);
+                                    }
+                                }, 2000); // Wait 2 seconds before restarting
                             }
                         }
                     }
