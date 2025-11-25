@@ -6647,7 +6647,8 @@
                 if (isPlaying && simpleAudioPlayer && !simpleAudioPlayer.paused) {
                     console.log('⏹️ Stopping audio player and metadata player');
                     simpleAudioPlayer.pause();
-                    simpleAudioPlayer.src = ''; // Clear source to fully stop
+                    simpleAudioPlayer.removeAttribute('src'); // Remove source to fully stop
+                    simpleAudioPlayer.load(); // Reset the media element
                     stopMetadataOnlyPlayer(); // Stop metadata player to keep in sync
                     isPlaying = false;
                     isPaused = false; // Not paused, fully stopped
