@@ -5681,6 +5681,9 @@
             } else {
                 updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
             }
+            // Reset last fetched track and lyrics to allow fresh fetches when metadata returns
+            lastFetchedTrack = { title: null, artist: null };
+            lastFetchedLyrics = { title: null, artist: null, lyrics: null, lyricsUrl: null, hasLyrics: false };
         }
         
         // Display metadata
