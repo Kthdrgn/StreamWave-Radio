@@ -1811,7 +1811,7 @@
                 // Add click listeners to playlist items
                 document.querySelectorAll('.playlist-selector-item').forEach(item => {
                     item.addEventListener('click', async () => {
-                        const playlistId = parseInt(item.getAttribute('data-playlist-id'));
+                        const playlistId = item.getAttribute('data-playlist-id');
                         const stationData = JSON.parse(item.getAttribute('data-station'));
 
                         try {
