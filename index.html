@@ -329,7 +329,7 @@
                             <span class="quality-option-icon">▶️</span>
                             <span class="quality-option-name">Simple Mode</span>
                         </div>
-                        <div class="quality-option-desc">Pause/resume playback. No metadata updates. Works with more streams.</div>
+                        <div class="quality-option-desc">Stop/restart playback (live stream). No metadata updates. Works with more streams.</div>
                     </div>
                 </div>
             </div>
@@ -5681,6 +5681,9 @@
             } else {
                 updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
             }
+            // Reset last fetched track and lyrics to allow fresh fetches when metadata returns
+            lastFetchedTrack = { title: null, artist: null };
+            lastFetchedLyrics = { title: null, artist: null, lyrics: null, lyricsUrl: null, hasLyrics: false };
         }
         
         // Display metadata
@@ -6641,41 +6644,26 @@
                 return;
             }
             
-            // SIMPLE MODE - Use HTML5 audio with pause/resume
+            // SIMPLE MODE - Stop instead of pause (radio is live content)
             if (playbackMode === 'simple') {
-                // If playing, pause
+                // If playing, stop both audio and metadata players
                 if (isPlaying && simpleAudioPlayer && !simpleAudioPlayer.paused) {
+                    console.log('⏹️ Stopping audio player and metadata player');
                     simpleAudioPlayer.pause();
+                    simpleAudioPlayer.removeAttribute('src'); // Remove source to fully stop
+                    simpleAudioPlayer.load(); // Reset the media element
+                    stopMetadataOnlyPlayer(); // Stop metadata player to keep in sync
                     isPlaying = false;
-                    isPaused = true;
-                    updateStatus('Paused', 'stopped');
+                    isPaused = false; // Not paused, fully stopped
+                    updateStatus('Stopped', 'stopped');
                     updatePlayPauseButton(false);
                     return;
                 }
-                
-                // If paused, resume
-                if (simpleAudioPlayer && simpleAudioPlayer.paused) {
-                    // If source is empty or invalid (e.g., after mode switch or station change), reload it
-                    const hasSrc = simpleAudioPlayer.src && 
-                                   simpleAudioPlayer.src !== '' && 
-                                   simpleAudioPlayer.src !== window.location.href &&
-                                   !simpleAudioPlayer.src.includes(window.location.pathname);
-                    
-                    if (!hasSrc) {
-                        console.log('Simple player has no valid source, loading new stream');
-                        // Fall through to load new stream below
-                    } else {
-                        console.log('Resuming simple player with existing source:', simpleAudioPlayer.src);
-                        simpleAudioPlayer.play().catch(error => {
-                            console.error('Resume failed:', error);
-                            updateStatus('Error: Unable to resume stream', 'error');
-                        });
-                        isPlaying = true;
-                        isPaused = false;
-                        updateStatus('Playing', 'playing');
-                        updatePlayPauseButton(true);
-                        return;
-                    }
+
+                // If stopped/paused, start fresh from live stream
+                if (!isPlaying) {
+                    console.log('▶️ Starting fresh playback from live stream');
+                    // Fall through to load new stream below
                 }
                 
                 // Start new playback in simple mode
