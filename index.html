@@ -838,47 +838,41 @@
                         >
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                        <!-- Country Filter Wrapper -->
-                        <div style="flex: 1; min-width: 150px; position: relative;">
-                            <input
-                                type="text"
-                                id="radioDatabaseCountryFilter"
-                                class="form-input"
-                                placeholder="Filter countries..."
-                                style="margin-bottom: 5px; font-size: 12px; padding: 6px 10px;"
-                            >
-                            <select id="radioDatabaseCountry" class="form-input" size="1">
-                                <option value="">All Countries</option>
-                            </select>
-                        </div>
+                        <input
+                            type="text"
+                            id="radioDatabaseCountry"
+                            class="form-input"
+                            list="radioDatabaseCountryList"
+                            placeholder="All Countries"
+                            autocomplete="off"
+                            style="flex: 1; min-width: 150px;"
+                        >
+                        <datalist id="radioDatabaseCountryList">
+                        </datalist>
 
-                        <!-- Language Filter Wrapper -->
-                        <div style="flex: 1; min-width: 150px; position: relative;">
-                            <input
-                                type="text"
-                                id="radioDatabaseLanguageFilter"
-                                class="form-input"
-                                placeholder="Filter languages..."
-                                style="margin-bottom: 5px; font-size: 12px; padding: 6px 10px;"
-                            >
-                            <select id="radioDatabaseLanguage" class="form-input" size="1">
-                                <option value="">All Languages</option>
-                            </select>
-                        </div>
+                        <input
+                            type="text"
+                            id="radioDatabaseLanguage"
+                            class="form-input"
+                            list="radioDatabaseLanguageList"
+                            placeholder="All Languages"
+                            autocomplete="off"
+                            style="flex: 1; min-width: 150px;"
+                        >
+                        <datalist id="radioDatabaseLanguageList">
+                        </datalist>
 
-                        <!-- Tag Filter Wrapper -->
-                        <div style="flex: 1; min-width: 150px; position: relative;">
-                            <input
-                                type="text"
-                                id="radioDatabaseTagFilter"
-                                class="form-input"
-                                placeholder="Filter tags..."
-                                style="margin-bottom: 5px; font-size: 12px; padding: 6px 10px;"
-                            >
-                            <select id="radioDatabaseTag" class="form-input" size="1">
-                                <option value="">All Tags</option>
-                            </select>
-                        </div>
+                        <input
+                            type="text"
+                            id="radioDatabaseTag"
+                            class="form-input"
+                            list="radioDatabaseTagList"
+                            placeholder="All Tags"
+                            autocomplete="off"
+                            style="flex: 1; min-width: 150px;"
+                        >
+                        <datalist id="radioDatabaseTagList">
+                        </datalist>
 
                         <select id="radioDatabaseSort" class="form-input" style="flex: 1; min-width: 150px;">
                             <option value="votes">Most Popular</option>
@@ -1076,9 +1070,9 @@
         const radioDatabaseCountry = document.getElementById('radioDatabaseCountry');
         const radioDatabaseLanguage = document.getElementById('radioDatabaseLanguage');
         const radioDatabaseTag = document.getElementById('radioDatabaseTag');
-        const radioDatabaseCountryFilter = document.getElementById('radioDatabaseCountryFilter');
-        const radioDatabaseLanguageFilter = document.getElementById('radioDatabaseLanguageFilter');
-        const radioDatabaseTagFilter = document.getElementById('radioDatabaseTagFilter');
+        const radioDatabaseCountryList = document.getElementById('radioDatabaseCountryList');
+        const radioDatabaseLanguageList = document.getElementById('radioDatabaseLanguageList');
+        const radioDatabaseTagList = document.getElementById('radioDatabaseTagList');
         const radioDatabaseSort = document.getElementById('radioDatabaseSort');
         const radioDatabaseSearchBtn = document.getElementById('radioDatabaseSearchBtn');
         const radioDatabaseLoading = document.getElementById('radioDatabaseLoading');
@@ -1537,7 +1531,7 @@
                         const option = document.createElement('option');
                         option.value = country.name;
                         option.textContent = `${country.name} (${country.stationcount})`;
-                        radioDatabaseCountry.appendChild(option);
+                        radioDatabaseCountryList.appendChild(option);
                     }
                 });
 
@@ -1550,7 +1544,7 @@
                         const option = document.createElement('option');
                         option.value = lang.name;
                         option.textContent = `${lang.name} (${lang.stationcount})`;
-                        radioDatabaseLanguage.appendChild(option);
+                        radioDatabaseLanguageList.appendChild(option);
                     }
                 });
 
@@ -1563,26 +1557,11 @@
                         const option = document.createElement('option');
                         option.value = tag.name;
                         option.textContent = `${tag.name} (${tag.stationcount})`;
-                        radioDatabaseTag.appendChild(option);
+                        radioDatabaseTagList.appendChild(option);
                     }
                 });
             } catch (error) {
                 console.error('Error loading Radio Browser filters:', error);
-            }
-        }
-
-        // Filter function for dropdowns
-        function filterDropdownOptions(filterInput, selectElement) {
-            const filterText = filterInput.value.toLowerCase();
-            const options = selectElement.options;
-
-            for (let i = 0; i < options.length; i++) {
-                const optionText = options[i].textContent.toLowerCase();
-                if (optionText.includes(filterText) || options[i].value === '') {
-                    options[i].style.display = '';
-                } else {
-                    options[i].style.display = 'none';
-                }
             }
         }
 
@@ -4126,16 +4105,12 @@
         radioDatabaseBtn.addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
             radioDatabaseModal.classList.add('active');
-            // Clear filter inputs
-            radioDatabaseCountryFilter.value = '';
-            radioDatabaseLanguageFilter.value = '';
-            radioDatabaseTagFilter.value = '';
-            // Reset all dropdown options to be visible
-            filterDropdownOptions(radioDatabaseCountryFilter, radioDatabaseCountry);
-            filterDropdownOptions(radioDatabaseLanguageFilter, radioDatabaseLanguage);
-            filterDropdownOptions(radioDatabaseTagFilter, radioDatabaseTag);
+            // Clear input values
+            radioDatabaseCountry.value = '';
+            radioDatabaseLanguage.value = '';
+            radioDatabaseTag.value = '';
             // Load filters if not already loaded
-            if (radioDatabaseCountry.options.length === 1) {
+            if (radioDatabaseCountryList.children.length === 0) {
                 loadRadioBrowserFilters();
             }
         });
@@ -4162,37 +4137,6 @@
             if (e.key === 'Enter') {
                 searchRadioBrowser();
             }
-        });
-
-        // Radio Database Country filter
-        radioDatabaseCountryFilter.addEventListener('input', () => {
-            filterDropdownOptions(radioDatabaseCountryFilter, radioDatabaseCountry);
-        });
-
-        // Radio Database Language filter
-        radioDatabaseLanguageFilter.addEventListener('input', () => {
-            filterDropdownOptions(radioDatabaseLanguageFilter, radioDatabaseLanguage);
-        });
-
-        // Radio Database Tag filter
-        radioDatabaseTagFilter.addEventListener('input', () => {
-            filterDropdownOptions(radioDatabaseTagFilter, radioDatabaseTag);
-        });
-
-        // Clear filter inputs when a selection is made
-        radioDatabaseCountry.addEventListener('change', () => {
-            radioDatabaseCountryFilter.value = '';
-            filterDropdownOptions(radioDatabaseCountryFilter, radioDatabaseCountry);
-        });
-
-        radioDatabaseLanguage.addEventListener('change', () => {
-            radioDatabaseLanguageFilter.value = '';
-            filterDropdownOptions(radioDatabaseLanguageFilter, radioDatabaseLanguage);
-        });
-
-        radioDatabaseTag.addEventListener('change', () => {
-            radioDatabaseTagFilter.value = '';
-            filterDropdownOptions(radioDatabaseTagFilter, radioDatabaseTag);
         });
 
         // Radio Database sort change - restart search from page 1
