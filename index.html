@@ -948,6 +948,7 @@
         let simpleAudioPlayer = null;
         let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
         let metadataOnlyPlayerUrl = null; // Track the URL currently being used by metadata-only player
+        let metadataOnlyPlayerIntentionalStop = false; // Track if stop was intentional
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
@@ -4607,7 +4608,26 @@
                     },
 
                     onStop: () => {
-                        console.log('⏹️ Metadata-only player stopped');
+                        if (metadataOnlyPlayerIntentionalStop) {
+                            console.log('⏹️ Metadata-only player stopped - intentional');
+                            metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                        } else {
+                            console.warn('⚠️ Metadata-only player stopped unexpectedly');
+                            if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                                const audio = metadataOnlyPlayer.audioElement;
+                                console.log('Audio element state:', {
+                                    paused: audio.paused,
+                                    ended: audio.ended,
+                                    readyState: audio.readyState,
+                                    networkState: audio.networkState,
+                                    error: audio.error ? {
+                                        code: audio.error.code,
+                                        message: audio.error.message
+                                    } : null,
+                                    currentSrc: audio.currentSrc
+                                });
+                            }
+                        }
                     }
                 });
 
@@ -4621,6 +4641,15 @@
                         readyState: metadataOnlyPlayer.audioElement.readyState,
                         networkState: metadataOnlyPlayer.audioElement.networkState
                     });
+
+                    // Add diagnostic event listeners
+                    const audio = metadataOnlyPlayer.audioElement;
+                    audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended'));
+                    audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled'));
+                    audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
+                    audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
+                    audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
+                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
@@ -4642,6 +4671,15 @@
                                 networkState: metadataOnlyPlayer.audioElement.networkState
                             });
 
+                            // Add diagnostic event listeners
+                            const audio = metadataOnlyPlayer.audioElement;
+                            audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended'));
+                            audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled'));
+                            audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
+                            audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
+                            audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
+                            audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
+
                             // Start playing to receive metadata
                             metadataOnlyPlayer.play().then(() => {
                                 console.log('✅ Metadata-only player playback started (delayed)');
@@ -4662,6 +4700,7 @@
         function stopMetadataOnlyPlayer() {
             if (metadataOnlyPlayer) {
                 console.log('Stopping metadata-only player...');
+                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional stop
                 try {
                     metadataOnlyPlayer.stop();
                 } catch (e) {
@@ -4669,7 +4708,7 @@
                 }
                 metadataOnlyPlayer = null;
                 metadataOnlyPlayerUrl = null; // Reset URL tracker
-                console.log('✅ Metadata-only player stopped');
+                console.log('✅ Metadata-only player stopped (intentional)');
             }
         }
 
@@ -4726,7 +4765,26 @@
                     },
 
                     onStop: () => {
-                        console.log('⏹️ Metadata-only player stopped (Simple Mode)');
+                        if (metadataOnlyPlayerIntentionalStop) {
+                            console.log('⏹️ Metadata-only player stopped (Simple Mode) - intentional');
+                            metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                        } else {
+                            console.warn('⚠️ Metadata-only player stopped unexpectedly (Simple Mode)');
+                            if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                                const audio = metadataOnlyPlayer.audioElement;
+                                console.log('Audio element state:', {
+                                    paused: audio.paused,
+                                    ended: audio.ended,
+                                    readyState: audio.readyState,
+                                    networkState: audio.networkState,
+                                    error: audio.error ? {
+                                        code: audio.error.code,
+                                        message: audio.error.message
+                                    } : null,
+                                    currentSrc: audio.currentSrc
+                                });
+                            }
+                        }
                     }
                 });
 
@@ -4735,6 +4793,15 @@
                     metadataOnlyPlayer.audioElement.volume = 0;
                     metadataOnlyPlayer.audioElement.muted = true;
                     console.log('✅ Metadata-only player created and muted (Simple Mode)');
+
+                    // Add diagnostic event listeners
+                    const audio = metadataOnlyPlayer.audioElement;
+                    audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended'));
+                    audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled'));
+                    audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
+                    audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
+                    audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
+                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
@@ -4760,6 +4827,15 @@
                             metadataOnlyPlayer.audioElement.volume = 0;
                             metadataOnlyPlayer.audioElement.muted = true;
                             console.log('✅ Metadata-only player audio element muted (delayed, Simple Mode)');
+
+                            // Add diagnostic event listeners
+                            const audio = metadataOnlyPlayer.audioElement;
+                            audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended'));
+                            audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled'));
+                            audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
+                            audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
+                            audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
+                            audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
 
                             // Start playing to receive metadata
                             metadataOnlyPlayer.play().then(() => {
@@ -4805,13 +4881,41 @@
                     },
 
                     onStop: () => {
-                        console.log('⏹️ Metadata-only player stopped (Direct)');
+                        if (metadataOnlyPlayerIntentionalStop) {
+                            console.log('⏹️ Metadata-only player stopped (Direct) - intentional');
+                            metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                        } else {
+                            console.warn('⚠️ Metadata-only player stopped unexpectedly (Direct)');
+                            if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
+                                const audio = metadataOnlyPlayer.audioElement;
+                                console.log('Audio element state:', {
+                                    paused: audio.paused,
+                                    ended: audio.ended,
+                                    readyState: audio.readyState,
+                                    networkState: audio.networkState,
+                                    error: audio.error ? {
+                                        code: audio.error.code,
+                                        message: audio.error.message
+                                    } : null,
+                                    currentSrc: audio.currentSrc
+                                });
+                            }
+                        }
                     }
                 });
 
                 if (metadataOnlyPlayer.audioElement) {
                     metadataOnlyPlayer.audioElement.volume = 0;
                     metadataOnlyPlayer.audioElement.muted = true;
+
+                    // Add diagnostic event listeners
+                    const audio = metadataOnlyPlayer.audioElement;
+                    audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended (Direct)'));
+                    audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled (Direct)'));
+                    audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended (Direct)'));
+                    audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted (Direct)'));
+                    audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied (Direct)'));
+                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data (Direct)'));
 
                     metadataOnlyPlayer.play().catch(error => {
                         console.log('⚠️ Failed to start metadata-only player (Direct):', error);
@@ -4828,6 +4932,16 @@
                         if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
                             metadataOnlyPlayer.audioElement.volume = 0;
                             metadataOnlyPlayer.audioElement.muted = true;
+
+                            // Add diagnostic event listeners
+                            const audio = metadataOnlyPlayer.audioElement;
+                            audio.addEventListener('ended', () => console.log('🔚 Metadata player: stream ended (Direct)'));
+                            audio.addEventListener('stalled', () => console.warn('⚠️ Metadata player: stream stalled (Direct)'));
+                            audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended (Direct)'));
+                            audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted (Direct)'));
+                            audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied (Direct)'));
+                            audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data (Direct)'));
+
                             metadataOnlyPlayer.play().catch(error => {
                                 console.log('⚠️ Failed to start metadata-only player (Direct, delayed):', error);
                             });
