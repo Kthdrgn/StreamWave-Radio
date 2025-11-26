@@ -954,6 +954,8 @@
         let metadataOnlyPlayerRetryTimeoutId = null; // Track pending retry timeout
         let metadataOnlyPlayerErrorCount = 0; // Track consecutive errors from onError handler
         let metadataOnlyPlayerMaxErrors = 3; // Maximum errors before giving up
+        let metadataOnlyPlayerWaitingTimeoutId = null; // Track timeout for stuck 'waiting' state
+        let metadataOnlyPlayerWaitingTimeout = 30000; // 30 seconds timeout for waiting state
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
@@ -4579,6 +4581,49 @@
             }
         }
 
+        // Clear any pending metadata player waiting timeout
+        function clearMetadataPlayerWaitingTimeout() {
+            if (metadataOnlyPlayerWaitingTimeoutId) {
+                clearTimeout(metadataOnlyPlayerWaitingTimeoutId);
+                metadataOnlyPlayerWaitingTimeoutId = null;
+            }
+        }
+
+        // Set a timeout to detect if metadata player is stuck waiting
+        function setMetadataPlayerWaitingTimeout() {
+            clearMetadataPlayerWaitingTimeout();
+            metadataOnlyPlayerWaitingTimeoutId = setTimeout(() => {
+                console.error('❌ Metadata player stuck in waiting state for too long (30s). Stopping to prevent infinite retries.');
+                metadataOnlyPlayerErrorCount++;
+
+                // Stop the player after too many consecutive timeout errors
+                if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                    console.error(`❌ Metadata player reached ${metadataOnlyPlayerMaxErrors} timeout errors. Giving up.`);
+                    if (metadataOnlyPlayer) {
+                        metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                        try {
+                            metadataOnlyPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping metadata player:', e);
+                        }
+                        metadataOnlyPlayer = null;
+                        metadataOnlyPlayerUrl = null;
+                    }
+                    metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                    clearMetadataPlayerRetryTimeout();
+                } else {
+                    // Try to restart the player
+                    if (metadataOnlyPlayer) {
+                        try {
+                            metadataOnlyPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping metadata player:', e);
+                        }
+                    }
+                }
+            }, metadataOnlyPlayerWaitingTimeout);
+        }
+
         // Start metadata-only player (silent, for Chromecast sessions)
         function startMetadataOnlyPlayer() {
             if (!currentStation || metadataOnlyPlayer) {
@@ -4619,15 +4664,18 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout on successful playback
                     },
 
                     onLoad: () => {
                         console.log('✅ Metadata-only player loaded');
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout when loaded
                     },
 
                     onStreamStart: () => {
                         console.log('✅ Metadata-only player stream started');
                         resetMetadataPlayerRetries(); // Reset retry counter on successful stream start
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout when stream starts
                     },
 
                     onError: (error) => {
@@ -4660,6 +4708,7 @@
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
                             resetMetadataPlayerRetries(); // Reset retry counter
                             clearMetadataPlayerRetryTimeout(); // Clear any pending retries
+                            clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4735,7 +4784,18 @@
                     audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
                     audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
                     audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
-                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
+                    audio.addEventListener('waiting', () => {
+                        console.log('⏳ Metadata player: waiting for data');
+                        setMetadataPlayerWaitingTimeout(); // Set timeout to detect stuck state
+                    });
+                    audio.addEventListener('playing', () => {
+                        console.log('▶️ Metadata player: playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when playback starts
+                    });
+                    audio.addEventListener('canplay', () => {
+                        console.log('✅ Metadata player: can play');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when data is ready
+                    });
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
@@ -4788,6 +4848,7 @@
                 console.log('Stopping metadata-only player...');
                 metadataOnlyPlayerIntentionalStop = true; // Mark as intentional stop
                 clearMetadataPlayerRetryTimeout(); // Clear any pending retry attempts
+                clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
                 metadataOnlyPlayerErrorCount = 0; // Reset error counter
                 try {
                     metadataOnlyPlayer.stop();
@@ -4845,6 +4906,7 @@
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing (Simple Mode)');
                         resetMetadataPlayerRetries(); // Reset retry counter on successful playback
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout on successful playback
                     },
 
                     onError: (error) => {
@@ -4877,6 +4939,7 @@
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
                             resetMetadataPlayerRetries(); // Reset retry counter
                             clearMetadataPlayerRetryTimeout(); // Clear any pending retries
+                            clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly (Simple Mode)');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4947,7 +5010,18 @@
                     audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
                     audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
                     audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
-                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
+                    audio.addEventListener('waiting', () => {
+                        console.log('⏳ Metadata player: waiting for data');
+                        setMetadataPlayerWaitingTimeout(); // Set timeout to detect stuck state
+                    });
+                    audio.addEventListener('playing', () => {
+                        console.log('▶️ Metadata player: playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when playback starts
+                    });
+                    audio.addEventListener('canplay', () => {
+                        console.log('✅ Metadata player: can play');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when data is ready
+                    });
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
