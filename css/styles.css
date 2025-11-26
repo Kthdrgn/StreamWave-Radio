@@ -2273,6 +2273,11 @@ body[data-layout="landscape"] .no-metadata {
     font-size: 24px; /* 16px * 1.5 */
 }
 
+/* Landscape mode: hamburger menu wrapper takes full width */
+body[data-layout="landscape"] .hamburger-menu-wrapper {
+    max-width: none;
+}
+
 body[data-layout="landscape"] .station-display-name {
     font-size: 27px; /* 18px * 1.5 */
 }
@@ -2446,13 +2451,18 @@ body[data-layout="landscape"] .layout-slider {
     position: relative;
 }
 
+/* Hamburger Menu Wrapper - matches artwork width */
+.hamburger-menu-wrapper {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    justify-content: flex-end;
+}
+
 /* Hamburger Menu Container */
 .hamburger-menu-container {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 10;
     padding: 15px;
+    z-index: 10;
 }
 
 /* Hamburger Button */
