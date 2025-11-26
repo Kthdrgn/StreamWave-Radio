@@ -952,6 +952,8 @@
         let metadataOnlyPlayerRetryCount = 0; // Track consecutive restart attempts
         let metadataOnlyPlayerMaxRetries = 5; // Maximum number of restart attempts
         let metadataOnlyPlayerRetryTimeoutId = null; // Track pending retry timeout
+        let metadataOnlyPlayerErrorCount = 0; // Track consecutive errors from onError handler
+        let metadataOnlyPlayerMaxErrors = 3; // Maximum errors before giving up
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
@@ -4565,7 +4567,8 @@
         // Reset metadata player retry counter (call on successful playback)
         function resetMetadataPlayerRetries() {
             metadataOnlyPlayerRetryCount = 0;
-            console.log('✅ Metadata player retry counter reset');
+            metadataOnlyPlayerErrorCount = 0;
+            console.log('✅ Metadata player retry and error counters reset');
         }
 
         // Clear any pending metadata player retry timeout
@@ -4629,6 +4632,24 @@
 
                     onError: (error) => {
                         console.log('❌ Metadata-only player error:', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Chromecast mode) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                         // Don't show errors to user - this is a background process
                         // If it fails, we just won't have metadata during casting
                     },
@@ -4767,6 +4788,7 @@
                 console.log('Stopping metadata-only player...');
                 metadataOnlyPlayerIntentionalStop = true; // Mark as intentional stop
                 clearMetadataPlayerRetryTimeout(); // Clear any pending retry attempts
+                metadataOnlyPlayerErrorCount = 0; // Reset error counter
                 try {
                     metadataOnlyPlayer.stop();
                 } catch (e) {
@@ -4827,6 +4849,24 @@
 
                     onError: (error) => {
                         console.log('⚠️ Metadata-only player error (Simple Mode):', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Simple Mode) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                         // Don't show errors to user - this is a background process
                         // If it fails, we just won't have metadata during playback
                     },
@@ -4985,6 +5025,24 @@
 
                     onError: (error) => {
                         console.log('⚠️ Metadata-only player error (Direct):', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Direct) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                     },
 
                     onStop: () => {
