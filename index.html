@@ -7123,35 +7123,17 @@
             // Metadata will be fetched separately in the background
             const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
+            // Limit to just 3-4 attempts - if a station doesn't work after the first few tries, it won't work
             let attempts = [
                 { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
-                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
+                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' }
             ];
 
-            // If mixed content fix is needed, add fallback attempts with alternative CORS proxies
-            if (needsMixedContentFix) {
-                // Add simple mode attempts with different CORS proxies
-                const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
-                if (simpleModeIndex !== -1) {
-                    // Insert alternative proxy attempts after the first simple mode attempt
-                    for (let j = 1; j < corsProxies.length; j++) {
-                        attempts.splice(simpleModeIndex + j, 0, {
-                            url: rawUrl,
-                            cors: false,
-                            corsProxyIndex: j,
-                            metadata: [],
-                            description: `Simple Mode (${corsProxies[j].name})`
-                        });
-                    }
-                }
-
-                // Add metadata attempts with alternative proxies
+            // If mixed content fix is needed, try one alternative CORS proxy as a fallback
+            if (needsMixedContentFix && corsProxies.length > 1) {
                 attempts.push(
-                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` },
-                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: [], description: `${corsProxies[1].name} (No Metadata)` }
+                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` }
                 );
             }
 
@@ -7160,25 +7142,14 @@
                 attempts = [
                     { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
                     { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                    { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
-                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
+                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' }
                 ];
 
-                // Even with CORS proxy disabled, add fallbacks if mixed content fix is needed
-                if (needsMixedContentFix) {
-                    const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
-                    if (simpleModeIndex !== -1) {
-                        for (let j = 1; j < corsProxies.length; j++) {
-                            attempts.splice(simpleModeIndex + j, 0, {
-                                url: rawUrl,
-                                cors: false,
-                                corsProxyIndex: j,
-                                metadata: [],
-                                description: `Simple Mode (${corsProxies[j].name})`
-                            });
-                        }
-                    }
+                // Even with CORS proxy disabled, try one fallback if mixed content fix is needed
+                if (needsMixedContentFix && corsProxies.length > 1) {
+                    attempts.push(
+                        { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` }
+                    );
                 }
             }
             
