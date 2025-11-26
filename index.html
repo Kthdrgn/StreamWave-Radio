@@ -949,6 +949,9 @@
         let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
         let metadataOnlyPlayerUrl = null; // Track the URL currently being used by metadata-only player
         let metadataOnlyPlayerIntentionalStop = false; // Track if stop was intentional
+        let metadataOnlyPlayerRetryCount = 0; // Track consecutive restart attempts
+        let metadataOnlyPlayerMaxRetries = 5; // Maximum number of restart attempts
+        let metadataOnlyPlayerRetryTimeoutId = null; // Track pending retry timeout
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
         let isPlaying = false;
         let isPaused = false;
@@ -4551,6 +4554,28 @@
             }
         }
 
+        // Calculate exponential backoff delay for metadata player retries
+        function getMetadataPlayerRetryDelay(retryCount) {
+            // Exponential backoff: 2s, 4s, 8s, 16s, 30s (capped at 30s)
+            const baseDelay = 2000; // 2 seconds
+            const delay = Math.min(baseDelay * Math.pow(2, retryCount), 30000);
+            return delay;
+        }
+
+        // Reset metadata player retry counter (call on successful playback)
+        function resetMetadataPlayerRetries() {
+            metadataOnlyPlayerRetryCount = 0;
+            console.log('✅ Metadata player retry counter reset');
+        }
+
+        // Clear any pending metadata player retry timeout
+        function clearMetadataPlayerRetryTimeout() {
+            if (metadataOnlyPlayerRetryTimeoutId) {
+                clearTimeout(metadataOnlyPlayerRetryTimeoutId);
+                metadataOnlyPlayerRetryTimeoutId = null;
+            }
+        }
+
         // Start metadata-only player (silent, for Chromecast sessions)
         function startMetadataOnlyPlayer() {
             if (!currentStation || metadataOnlyPlayer) {
@@ -4599,6 +4624,7 @@
 
                     onStreamStart: () => {
                         console.log('✅ Metadata-only player stream started');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful stream start
                     },
 
                     onError: (error) => {
@@ -4611,6 +4637,8 @@
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4630,7 +4658,18 @@
 
                             // Attempt to restart the metadata player if we have a current station
                             if (currentStation) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
 
                                 // Clean up the stopped player first
                                 try {
@@ -4643,12 +4682,15 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     if (currentStation) {
                                         startMetadataOnlyPlayer();
                                     }
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
@@ -4724,6 +4766,7 @@
             if (metadataOnlyPlayer) {
                 console.log('Stopping metadata-only player...');
                 metadataOnlyPlayerIntentionalStop = true; // Mark as intentional stop
+                clearMetadataPlayerRetryTimeout(); // Clear any pending retry attempts
                 try {
                     metadataOnlyPlayer.stop();
                 } catch (e) {
@@ -4779,6 +4822,7 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing (Simple Mode)');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful playback
                     },
 
                     onError: (error) => {
@@ -4791,6 +4835,8 @@
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped (Simple Mode) - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly (Simple Mode)');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4810,7 +4856,19 @@
 
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player (Simple Mode) failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (Simple Mode) (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
+
                                 const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
 
                                 // Clean up the stopped player first
@@ -4824,10 +4882,13 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     startMetadataOnlyPlayerForSimpleMode(urlToRestart);
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
@@ -4919,6 +4980,7 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing (Direct)');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful playback
                     },
 
                     onError: (error) => {
@@ -4929,6 +4991,8 @@
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped (Direct) - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly (Direct)');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4948,7 +5012,19 @@
 
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player (Direct) failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (Direct) (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
+
                                 const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
 
                                 // Clean up the stopped player first
@@ -4962,10 +5038,13 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     startMetadataOnlyPlayerDirect(urlToRestart);
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
