@@ -838,41 +838,17 @@
                         >
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                        <input
-                            type="text"
-                            id="radioDatabaseCountry"
-                            class="form-input"
-                            list="radioDatabaseCountryList"
-                            placeholder="All Countries"
-                            autocomplete="off"
-                            style="flex: 1; min-width: 150px;"
-                        >
-                        <datalist id="radioDatabaseCountryList">
-                        </datalist>
+                        <select id="radioDatabaseCountry" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Countries</option>
+                        </select>
 
-                        <input
-                            type="text"
-                            id="radioDatabaseLanguage"
-                            class="form-input"
-                            list="radioDatabaseLanguageList"
-                            placeholder="All Languages"
-                            autocomplete="off"
-                            style="flex: 1; min-width: 150px;"
-                        >
-                        <datalist id="radioDatabaseLanguageList">
-                        </datalist>
+                        <select id="radioDatabaseLanguage" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Languages</option>
+                        </select>
 
-                        <input
-                            type="text"
-                            id="radioDatabaseTag"
-                            class="form-input"
-                            list="radioDatabaseTagList"
-                            placeholder="All Tags"
-                            autocomplete="off"
-                            style="flex: 1; min-width: 150px;"
-                        >
-                        <datalist id="radioDatabaseTagList">
-                        </datalist>
+                        <select id="radioDatabaseTag" class="form-input" style="flex: 1; min-width: 150px;">
+                            <option value="">All Tags</option>
+                        </select>
 
                         <select id="radioDatabaseSort" class="form-input" style="flex: 1; min-width: 150px;">
                             <option value="votes">Most Popular</option>
@@ -949,7 +925,26 @@
         let metadataOnlyPlayer = null; // Silent player for metadata during Chromecast
         let metadataOnlyPlayerUrl = null; // Track the URL currently being used by metadata-only player
         let metadataOnlyPlayerIntentionalStop = false; // Track if stop was intentional
+        let metadataOnlyPlayerRetryCount = 0; // Track consecutive restart attempts
+        let metadataOnlyPlayerMaxRetries = 5; // Maximum number of restart attempts
+        let metadataOnlyPlayerRetryTimeoutId = null; // Track pending retry timeout
+        let metadataOnlyPlayerErrorCount = 0; // Track consecutive errors from onError handler
+        let metadataOnlyPlayerMaxErrors = 3; // Maximum errors before giving up
+        let metadataOnlyPlayerWaitingTimeoutId = null; // Track timeout for stuck 'waiting' state
+        let metadataOnlyPlayerWaitingTimeout = 30000; // 30 seconds timeout for waiting state
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
+
+        // CORS proxy configuration (shared between audio player and metadata player)
+        const corsProxies = [
+            // Self-hosted CORS proxies (highest priority):
+            { name: 'cloudflare-worker', url: (streamUrl) => `https://streamwave-cors-proxy.keith-e-dragon.workers.dev/${streamUrl}` },
+            { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
+
+            // Public fallback proxies (may be unreliable or rate-limited)
+            { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
+            { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
+            { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
+        ];
         let isPlaying = false;
         let isPaused = false;
         let simplePlayerReloading = false; // Flag to suppress errors during stream switching
@@ -1087,9 +1082,6 @@
         const radioDatabaseCountry = document.getElementById('radioDatabaseCountry');
         const radioDatabaseLanguage = document.getElementById('radioDatabaseLanguage');
         const radioDatabaseTag = document.getElementById('radioDatabaseTag');
-        const radioDatabaseCountryList = document.getElementById('radioDatabaseCountryList');
-        const radioDatabaseLanguageList = document.getElementById('radioDatabaseLanguageList');
-        const radioDatabaseTagList = document.getElementById('radioDatabaseTagList');
         const radioDatabaseSort = document.getElementById('radioDatabaseSort');
         const radioDatabaseSearchBtn = document.getElementById('radioDatabaseSearchBtn');
         const radioDatabaseLoading = document.getElementById('radioDatabaseLoading');
@@ -1554,7 +1546,7 @@
                         const option = document.createElement('option');
                         option.value = country.name;
                         option.textContent = `${country.name} (${country.stationcount})`;
-                        radioDatabaseCountryList.appendChild(option);
+                        radioDatabaseCountry.appendChild(option);
                     }
                 });
 
@@ -1567,7 +1559,7 @@
                         const option = document.createElement('option');
                         option.value = lang.name;
                         option.textContent = `${lang.name} (${lang.stationcount})`;
-                        radioDatabaseLanguageList.appendChild(option);
+                        radioDatabaseLanguage.appendChild(option);
                     }
                 });
 
@@ -1580,7 +1572,7 @@
                         const option = document.createElement('option');
                         option.value = tag.name;
                         option.textContent = `${tag.name} (${tag.stationcount})`;
-                        radioDatabaseTagList.appendChild(option);
+                        radioDatabaseTag.appendChild(option);
                     }
                 });
             } catch (error) {
@@ -2207,8 +2199,8 @@
                         return;
                     }
 
-                    // Use CORS proxy
-                    const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+                    // Use CORS proxy (Cloudflare Worker)
+                    const streamUrl = corsProxies[0].url(rawUrl);
 
                     tempPlayer = new IcecastMetadataPlayer(streamUrl, {
                         metadataTypes: ['icy', 'ogg'],
@@ -4151,8 +4143,8 @@
             radioDatabaseCountry.value = '';
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
-            // Load filters if not already loaded
-            if (radioDatabaseCountryList.children.length === 0) {
+            // Load filters if not already loaded (checking if only default option exists)
+            if (radioDatabaseCountry.children.length === 1) {
                 loadRadioBrowserFilters();
             }
         });
@@ -4551,6 +4543,72 @@
             }
         }
 
+        // Calculate exponential backoff delay for metadata player retries
+        function getMetadataPlayerRetryDelay(retryCount) {
+            // Exponential backoff: 2s, 4s, 8s, 16s, 30s (capped at 30s)
+            const baseDelay = 2000; // 2 seconds
+            const delay = Math.min(baseDelay * Math.pow(2, retryCount), 30000);
+            return delay;
+        }
+
+        // Reset metadata player retry counter (call on successful playback)
+        function resetMetadataPlayerRetries() {
+            metadataOnlyPlayerRetryCount = 0;
+            metadataOnlyPlayerErrorCount = 0;
+            console.log('✅ Metadata player retry and error counters reset');
+        }
+
+        // Clear any pending metadata player retry timeout
+        function clearMetadataPlayerRetryTimeout() {
+            if (metadataOnlyPlayerRetryTimeoutId) {
+                clearTimeout(metadataOnlyPlayerRetryTimeoutId);
+                metadataOnlyPlayerRetryTimeoutId = null;
+            }
+        }
+
+        // Clear any pending metadata player waiting timeout
+        function clearMetadataPlayerWaitingTimeout() {
+            if (metadataOnlyPlayerWaitingTimeoutId) {
+                clearTimeout(metadataOnlyPlayerWaitingTimeoutId);
+                metadataOnlyPlayerWaitingTimeoutId = null;
+            }
+        }
+
+        // Set a timeout to detect if metadata player is stuck waiting
+        function setMetadataPlayerWaitingTimeout() {
+            clearMetadataPlayerWaitingTimeout();
+            metadataOnlyPlayerWaitingTimeoutId = setTimeout(() => {
+                console.error('❌ Metadata player stuck in waiting state for too long (30s). Stopping to prevent infinite retries.');
+                metadataOnlyPlayerErrorCount++;
+
+                // Stop the player after too many consecutive timeout errors
+                if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                    console.error(`❌ Metadata player reached ${metadataOnlyPlayerMaxErrors} timeout errors. Giving up.`);
+                    if (metadataOnlyPlayer) {
+                        metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                        try {
+                            metadataOnlyPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping metadata player:', e);
+                        }
+                        metadataOnlyPlayer = null;
+                        metadataOnlyPlayerUrl = null;
+                    }
+                    metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                    clearMetadataPlayerRetryTimeout();
+                } else {
+                    // Try to restart the player
+                    if (metadataOnlyPlayer) {
+                        try {
+                            metadataOnlyPlayer.stop();
+                        } catch (e) {
+                            console.log('Error stopping metadata player:', e);
+                        }
+                    }
+                }
+            }, metadataOnlyPlayerWaitingTimeout);
+        }
+
         // Start metadata-only player (silent, for Chromecast sessions)
         function startMetadataOnlyPlayer() {
             if (!currentStation || metadataOnlyPlayer) {
@@ -4575,9 +4633,11 @@
                 return;
             }
 
-            // Try with CORS proxy first for best metadata compatibility
-            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+            // Try with CORS proxy first for best metadata compatibility (use Cloudflare Worker)
+            const streamUrl = corsProxies[0].url(rawUrl);
             metadataOnlyPlayerUrl = rawUrl; // Track the current URL
+
+            console.log(`Using ${corsProxies[0].name} for metadata player (Chromecast mode)`);
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
@@ -4591,18 +4651,40 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout on successful playback
                     },
 
                     onLoad: () => {
                         console.log('✅ Metadata-only player loaded');
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout when loaded
                     },
 
                     onStreamStart: () => {
                         console.log('✅ Metadata-only player stream started');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful stream start
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout when stream starts
                     },
 
                     onError: (error) => {
                         console.log('❌ Metadata-only player error:', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Chromecast mode) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                         // Don't show errors to user - this is a background process
                         // If it fails, we just won't have metadata during casting
                     },
@@ -4611,6 +4693,9 @@
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
+                            clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4630,7 +4715,18 @@
 
                             // Attempt to restart the metadata player if we have a current station
                             if (currentStation) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
 
                                 // Clean up the stopped player first
                                 try {
@@ -4643,12 +4739,15 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     if (currentStation) {
                                         startMetadataOnlyPlayer();
                                     }
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
@@ -4672,7 +4771,18 @@
                     audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
                     audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
                     audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
-                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
+                    audio.addEventListener('waiting', () => {
+                        console.log('⏳ Metadata player: waiting for data');
+                        setMetadataPlayerWaitingTimeout(); // Set timeout to detect stuck state
+                    });
+                    audio.addEventListener('playing', () => {
+                        console.log('▶️ Metadata player: playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when playback starts
+                    });
+                    audio.addEventListener('canplay', () => {
+                        console.log('✅ Metadata player: can play');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when data is ready
+                    });
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
@@ -4724,6 +4834,9 @@
             if (metadataOnlyPlayer) {
                 console.log('Stopping metadata-only player...');
                 metadataOnlyPlayerIntentionalStop = true; // Mark as intentional stop
+                clearMetadataPlayerRetryTimeout(); // Clear any pending retry attempts
+                clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
+                metadataOnlyPlayerErrorCount = 0; // Reset error counter
                 try {
                     metadataOnlyPlayer.stop();
                 } catch (e) {
@@ -4764,8 +4877,10 @@
                 return;
             }
 
-            // Try with CORS proxy for best metadata compatibility
-            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+            // Try with CORS proxy for best metadata compatibility (use Cloudflare Worker)
+            const streamUrl = corsProxies[0].url(rawUrl);
+
+            console.log(`Using ${corsProxies[0].name} for metadata player (Simple Mode)`);
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
@@ -4779,10 +4894,30 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing (Simple Mode)');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful playback
+                        clearMetadataPlayerWaitingTimeout(); // Clear waiting timeout on successful playback
                     },
 
                     onError: (error) => {
                         console.log('⚠️ Metadata-only player error (Simple Mode):', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Simple Mode) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                         // Don't show errors to user - this is a background process
                         // If it fails, we just won't have metadata during playback
                     },
@@ -4791,6 +4926,9 @@
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped (Simple Mode) - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
+                            clearMetadataPlayerWaitingTimeout(); // Clear any pending waiting timeout
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly (Simple Mode)');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4810,7 +4948,19 @@
 
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player (Simple Mode) failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (Simple Mode) (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
+
                                 const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
 
                                 // Clean up the stopped player first
@@ -4824,10 +4974,13 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     startMetadataOnlyPlayerForSimpleMode(urlToRestart);
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
@@ -4846,7 +4999,18 @@
                     audio.addEventListener('suspend', () => console.log('⏸️ Metadata player: stream suspended'));
                     audio.addEventListener('abort', () => console.warn('⚠️ Metadata player: stream aborted'));
                     audio.addEventListener('emptied', () => console.warn('⚠️ Metadata player: stream emptied'));
-                    audio.addEventListener('waiting', () => console.log('⏳ Metadata player: waiting for data'));
+                    audio.addEventListener('waiting', () => {
+                        console.log('⏳ Metadata player: waiting for data');
+                        setMetadataPlayerWaitingTimeout(); // Set timeout to detect stuck state
+                    });
+                    audio.addEventListener('playing', () => {
+                        console.log('▶️ Metadata player: playing');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when playback starts
+                    });
+                    audio.addEventListener('canplay', () => {
+                        console.log('✅ Metadata player: can play');
+                        clearMetadataPlayerWaitingTimeout(); // Clear timeout when data is ready
+                    });
 
                     // Start playing to receive metadata
                     metadataOnlyPlayer.play().then(() => {
@@ -4919,16 +5083,37 @@
 
                     onPlay: () => {
                         console.log('✅ Metadata-only player is playing (Direct)');
+                        resetMetadataPlayerRetries(); // Reset retry counter on successful playback
                     },
 
                     onError: (error) => {
                         console.log('⚠️ Metadata-only player error (Direct):', error);
+                        metadataOnlyPlayerErrorCount++;
+
+                        // Stop the player after too many consecutive errors to prevent infinite retries
+                        if (metadataOnlyPlayerErrorCount >= metadataOnlyPlayerMaxErrors) {
+                            console.error(`❌ Metadata player (Direct) received ${metadataOnlyPlayerMaxErrors} consecutive errors. Stopping to prevent infinite retries.`);
+                            if (metadataOnlyPlayer) {
+                                metadataOnlyPlayerIntentionalStop = true; // Mark as intentional to prevent restart
+                                try {
+                                    metadataOnlyPlayer.stop();
+                                } catch (e) {
+                                    console.log('Error stopping metadata player:', e);
+                                }
+                                metadataOnlyPlayer = null;
+                                metadataOnlyPlayerUrl = null;
+                            }
+                            metadataOnlyPlayerErrorCount = 0; // Reset for next attempt
+                            clearMetadataPlayerRetryTimeout();
+                        }
                     },
 
                     onStop: () => {
                         if (metadataOnlyPlayerIntentionalStop) {
                             console.log('⏹️ Metadata-only player stopped (Direct) - intentional');
                             metadataOnlyPlayerIntentionalStop = false; // Reset flag
+                            resetMetadataPlayerRetries(); // Reset retry counter
+                            clearMetadataPlayerRetryTimeout(); // Clear any pending retries
                         } else {
                             console.warn('⚠️ Metadata-only player stopped unexpectedly (Direct)');
                             if (metadataOnlyPlayer && metadataOnlyPlayer.audioElement) {
@@ -4948,7 +5133,19 @@
 
                             // Attempt to restart the metadata player if we still have a URL
                             if (metadataOnlyPlayerUrl) {
-                                console.log('🔄 Attempting to restart metadata player...');
+                                // Check if we've exceeded max retries
+                                if (metadataOnlyPlayerRetryCount >= metadataOnlyPlayerMaxRetries) {
+                                    console.error(`❌ Metadata player (Direct) failed after ${metadataOnlyPlayerMaxRetries} attempts. Giving up.`);
+                                    metadataOnlyPlayer = null;
+                                    metadataOnlyPlayerUrl = null;
+                                    metadataOnlyPlayerRetryCount = 0;
+                                    return;
+                                }
+
+                                metadataOnlyPlayerRetryCount++;
+                                const retryDelay = getMetadataPlayerRetryDelay(metadataOnlyPlayerRetryCount - 1);
+                                console.log(`🔄 Attempting to restart metadata player (Direct) (attempt ${metadataOnlyPlayerRetryCount}/${metadataOnlyPlayerMaxRetries}) in ${retryDelay}ms...`);
+
                                 const urlToRestart = metadataOnlyPlayerUrl; // Save URL before cleanup
 
                                 // Clean up the stopped player first
@@ -4962,10 +5159,13 @@
                                 metadataOnlyPlayer = null;
                                 metadataOnlyPlayerUrl = null;
 
-                                // Now restart with a fresh player
-                                setTimeout(() => {
+                                // Clear any existing retry timeout
+                                clearMetadataPlayerRetryTimeout();
+
+                                // Now restart with a fresh player using exponential backoff
+                                metadataOnlyPlayerRetryTimeoutId = setTimeout(() => {
                                     startMetadataOnlyPlayerDirect(urlToRestart);
-                                }, 2000); // Wait 2 seconds before restarting
+                                }, retryDelay);
                             }
                         }
                     }
@@ -6888,55 +7088,25 @@
             //     ...rest of proxies below as fallbacks
             // ];
             //
-            const corsProxies = [
-                // 👇 Self-hosted CORS proxies (highest priority):
-
-                // Cloudflare Worker (recommended - fastest, global edge deployment)
-                // After deploying your worker, uncomment and replace YOUR-SUBDOMAIN:
-                { name: 'cloudflare-worker', url: (streamUrl) => `https://streamwave-cors-proxy.keith-e-dragon.workers.dev/${streamUrl}` },
-
-                // Render.com (fallback - free tier with cold starts)
-                { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
-
-                // Public fallback proxies (may be unreliable or rate-limited)
-                { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
-                { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
-                { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
-            ];
+            // NOTE: corsProxies is now defined globally (see line ~962) and shared between
+            // the main audio player and metadata player to ensure consistency.
+            // Using the global definition here.
 
             // Prioritize Simple Mode for fastest, most reliable playback
             // Metadata will be fetched separately in the background
             const needsMixedContentFix = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
+            // Limit to just 3-4 attempts - if a station doesn't work after the first few tries, it won't work
             let attempts = [
                 { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
                 { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['ogg'], description: 'CORS Proxy + OGG Metadata' },
-                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
+                { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' }
             ];
 
-            // If mixed content fix is needed, add fallback attempts with alternative CORS proxies
-            if (needsMixedContentFix) {
-                // Add simple mode attempts with different CORS proxies
-                const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
-                if (simpleModeIndex !== -1) {
-                    // Insert alternative proxy attempts after the first simple mode attempt
-                    for (let j = 1; j < corsProxies.length; j++) {
-                        attempts.splice(simpleModeIndex + j, 0, {
-                            url: rawUrl,
-                            cors: false,
-                            corsProxyIndex: j,
-                            metadata: [],
-                            description: `Simple Mode (${corsProxies[j].name})`
-                        });
-                    }
-                }
-
-                // Add metadata attempts with alternative proxies
+            // If mixed content fix is needed, try one alternative CORS proxy as a fallback
+            if (needsMixedContentFix && corsProxies.length > 1) {
                 attempts.push(
-                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` },
-                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: [], description: `${corsProxies[1].name} (No Metadata)` }
+                    { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` }
                 );
             }
 
@@ -6945,25 +7115,14 @@
                 attempts = [
                     { url: rawUrl, cors: false, metadata: [], description: 'Simple Mode (Direct)' },
                     { url: rawUrl, cors: false, metadata: ['icy', 'ogg'], description: 'Direct + Full Metadata' },
-                    { url: rawUrl, cors: false, metadata: ['ogg'], description: 'Direct + OGG Metadata' },
-                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' },
-                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: [], description: 'CORS Proxy (No Metadata)' }
+                    { url: rawUrl, cors: true, corsProxyIndex: 0, metadata: ['icy', 'ogg'], description: 'CORS Proxy + Full Metadata' }
                 ];
 
-                // Even with CORS proxy disabled, add fallbacks if mixed content fix is needed
-                if (needsMixedContentFix) {
-                    const simpleModeIndex = attempts.findIndex(a => a.description === 'Simple Mode (Direct)');
-                    if (simpleModeIndex !== -1) {
-                        for (let j = 1; j < corsProxies.length; j++) {
-                            attempts.splice(simpleModeIndex + j, 0, {
-                                url: rawUrl,
-                                cors: false,
-                                corsProxyIndex: j,
-                                metadata: [],
-                                description: `Simple Mode (${corsProxies[j].name})`
-                            });
-                        }
-                    }
+                // Even with CORS proxy disabled, try one fallback if mixed content fix is needed
+                if (needsMixedContentFix && corsProxies.length > 1) {
+                    attempts.push(
+                        { url: rawUrl, cors: true, corsProxyIndex: 1, metadata: ['icy', 'ogg'], description: `${corsProxies[1].name} + Full Metadata` }
+                    );
                 }
             }
             
