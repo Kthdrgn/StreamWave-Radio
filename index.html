@@ -957,6 +957,18 @@
         let metadataOnlyPlayerWaitingTimeoutId = null; // Track timeout for stuck 'waiting' state
         let metadataOnlyPlayerWaitingTimeout = 30000; // 30 seconds timeout for waiting state
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
+
+        // CORS proxy configuration (shared between audio player and metadata player)
+        const corsProxies = [
+            // Self-hosted CORS proxies (highest priority):
+            { name: 'cloudflare-worker', url: (streamUrl) => `https://streamwave-cors-proxy.keith-e-dragon.workers.dev/${streamUrl}` },
+            { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
+
+            // Public fallback proxies (may be unreliable or rate-limited)
+            { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
+            { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
+            { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
+        ];
         let isPlaying = false;
         let isPaused = false;
         let simplePlayerReloading = false; // Flag to suppress errors during stream switching
@@ -2214,8 +2226,8 @@
                         return;
                     }
 
-                    // Use CORS proxy
-                    const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+                    // Use CORS proxy (Cloudflare Worker)
+                    const streamUrl = corsProxies[0].url(rawUrl);
 
                     tempPlayer = new IcecastMetadataPlayer(streamUrl, {
                         metadataTypes: ['icy', 'ogg'],
@@ -4648,9 +4660,11 @@
                 return;
             }
 
-            // Try with CORS proxy first for best metadata compatibility
-            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+            // Try with CORS proxy first for best metadata compatibility (use Cloudflare Worker)
+            const streamUrl = corsProxies[0].url(rawUrl);
             metadataOnlyPlayerUrl = rawUrl; // Track the current URL
+
+            console.log(`Using ${corsProxies[0].name} for metadata player (Chromecast mode)`);
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
@@ -4890,8 +4904,10 @@
                 return;
             }
 
-            // Try with CORS proxy for best metadata compatibility
-            const streamUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+            // Try with CORS proxy for best metadata compatibility (use Cloudflare Worker)
+            const streamUrl = corsProxies[0].url(rawUrl);
+
+            console.log(`Using ${corsProxies[0].name} for metadata player (Simple Mode)`);
 
             try {
                 metadataOnlyPlayer = new IcecastMetadataPlayer(streamUrl, {
@@ -7099,21 +7115,9 @@
             //     ...rest of proxies below as fallbacks
             // ];
             //
-            const corsProxies = [
-                // 👇 Self-hosted CORS proxies (highest priority):
-
-                // Cloudflare Worker (recommended - fastest, global edge deployment)
-                // After deploying your worker, uncomment and replace YOUR-SUBDOMAIN:
-                { name: 'cloudflare-worker', url: (streamUrl) => `https://streamwave-cors-proxy.keith-e-dragon.workers.dev/${streamUrl}` },
-
-                // Render.com (fallback - free tier with cold starts)
-                { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
-
-                // Public fallback proxies (may be unreliable or rate-limited)
-                { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
-                { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
-                { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
-            ];
+            // NOTE: corsProxies is now defined globally (see line ~962) and shared between
+            // the main audio player and metadata player to ensure consistency.
+            // Using the global definition here.
 
             // Prioritize Simple Mode for fastest, most reliable playback
             // Metadata will be fetched separately in the background
