@@ -5539,18 +5539,22 @@
                     console.log(`Switching to ${newQuality} quality...`);
                     updateStatus(`Switching to ${newQuality} quality...`, 'loading');
 
-                    // Stop the current stream if playing (works for both Live Mode and Simple Mode)
-                    if (player && wasPlaying) {
+                    // Stop any current playback
+                    if (player) {
                         player.stop();
                     }
 
                     // Stop metadata-only player so it restarts with new quality URL
                     stopMetadataOnlyPlayer();
 
+                    // Ensure isPlaying is false so the next click will start playing
+                    isPlaying = false;
+
                     // Wait a moment for the stop to complete, then start new stream
                     setTimeout(() => {
+                        // Force play by simulating a click
                         playPauseBtn.click();
-                    }, 200);
+                    }, 300);
                 }
             });
         });
