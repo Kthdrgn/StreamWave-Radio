@@ -4636,7 +4636,7 @@
             }
 
             try {
-                metadataWorker = new Worker('metadata-worker.js');
+                metadataWorker = new Worker('metadata-worker.js?v=8');
 
                 // Handle messages from the worker
                 metadataWorker.addEventListener('message', (event) => {

@@ -1,12 +1,12 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v7'; // Fix Range header to read enough data for metadata
+const CACHE_NAME = 'radio-player-v8'; // Force fresh metadata-worker.js with cache-busting
 const urlsToCache = [
     './',
     './index.html',
     './radio-auth.js', // Added authentication module
-    './metadata-worker.js', // Background metadata fetching worker
+    './metadata-worker.js?v=8', // Background metadata fetching worker (cache-busting version)
     './css/styles.css', // Main stylesheet
     './manifest.json',
     './icons/icon-192x192.png',
