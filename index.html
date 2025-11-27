@@ -4657,12 +4657,15 @@
                             currentTrack.artist = artist;
                             currentTrack.album = album;
 
-                            // Update display
-                            const nowPlayingDiv = document.getElementById('nowPlaying');
-                            if (nowPlayingDiv) {
-                                nowPlayingDiv.innerHTML = `
-                                    <div class="track-title">${title}</div>
-                                    <div class="artist-name">${artist}</div>
+                            // Update display using the correct element
+                            const metadataSection = document.getElementById('metadataSection');
+                            if (metadataSection) {
+                                metadataSection.innerHTML = `
+                                    <div class="now-playing-label">NOW PLAYING</div>
+                                    <div class="song-title">${escapeHtml(title)}</div>
+                                    ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
+                                    ${album ? `<div class="album-name">${escapeHtml(album)}</div>` : ''}
+                                    <button class="like-btn" id="likeBtn" onclick="toggleLikeTrack()">♡</button>
                                 `;
                             }
 
