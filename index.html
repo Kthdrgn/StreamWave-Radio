@@ -5939,7 +5939,7 @@
                 }
                 player = null;
             }
-            
+
             if (hlsPlayer) {
                 try {
                     hlsPlayer.destroy();
@@ -5948,7 +5948,10 @@
                 }
                 hlsPlayer = null;
             }
-            
+
+            // Stop periodic metadata fetching
+            clearMetadataPlayerRefreshInterval();
+
             if (audioElement) {
                 try {
                     audioElement.pause();
@@ -6888,7 +6891,7 @@
                         
                         onPlay: () => {
                             isPlaying = true;
-                            const statusMsg = attempt.metadata.length === 0 
+                            const statusMsg = attempt.metadata.length === 0
                                 ? 'Playing (no metadata available)'
                                 : 'Playing';
                             updateStatus(statusMsg, 'playing');
@@ -6902,6 +6905,10 @@
                                     '',
                                     currentStation.icon_url
                                 );
+                            }
+                            // Start periodic metadata fetching to ensure notification updates in background
+                            if (attempt.metadata.length > 0) {
+                                startMetadataPlayerRefreshInterval();
                             }
                         },
                         
