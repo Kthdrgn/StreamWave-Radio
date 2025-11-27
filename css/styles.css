@@ -841,7 +841,12 @@
         .modal-overlay.active {
             display: flex;
         }
-        
+
+        /* Quality modal should appear above other modals when opened from Station Info */
+        #qualityModal {
+            z-index: 1001;
+        }
+
         /* Modal content */
         .modal-content {
             background: var(--modal-bg);
@@ -2649,6 +2654,18 @@ body[data-layout="landscape"] .layout-slider {
 
 .menu-option-btn span {
     flex: 1;
+}
+
+.menu-option-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.menu-option-btn.disabled:hover {
+    transform: none;
+    background: var(--card-bg);
+    border-color: var(--border-color);
 }
 
 /* Specific icon styles for buttons with filled icons */
