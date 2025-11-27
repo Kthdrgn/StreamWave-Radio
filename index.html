@@ -586,6 +586,14 @@
                     <span>Select Quality</span>
                 </button>
 
+                <!-- Curate Station Button (Admin Only) -->
+                <button id="curateStationBtn" class="menu-option-btn" style="margin-bottom: 12px; display: none;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Curate Station</span>
+                </button>
+
                 <!-- Station info will go here -->
             </div>
         </div>
@@ -4068,6 +4076,49 @@
             stationFormModal.classList.add('active');
         }
 
+        // Show station form pre-populated with current station data for curation
+        function showStationFormForCurrentStation() {
+            // Reset the editing ID since this is a new station (curating, not editing)
+            editingStationId = null;
+
+            // Set form title
+            stationFormTitle.textContent = 'Add Station to Curated Stations';
+
+            // Populate form with current station data
+            document.getElementById('stationFormName').value = currentStation.name || '';
+            document.getElementById('stationFormUrl').value = currentStation.url || '';
+            document.getElementById('stationFormUrlLow').value = currentStation.url_low || '';
+            document.getElementById('stationFormUrlHigh').value = currentStation.url_high || '';
+            document.getElementById('stationFormCallLetters').value = currentStation.call_letters || '';
+            document.getElementById('stationFormFrequency').value = currentStation.frequency || '';
+            document.getElementById('stationFormWebsiteUrl').value = currentStation.website_url || '';
+            document.getElementById('stationFormDescription').value = currentStation.description || '';
+
+            // Convert genres array to comma-separated string
+            const genresStr = Array.isArray(currentStation.genres)
+                ? currentStation.genres.join(', ')
+                : (currentStation.genres || '');
+            document.getElementById('stationFormGenres').value = genresStr;
+
+            // Set icon URL
+            document.getElementById('stationFormIconUrl').value = currentStation.icon_url || '';
+
+            // Reset image preview
+            stationFormIconUpload.value = '';
+            iconPreview.style.display = 'none';
+            uploadIconBtn.textContent = '📷 Choose Image';
+            uploadIconBtn.style.background = '';
+
+            // Close any dropdowns
+            document.querySelectorAll('.station-dropdown').forEach(d => {
+                d.classList.remove('active');
+            });
+
+            // Close station info modal and open station form modal
+            stationInfoModal.classList.remove('active');
+            stationFormModal.classList.add('active');
+        }
+
         // Edit station
         function editStation(id) {
             showStationForm(id);
@@ -4330,6 +4381,13 @@
 
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
+            // Show/hide curate button based on admin status
+            const curateStationBtn = document.getElementById('curateStationBtn');
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            if (curateStationBtn) {
+                curateStationBtn.style.display = isAdmin ? 'flex' : 'none';
+            }
+
             stationInfoModal.classList.add('active');
         });
 
@@ -4365,6 +4423,13 @@
                 return;
             }
             qualityModal.classList.add('active');
+        });
+
+        // Curate station button in station info modal (admin only)
+        document.getElementById('curateStationBtn').addEventListener('click', () => {
+            if (currentStation) {
+                showStationFormForCurrentStation();
+            }
         });
 
         // Play random station button
