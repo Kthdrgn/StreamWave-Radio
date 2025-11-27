@@ -4050,6 +4050,12 @@
             loadOverviewModal();
         });
 
+        // Station display click - open overview modal
+        stationDisplay.addEventListener('click', () => {
+            overviewModal.classList.add('active');
+            loadOverviewModal();
+        });
+
         // Close hamburger menu modal
         closeHamburgerMenuModal.addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
