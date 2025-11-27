@@ -58,6 +58,14 @@
             <!-- Hamburger Menu Icon (above artwork) -->
             <div class="hamburger-menu-wrapper">
                 <div class="hamburger-menu-container">
+                    <button id="overviewBtn" class="hamburger-btn overview-btn" title="Overview">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                            <rect x="13" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                            <rect x="3" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                            <rect x="13" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                        </svg>
+                    </button>
                     <button id="hamburgerMenuBtn" class="hamburger-btn" title="Menu">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4 6H20M4 12H20M4 18H20" stroke-width="2" stroke-linecap="round"/>
@@ -557,6 +565,19 @@
         </div>
     </div>
 
+    <!-- Station Info Modal -->
+    <div id="stationInfoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Station Information</h2>
+                <button class="modal-close" id="closeStationInfoModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Station info will go here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Playlists Modal -->
     <div id="playlistsModal" class="modal-overlay">
         <div class="modal-content">
@@ -1032,6 +1053,7 @@
         // ======================
 
         // Hamburger Menu
+        const overviewBtn = document.getElementById('overviewBtn');
         const hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
         const hamburgerMenuModal = document.getElementById('hamburgerMenuModal');
         const closeHamburgerMenuModal = document.getElementById('closeHamburgerMenuModal');
@@ -1053,6 +1075,8 @@
         const authBtn = document.getElementById('authBtn');
         const overviewModal = document.getElementById('overviewModal');
         const closeOverviewModal = document.getElementById('closeOverviewModal');
+        const stationInfoModal = document.getElementById('stationInfoModal');
+        const closeStationInfoModal = document.getElementById('closeStationInfoModal');
 
         const stationList = document.getElementById('stationList');
         const stationSearch = document.getElementById('stationSearch');
@@ -4093,6 +4117,12 @@
         // EVENT LISTENERS
         // ======================
 
+        // Open overview modal from overview button
+        overviewBtn.addEventListener('click', () => {
+            overviewModal.classList.add('active');
+            loadOverviewModal();
+        });
+
         // Open hamburger menu modal
         hamburgerMenuBtn.addEventListener('click', () => {
             hamburgerMenuModal.classList.add('active');
@@ -4131,10 +4161,9 @@
             }
         });
 
-        // Station display click - open overview modal
+        // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
-            overviewModal.classList.add('active');
-            loadOverviewModal();
+            stationInfoModal.classList.add('active');
         });
 
         // Close playlists modal
@@ -4146,10 +4175,15 @@
         closeBrowseStationsModal.addEventListener('click', () => {
             browseStationsModal.classList.remove('active');
         });
-        
+
         // Close overview modal
         closeOverviewModal.addEventListener('click', () => {
             overviewModal.classList.remove('active');
+        });
+
+        // Close station info modal
+        closeStationInfoModal.addEventListener('click', () => {
+            stationInfoModal.classList.remove('active');
         });
 
         // Play random station button
