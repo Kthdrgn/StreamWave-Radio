@@ -1877,10 +1877,25 @@
                     url: station.url_resolved || station.url,
                     icon_url: station.favicon || '',
                     genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
+                    tags: station.tags,
                     call_letters: '',
                     frequency: '',
                     is_external: true,
-                    external_id: externalStationId
+                    external_id: externalStationId,
+                    // Preserve all Radio Browser fields for station info display
+                    homepage: station.homepage,
+                    country: station.country,
+                    countrycode: station.countrycode,
+                    country_code: station.countrycode,
+                    state: station.state,
+                    language: station.language,
+                    languagecodes: station.languagecodes,
+                    languages: station.languages,
+                    countrysubdivisioncode: station.countrysubdivisioncode,
+                    countrysubdivision: station.countrysubdivision,
+                    codec: station.codec,
+                    bitrate: station.bitrate,
+                    votes: station.votes
                 };
 
                 // Close the radio database modal
@@ -2090,6 +2105,10 @@
                     homepage: station.homepage || null,
                     metadata: {
                         state: station.state,
+                        languagecodes: station.languagecodes,
+                        languages: station.languages,
+                        countrysubdivisioncode: station.countrysubdivisioncode,
+                        countrysubdivision: station.countrysubdivision,
                         hls: station.hls,
                         lastcheckok: station.lastcheckok,
                         lastchecktime: station.lastchecktime
@@ -2152,11 +2171,25 @@
                     url: data.url_resolved || data.url,
                     icon_url: data.icon_url || data.favicon || '',
                     genres: data.genres || [],
+                    tags: data.genres ? data.genres.join(', ') : '',
                     call_letters: '',
                     frequency: '',
                     country: data.country,
                     is_external: true,
-                    external_id: data.id
+                    external_id: data.id,
+                    // Include all Radio Browser fields for station info display
+                    homepage: data.homepage,
+                    countrycode: data.country_code,
+                    country_code: data.country_code,
+                    state: data.metadata?.state,
+                    language: data.language,
+                    languagecodes: data.metadata?.languagecodes,
+                    languages: data.metadata?.languages,
+                    countrysubdivisioncode: data.metadata?.countrysubdivisioncode,
+                    countrysubdivision: data.metadata?.countrysubdivision,
+                    codec: data.codec,
+                    bitrate: data.bitrate,
+                    votes: data.votes
                 };
             } catch (error) {
                 console.error('Error getting external station:', error);
@@ -3828,19 +3861,37 @@
                 infoHTML += createInfoRow('Website', station.homepage, true);
                 infoHTML += createInfoRow('Country', station.country);
                 infoHTML += createInfoRow('Country Code', station.country_code || station.countrycode);
+
+                // Country Subdivision (State/Region) - display both code and name if available
+                const subdivisionCode = station.countrysubdivisioncode || (station.metadata && station.metadata.countrysubdivisioncode);
+                if (subdivisionCode) {
+                    infoHTML += createInfoRow('Country Subdivision Code', subdivisionCode);
+                }
+
+                const subdivisionName = station.countrysubdivision || (station.metadata && station.metadata.countrysubdivision);
+                if (subdivisionName) {
+                    infoHTML += createInfoRow('Country Subdivision', subdivisionName);
+                }
+
+                // Languages (full names)
+                const languages = station.languages || (station.metadata && station.metadata.languages);
+                if (languages) {
+                    infoHTML += createInfoRow('Languages', languages);
+                }
+
                 infoHTML += createInfoRow('Language', station.language);
+
+                // Language Codes
+                const langCodes = station.languagecodes || (station.metadata && station.metadata.languagecodes);
+                if (langCodes) {
+                    infoHTML += createInfoRow('Language Codes', langCodes);
+                }
+
                 infoHTML += createInfoRow('Tags', station.tags || (station.genres && Array.isArray(station.genres) ? station.genres.join(', ') : ''));
                 infoHTML += createInfoRow('Audio Codec', station.codec);
                 infoHTML += createInfoRow('Bitrate', station.bitrate ? `${station.bitrate} kbps` : '');
                 infoHTML += createInfoRow('Votes', station.votes);
                 infoHTML += createInfoRow('Popularity', station.click_count || station.clickcount);
-
-                // State from metadata if available
-                if (station.metadata && station.metadata.state) {
-                    infoHTML += createInfoRow('State/Region', station.metadata.state);
-                } else if (station.state) {
-                    infoHTML += createInfoRow('State/Region', station.state);
-                }
             } else {
                 // Supabase (curated) station
                 infoHTML += createInfoRow('Station Name', station.name);
