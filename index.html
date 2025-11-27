@@ -594,7 +594,20 @@
                     <span>Curate Station</span>
                 </button>
 
-                <!-- Station info will go here -->
+                <!-- Station Overview Section -->
+                <div id="stationOverviewSection" style="margin-top: 20px;">
+                    <h3 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; font-weight: 600;">Station Overview</h3>
+
+                    <!-- Station Logo -->
+                    <div id="stationLogoContainer" style="text-align: center; margin-bottom: 20px; display: none;">
+                        <img id="stationLogo" src="" alt="Station Logo" style="max-width: 120px; max-height: 120px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                    </div>
+
+                    <!-- Station Info Grid -->
+                    <div id="stationInfoGrid" style="display: grid; gap: 12px;">
+                        <!-- Info items will be dynamically added here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -3759,7 +3772,88 @@
                 }
             });
         }
-        
+
+        // Populate station overview in the station info modal
+        function populateStationOverview(station) {
+            if (!station) return;
+
+            const stationLogoContainer = document.getElementById('stationLogoContainer');
+            const stationLogo = document.getElementById('stationLogo');
+            const stationInfoGrid = document.getElementById('stationInfoGrid');
+
+            // Clear previous content
+            stationInfoGrid.innerHTML = '';
+
+            // Helper function to create info row
+            function createInfoRow(label, value, isLink = false) {
+                if (!value || value === '' || (Array.isArray(value) && value.length === 0)) {
+                    return '';
+                }
+
+                let displayValue = value;
+                if (Array.isArray(value)) {
+                    displayValue = value.join(', ');
+                }
+
+                if (isLink && value) {
+                    displayValue = `<a href="${value}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color); text-decoration: none; word-break: break-all;">${value}</a>`;
+                }
+
+                return `
+                    <div style="display: flex; gap: 12px; padding: 10px; background: var(--card-bg, rgba(255,255,255,0.05)); border-radius: 8px;">
+                        <div style="font-weight: 600; color: var(--text-secondary); min-width: 140px; flex-shrink: 0;">${label}:</div>
+                        <div style="color: var(--text-primary); flex: 1; word-break: break-word;">${displayValue}</div>
+                    </div>
+                `;
+            }
+
+            // Display station logo if available
+            const logoUrl = station.icon_url || station.favicon || '';
+            if (logoUrl) {
+                stationLogo.src = logoUrl;
+                stationLogo.onerror = function() {
+                    stationLogoContainer.style.display = 'none';
+                };
+                stationLogoContainer.style.display = 'block';
+            } else {
+                stationLogoContainer.style.display = 'none';
+            }
+
+            let infoHTML = '';
+
+            // Check if this is an external (Radio Browser) station or Supabase station
+            if (station.is_external) {
+                // Radio Browser station
+                infoHTML += createInfoRow('Station Name', station.name);
+                infoHTML += createInfoRow('Website', station.homepage, true);
+                infoHTML += createInfoRow('Country', station.country);
+                infoHTML += createInfoRow('Country Code', station.country_code || station.countrycode);
+                infoHTML += createInfoRow('Language', station.language);
+                infoHTML += createInfoRow('Tags', station.tags || (station.genres && Array.isArray(station.genres) ? station.genres.join(', ') : ''));
+                infoHTML += createInfoRow('Audio Codec', station.codec);
+                infoHTML += createInfoRow('Bitrate', station.bitrate ? `${station.bitrate} kbps` : '');
+                infoHTML += createInfoRow('Votes', station.votes);
+                infoHTML += createInfoRow('Popularity', station.click_count || station.clickcount);
+
+                // State from metadata if available
+                if (station.metadata && station.metadata.state) {
+                    infoHTML += createInfoRow('State/Region', station.metadata.state);
+                } else if (station.state) {
+                    infoHTML += createInfoRow('State/Region', station.state);
+                }
+            } else {
+                // Supabase (curated) station
+                infoHTML += createInfoRow('Station Name', station.name);
+                infoHTML += createInfoRow('Call Letters', station.call_letters);
+                infoHTML += createInfoRow('Frequency', station.frequency);
+                infoHTML += createInfoRow('Website', station.website_url, true);
+                infoHTML += createInfoRow('Description', station.description);
+                infoHTML += createInfoRow('Genres', station.genres);
+            }
+
+            stationInfoGrid.innerHTML = infoHTML;
+        }
+
         // Select station
         function selectStation(station) {
             currentStation = station;
@@ -4387,6 +4481,9 @@
             if (curateStationBtn) {
                 curateStationBtn.style.display = isAdmin ? 'flex' : 'none';
             }
+
+            // Populate station overview with current station data
+            populateStationOverview(currentStation);
 
             stationInfoModal.classList.add('active');
         });
