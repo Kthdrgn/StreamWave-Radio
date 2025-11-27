@@ -60,8 +60,15 @@ async function fetchMetadata() {
         for (let i = 0; i < proxies.length; i++) {
             try {
                 // Replace {STREAM_URL} placeholder with actual stream URL
-                // Note: URL encoding is already handled in the proxy template where needed
-                const proxyUrl = proxies[i].urlTemplate.replace('{STREAM_URL}', currentConfig.stationUrl);
+                // Handle both encoded (%7BSTREAM_URL%7D) and non-encoded ({STREAM_URL}) placeholders
+                let proxyUrl = proxies[i].urlTemplate;
+                if (proxyUrl.includes('%7BSTREAM_URL%7D')) {
+                    // Placeholder was URL-encoded, replace with encoded stream URL
+                    proxyUrl = proxyUrl.replace('%7BSTREAM_URL%7D', encodeURIComponent(currentConfig.stationUrl));
+                } else {
+                    // Placeholder is not encoded, replace as-is
+                    proxyUrl = proxyUrl.replace('{STREAM_URL}', currentConfig.stationUrl);
+                }
                 self.postMessage({
                     type: 'DEBUG',
                     message: `Trying proxy ${i + 1}/${proxies.length} (${proxies[i].name}): ${proxyUrl}`
@@ -96,6 +103,11 @@ async function fetchMetadata() {
                 const icyBr = response.headers.get('icy-br');
                 const icyMetaint = response.headers.get('icy-metaint');
 
+                self.postMessage({
+                    type: 'DEBUG',
+                    message: `ICY headers - metaint: ${icyMetaint}, name: ${icyName}, content-type: ${response.headers.get('content-type')}`
+                });
+
                 let metadata = {
                     title: null,
                     artist: null,
@@ -106,6 +118,10 @@ async function fetchMetadata() {
                 if (icyMetaint && response.body) {
                     const metaint = parseInt(icyMetaint);
                     if (!isNaN(metaint) && metaint > 0) {
+                        self.postMessage({
+                            type: 'DEBUG',
+                            message: `Reading stream data with metaint=${metaint}...`
+                        });
                         try {
                             const reader = response.body.getReader();
                             const chunks = [];
@@ -118,6 +134,11 @@ async function fetchMetadata() {
                                 chunks.push(value);
                                 totalBytes += value.length;
                             }
+
+                            self.postMessage({
+                                type: 'DEBUG',
+                                message: `Read ${totalBytes} bytes from stream`
+                            });
 
                             // Combine chunks
                             const buffer = new Uint8Array(totalBytes);
@@ -132,15 +153,30 @@ async function fetchMetadata() {
                                 const metadataLengthByte = buffer[metaint];
                                 const metadataLength = metadataLengthByte * 16;
 
+                                self.postMessage({
+                                    type: 'DEBUG',
+                                    message: `Metadata length byte: ${metadataLengthByte}, metadata length: ${metadataLength}`
+                                });
+
                                 if (metadataLength > 0 && totalBytes >= metaint + 1 + metadataLength) {
                                     // Extract metadata
                                     const metadataBytes = buffer.slice(metaint + 1, metaint + 1 + metadataLength);
                                     const metadataString = new TextDecoder('utf-8').decode(metadataBytes);
 
+                                    self.postMessage({
+                                        type: 'DEBUG',
+                                        message: `Metadata string: ${metadataString.substring(0, 200)}`
+                                    });
+
                                     // Parse StreamTitle='Artist - Title';
                                     const streamTitleMatch = metadataString.match(/StreamTitle='([^']*)'/);
                                     if (streamTitleMatch && streamTitleMatch[1]) {
                                         const streamTitle = streamTitleMatch[1];
+
+                                        self.postMessage({
+                                            type: 'DEBUG',
+                                            message: `Parsed StreamTitle: ${streamTitle}`
+                                        });
 
                                         // Try to split into artist and title
                                         const separators = [' - ', ' – ', ' — ', ': '];
@@ -167,9 +203,22 @@ async function fetchMetadata() {
 
                             reader.cancel();
                         } catch (error) {
-                            console.error('Error reading metadata from stream:', error);
+                            self.postMessage({
+                                type: 'DEBUG',
+                                message: `Error reading metadata from stream: ${error.message}`
+                            });
                         }
+                    } else {
+                        self.postMessage({
+                            type: 'DEBUG',
+                            message: `Invalid metaint value: ${icyMetaint}`
+                        });
                     }
+                } else {
+                    self.postMessage({
+                        type: 'DEBUG',
+                        message: `No icy-metaint header or response body - metaint: ${icyMetaint}, hasBody: ${!!response.body}`
+                    });
                 }
 
                 // Send metadata back to main thread
