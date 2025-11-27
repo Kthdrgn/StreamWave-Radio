@@ -77,7 +77,7 @@ async function fetchMetadata() {
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
                     headers: {
-                        'Range': 'bytes=0-16384', // Request small amount of data
+                        'Range': 'bytes=0-131072', // Request 128KB to cover most icy-metaint values (typically 8000-96000)
                         'Icy-MetaData': '1' // Request metadata from Icecast servers
                     }
                 });
