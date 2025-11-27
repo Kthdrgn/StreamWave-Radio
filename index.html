@@ -1764,7 +1764,11 @@
         // Render Radio Browser search results
         function renderRadioBrowserResults(results) {
             // Check if current user is admin
+            console.log('🔍 Checking admin status...');
+            console.log('window.currentUser:', window.currentUser);
+            console.log('window.currentUser.email:', window.currentUser?.email);
             const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            console.log('isAdmin:', isAdmin);
 
             radioDatabaseResults.innerHTML = results.map(station => {
                 const favicon = station.favicon || '';
