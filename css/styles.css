@@ -1695,6 +1695,17 @@
         .form-btn-secondary:hover {
             background: var(--card-hover);
         }
+
+        .form-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .form-btn-primary.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
         
         /* Quality selector */
         /* Quality modal options */

@@ -576,8 +576,15 @@
                 <!-- Add to Playlist Button -->
                 <button id="addCurrentStationToPlaylistBtn" class="form-btn form-btn-primary" style="width: 100%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span>➕</span>
-                    <span>Add to Playlist</span>
+                    <span>Add station to playlist</span>
                 </button>
+
+                <!-- Select Quality Button -->
+                <button id="selectQualityBtn" class="form-btn form-btn-primary" style="width: 100%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>🎚️</span>
+                    <span>Select Quality</span>
+                </button>
+
                 <!-- Station info will go here -->
             </div>
         </div>
@@ -3870,6 +3877,16 @@
             } else {
                 qualityBtn.classList.remove('visible');
             }
+
+            // Update select quality button in station info modal
+            const selectQualityBtn = document.getElementById('selectQualityBtn');
+            if (selectQualityBtn) {
+                if (hasMultipleQualities) {
+                    selectQualityBtn.classList.remove('disabled');
+                } else {
+                    selectQualityBtn.classList.add('disabled');
+                }
+            }
         }
         
         // Open playlist
@@ -4280,6 +4297,15 @@
         // Add current station to playlist button
         document.getElementById('addCurrentStationToPlaylistBtn').addEventListener('click', () => {
             showPlaylistSelectorForCurrentStation();
+        });
+
+        // Select quality button in station info modal
+        document.getElementById('selectQualityBtn').addEventListener('click', () => {
+            // Don't open modal if button is disabled
+            if (document.getElementById('selectQualityBtn').classList.contains('disabled')) {
+                return;
+            }
+            qualityModal.classList.add('active');
         });
 
         // Play random station button
