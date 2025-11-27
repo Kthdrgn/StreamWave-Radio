@@ -565,6 +565,19 @@
         </div>
     </div>
 
+    <!-- Station Info Modal -->
+    <div id="stationInfoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Station Information</h2>
+                <button class="modal-close" id="closeStationInfoModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Station info will go here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Playlists Modal -->
     <div id="playlistsModal" class="modal-overlay">
         <div class="modal-content">
@@ -1062,6 +1075,8 @@
         const authBtn = document.getElementById('authBtn');
         const overviewModal = document.getElementById('overviewModal');
         const closeOverviewModal = document.getElementById('closeOverviewModal');
+        const stationInfoModal = document.getElementById('stationInfoModal');
+        const closeStationInfoModal = document.getElementById('closeStationInfoModal');
 
         const stationList = document.getElementById('stationList');
         const stationSearch = document.getElementById('stationSearch');
@@ -4146,6 +4161,11 @@
             }
         });
 
+        // Station display click - open station info modal
+        stationDisplay.addEventListener('click', () => {
+            stationInfoModal.classList.add('active');
+        });
+
         // Close playlists modal
         closePlaylistsModal.addEventListener('click', () => {
             playlistsModal.classList.remove('active');
@@ -4155,10 +4175,15 @@
         closeBrowseStationsModal.addEventListener('click', () => {
             browseStationsModal.classList.remove('active');
         });
-        
+
         // Close overview modal
         closeOverviewModal.addEventListener('click', () => {
             overviewModal.classList.remove('active');
+        });
+
+        // Close station info modal
+        closeStationInfoModal.addEventListener('click', () => {
+            stationInfoModal.classList.remove('active');
         });
 
         // Play random station button
