@@ -48,11 +48,15 @@ async function fetchMetadata() {
     try {
         // Try to fetch metadata using the configured proxies
         const proxies = currentConfig.proxies || [];
+        console.log(`[Worker] Fetching metadata for: ${currentConfig.stationUrl}`);
+        console.log(`[Worker] Available proxies: ${proxies.length}`);
 
         for (let i = 0; i < proxies.length; i++) {
             try {
                 // Replace {STREAM_URL} placeholder with actual stream URL
                 const proxyUrl = proxies[i].urlTemplate.replace('{STREAM_URL}', currentConfig.stationUrl);
+                console.log(`[Worker] Trying proxy ${i + 1}/${proxies.length} (${proxies[i].name}): ${proxyUrl}`);
+
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
                     headers: {
@@ -61,8 +65,11 @@ async function fetchMetadata() {
                 });
 
                 if (!response.ok) {
+                    console.log(`[Worker] Proxy ${proxies[i].name} returned status: ${response.status}`);
                     continue;
                 }
+
+                console.log(`[Worker] Successfully fetched from ${proxies[i].name}, extracting metadata...`);
 
                 // Try to extract metadata from ICY headers
                 const icyName = response.headers.get('icy-name');
@@ -150,12 +157,15 @@ async function fetchMetadata() {
 
                 // Send metadata back to main thread
                 if (metadata.title || metadata.artist) {
+                    console.log(`[Worker] Metadata found: ${metadata.artist} - ${metadata.title}`);
                     self.postMessage({
                         type: 'METADATA',
                         metadata: metadata,
                         timestamp: Date.now()
                     });
                     return; // Success, don't try other proxies
+                } else {
+                    console.log(`[Worker] No metadata found from ${proxies[i].name}, trying next proxy...`);
                 }
 
                 // If we got here but no metadata, try next proxy
@@ -163,6 +173,7 @@ async function fetchMetadata() {
 
             } catch (error) {
                 // Try next proxy
+                console.log(`[Worker] Proxy ${proxies[i].name} failed with error: ${error.message}`);
                 continue;
             }
         }
