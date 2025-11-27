@@ -5509,6 +5509,10 @@
             currentTrack.artist = artist;
             currentTrack.album = album;
 
+            // Update media session immediately with track info (before album art loads)
+            // This ensures the notification shade updates even when app is backgrounded
+            updateMediaSession(title, artist, album, currentTrack.artworkUrl || null);
+
             // Add to recent tracks
             window.addToRecentTracks({
                 title: title,
@@ -7101,8 +7105,17 @@
 
             // Setup Media Session handlers
             setupMediaSessionHandlers();
+
+            // Setup Page Visibility API to handle background/foreground transitions
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && isPlaying && !isPaused) {
+                    // App became visible and is playing - fetch metadata immediately to update notification
+                    console.log('🔄 App became visible, refreshing metadata...');
+                    fetchMetadataOnce();
+                }
+            });
         })();
-        
+
         // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.station-menu-btn') && 
