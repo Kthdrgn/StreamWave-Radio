@@ -573,6 +573,11 @@
                 <button class="modal-close" id="closeStationInfoModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Add to Playlist Button -->
+                <button id="addCurrentStationToPlaylistBtn" class="form-btn form-btn-primary" style="width: 100%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>➕</span>
+                    <span>Add to Playlist</span>
+                </button>
                 <!-- Station info will go here -->
             </div>
         </div>
@@ -1891,6 +1896,92 @@
 
                             const selectedPlaylist = playlists.find(p => p.id === playlistId);
                             alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
+
+                            // Close modal
+                            playlistSelectorModal.classList.remove('active');
+                        } catch (error) {
+                            console.error('Error adding station to playlist:', error);
+                            alert('Failed to add station to playlist. Please try again.');
+                        }
+                    });
+                });
+
+                // Show modal
+                playlistSelectorModal.classList.add('active');
+            } catch (error) {
+                console.error('Error showing playlist selector:', error);
+                alert('Failed to load playlists. Please try again.');
+            }
+        }
+
+        // Show playlist selector for the current playing station
+        async function showPlaylistSelectorForCurrentStation() {
+            if (!currentStation) {
+                alert('No station is currently selected');
+                return;
+            }
+
+            if (!window.currentUser || !window.currentUser.id) {
+                alert('Please sign in to add stations to playlists');
+                return;
+            }
+
+            try {
+                // Ensure playlists are loaded
+                if (playlists.length === 0) {
+                    await loadPlaylists();
+                }
+
+                if (playlists.length === 0) {
+                    alert('You have no playlists. Create a playlist first!');
+                    return;
+                }
+
+                // Update modal title
+                playlistSelectorTitle.textContent = `Add "${currentStation.name}" to Playlist`;
+
+                // Determine if this is an external station or curated station
+                const isExternal = currentStation.is_external || false;
+                const stationId = isExternal ? null : currentStation.id;
+                const externalId = isExternal ? currentStation.external_id : null;
+
+                // Render playlist options
+                playlistSelectorList.innerHTML = playlists.map(playlist => `
+                    <div
+                        class="playlist-selector-item"
+                        data-playlist-id="${playlist.id}"
+                        data-station-id="${stationId || ''}"
+                        data-external-id="${externalId || ''}"
+                        data-is-external="${isExternal}"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--text-primary);">${playlist.name}</div>
+                        ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
+                    </div>
+                `).join('');
+
+                // Add click listeners to playlist items
+                document.querySelectorAll('.playlist-selector-item').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const playlistId = item.getAttribute('data-playlist-id');
+                        const isExt = item.getAttribute('data-is-external') === 'true';
+                        const stId = item.getAttribute('data-station-id');
+                        const extId = item.getAttribute('data-external-id');
+
+                        try {
+                            // Add to the selected playlist
+                            if (isExt) {
+                                // External station - use external_id
+                                await addStationToPlaylist(playlistId, null, extId);
+                            } else {
+                                // Curated station - use station_id
+                                await addStationToPlaylist(playlistId, stId);
+                            }
+
+                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                            alert(`Successfully added "${currentStation.name}" to playlist "${selectedPlaylist.name}"!`);
 
                             // Close modal
                             playlistSelectorModal.classList.remove('active');
@@ -4184,6 +4275,11 @@
         // Close station info modal
         closeStationInfoModal.addEventListener('click', () => {
             stationInfoModal.classList.remove('active');
+        });
+
+        // Add current station to playlist button
+        document.getElementById('addCurrentStationToPlaylistBtn').addEventListener('click', () => {
+            showPlaylistSelectorForCurrentStation();
         });
 
         // Play random station button
