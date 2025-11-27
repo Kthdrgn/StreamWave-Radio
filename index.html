@@ -1763,6 +1763,9 @@
 
         // Render Radio Browser search results
         function renderRadioBrowserResults(results) {
+            // Check if current user is admin
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+
             radioDatabaseResults.innerHTML = results.map(station => {
                 const favicon = station.favicon || '';
                 const country = station.country || 'Unknown';
@@ -1784,7 +1787,7 @@
                                 </div>
                                 ${tags ? `<div style="font-size: 12px; color: var(--text-secondary);">${tags}</div>` : ''}
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex-direction: column;">
                                 <button
                                     class="radio-db-add-btn"
                                     data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
@@ -1793,6 +1796,16 @@
                                 >
                                     ➕
                                 </button>
+                                ${isAdmin ? `
+                                <button
+                                    class="radio-db-curate-btn"
+                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
+                                    title="Add to Curated Stations"
+                                    style="padding: 6px 10px; border: 2px solid var(--border-color); border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer; font-size: 11px; color: var(--text-primary); white-space: nowrap;"
+                                >
+                                    ⭐ Curate
+                                </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -1813,6 +1826,15 @@
                     e.stopPropagation();
                     const station = JSON.parse(btn.getAttribute('data-station'));
                     showPlaylistSelectorForRadioBrowser(station);
+                });
+            });
+
+            // Add event listeners to curate buttons (admin only)
+            document.querySelectorAll('.radio-db-curate-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const station = JSON.parse(btn.getAttribute('data-station'));
+                    showStationFormForCuration(station);
                 });
             });
         }
@@ -3999,7 +4021,49 @@
             
             stationFormModal.classList.add('active');
         }
-        
+
+        // Show station form pre-populated with Radio Browser data for curation
+        function showStationFormForCuration(radioBrowserStation) {
+            // Reset the editing ID since this is a new station
+            editingStationId = null;
+
+            // Set form title
+            stationFormTitle.textContent = 'Add Station to Curated Stations';
+
+            // Populate form with Radio Browser data
+            document.getElementById('stationFormName').value = radioBrowserStation.name || '';
+            document.getElementById('stationFormUrl').value = radioBrowserStation.url_resolved || radioBrowserStation.url || '';
+            document.getElementById('stationFormUrlLow').value = '';
+            document.getElementById('stationFormUrlHigh').value = '';
+            document.getElementById('stationFormCallLetters').value = '';
+            document.getElementById('stationFormFrequency').value = '';
+            document.getElementById('stationFormWebsiteUrl').value = radioBrowserStation.homepage || '';
+            document.getElementById('stationFormDescription').value = '';
+
+            // Convert tags to genres (Radio Browser uses tags, we use genres)
+            const tags = radioBrowserStation.tags || '';
+            const genresArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            document.getElementById('stationFormGenres').value = genresArray.join(', ');
+
+            // Set icon URL
+            document.getElementById('stationFormIconUrl').value = radioBrowserStation.favicon || '';
+
+            // Reset image preview
+            stationFormIconUpload.value = '';
+            iconPreview.style.display = 'none';
+            uploadIconBtn.textContent = '📷 Choose Image';
+            uploadIconBtn.style.background = '';
+
+            // Close any dropdowns
+            document.querySelectorAll('.station-dropdown').forEach(d => {
+                d.classList.remove('active');
+            });
+
+            // Close Radio Browser modal and open station form modal
+            radioDatabaseModal.classList.remove('active');
+            stationFormModal.classList.add('active');
+        }
+
         // Edit station
         function editStation(id) {
             showStationForm(id);
