@@ -102,10 +102,7 @@
                     <span id="currentMode">Live</span>
                     <span style="font-size: 10px;">▼</span>
                 </button> -->
-                <button id="qualityBtn" class="quality-btn">
-                    <span id="currentQuality">Standard</span>
-                    <span style="font-size: 10px;">▼</span>
-                </button>
+                <!-- Quality button removed - now accessible via Station Info modal -->
             </div>
 
             <!-- Status indicator -->
@@ -573,7 +570,44 @@
                 <button class="modal-close" id="closeStationInfoModal">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- Station info will go here -->
+                <!-- Add to Playlist Button -->
+                <button id="addCurrentStationToPlaylistBtn" class="menu-option-btn" style="margin-bottom: 12px;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Add station to playlist</span>
+                </button>
+
+                <!-- Select Quality Button -->
+                <button id="selectQualityBtn" class="menu-option-btn" style="margin-bottom: 12px;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 7V17M7 4V20M11 9V15M15 6V18M19 10V14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Select Quality</span>
+                </button>
+
+                <!-- Curate Station Button (Admin Only) -->
+                <button id="curateStationBtn" class="menu-option-btn" style="margin-bottom: 12px; display: none;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Curate Station</span>
+                </button>
+
+                <!-- Station Overview Section -->
+                <div id="stationOverviewSection" style="margin-top: 20px;">
+                    <h3 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; font-weight: 600;">Station Overview</h3>
+
+                    <!-- Station Logo -->
+                    <div id="stationLogoContainer" style="text-align: center; margin-bottom: 20px; display: none;">
+                        <img id="stationLogo" src="" alt="Station Logo" style="max-width: 120px; max-height: 120px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                    </div>
+
+                    <!-- Station Info Grid -->
+                    <div id="stationInfoGrid" style="display: grid; gap: 12px;">
+                        <!-- Info items will be dynamically added here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1750,6 +1784,13 @@
 
         // Render Radio Browser search results
         function renderRadioBrowserResults(results) {
+            // Check if current user is admin
+            console.log('🔍 Checking admin status...');
+            console.log('window.currentUser:', window.currentUser);
+            console.log('window.currentUser.email:', window.currentUser?.email);
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            console.log('isAdmin:', isAdmin);
+
             radioDatabaseResults.innerHTML = results.map(station => {
                 const favicon = station.favicon || '';
                 const country = station.country || 'Unknown';
@@ -1771,7 +1812,7 @@
                                 </div>
                                 ${tags ? `<div style="font-size: 12px; color: var(--text-secondary);">${tags}</div>` : ''}
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex-direction: column;">
                                 <button
                                     class="radio-db-add-btn"
                                     data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
@@ -1780,6 +1821,16 @@
                                 >
                                     ➕
                                 </button>
+                                ${isAdmin ? `
+                                <button
+                                    class="radio-db-curate-btn"
+                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
+                                    title="Add to Curated Stations"
+                                    style="padding: 6px 10px; border: 2px solid var(--border-color); border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer; font-size: 11px; color: var(--text-primary); white-space: nowrap;"
+                                >
+                                    ⭐ Curate
+                                </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -1802,6 +1853,15 @@
                     showPlaylistSelectorForRadioBrowser(station);
                 });
             });
+
+            // Add event listeners to curate buttons (admin only)
+            document.querySelectorAll('.radio-db-curate-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const station = JSON.parse(btn.getAttribute('data-station'));
+                    showStationFormForCuration(station);
+                });
+            });
         }
 
         // Play a station from Radio Browser
@@ -1817,10 +1877,25 @@
                     url: station.url_resolved || station.url,
                     icon_url: station.favicon || '',
                     genres: station.tags ? station.tags.split(',').map(t => t.trim()) : [],
+                    tags: station.tags,
                     call_letters: '',
                     frequency: '',
                     is_external: true,
-                    external_id: externalStationId
+                    external_id: externalStationId,
+                    // Preserve all Radio Browser fields for station info display
+                    homepage: station.homepage,
+                    country: station.country,
+                    countrycode: station.countrycode,
+                    country_code: station.countrycode,
+                    state: station.state,
+                    language: station.language,
+                    languagecodes: station.languagecodes,
+                    languages: station.languages,
+                    countrysubdivisioncode: station.countrysubdivisioncode,
+                    countrysubdivision: station.countrysubdivision,
+                    codec: station.codec,
+                    bitrate: station.bitrate,
+                    votes: station.votes
                 };
 
                 // Close the radio database modal
@@ -1909,6 +1984,92 @@
             }
         }
 
+        // Show playlist selector for the current playing station
+        async function showPlaylistSelectorForCurrentStation() {
+            if (!currentStation) {
+                alert('No station is currently selected');
+                return;
+            }
+
+            if (!window.currentUser || !window.currentUser.id) {
+                alert('Please sign in to add stations to playlists');
+                return;
+            }
+
+            try {
+                // Ensure playlists are loaded
+                if (playlists.length === 0) {
+                    await loadPlaylists();
+                }
+
+                if (playlists.length === 0) {
+                    alert('You have no playlists. Create a playlist first!');
+                    return;
+                }
+
+                // Update modal title
+                playlistSelectorTitle.textContent = `Add "${currentStation.name}" to Playlist`;
+
+                // Determine if this is an external station or curated station
+                const isExternal = currentStation.is_external || false;
+                const stationId = isExternal ? null : currentStation.id;
+                const externalId = isExternal ? currentStation.external_id : null;
+
+                // Render playlist options
+                playlistSelectorList.innerHTML = playlists.map(playlist => `
+                    <div
+                        class="playlist-selector-item"
+                        data-playlist-id="${playlist.id}"
+                        data-station-id="${stationId || ''}"
+                        data-external-id="${externalId || ''}"
+                        data-is-external="${isExternal}"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--text-primary);">${playlist.name}</div>
+                        ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
+                    </div>
+                `).join('');
+
+                // Add click listeners to playlist items
+                document.querySelectorAll('.playlist-selector-item').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const playlistId = item.getAttribute('data-playlist-id');
+                        const isExt = item.getAttribute('data-is-external') === 'true';
+                        const stId = item.getAttribute('data-station-id');
+                        const extId = item.getAttribute('data-external-id');
+
+                        try {
+                            // Add to the selected playlist
+                            if (isExt) {
+                                // External station - use external_id
+                                await addStationToPlaylist(playlistId, null, extId);
+                            } else {
+                                // Curated station - use station_id
+                                await addStationToPlaylist(playlistId, stId);
+                            }
+
+                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                            alert(`Successfully added "${currentStation.name}" to playlist "${selectedPlaylist.name}"!`);
+
+                            // Close modal
+                            playlistSelectorModal.classList.remove('active');
+                        } catch (error) {
+                            console.error('Error adding station to playlist:', error);
+                            alert('Failed to add station to playlist. Please try again.');
+                        }
+                    });
+                });
+
+                // Show modal
+                playlistSelectorModal.classList.add('active');
+            } catch (error) {
+                console.error('Error showing playlist selector:', error);
+                alert('Failed to load playlists. Please try again.');
+            }
+        }
+
         // Legacy function - kept for backwards compatibility if needed
         async function addRadioBrowserStationToDatabase(station) {
             console.warn('addRadioBrowserStationToDatabase is deprecated. Use showPlaylistSelectorForRadioBrowser instead.');
@@ -1944,6 +2105,10 @@
                     homepage: station.homepage || null,
                     metadata: {
                         state: station.state,
+                        languagecodes: station.languagecodes,
+                        languages: station.languages,
+                        countrysubdivisioncode: station.countrysubdivisioncode,
+                        countrysubdivision: station.countrysubdivision,
                         hls: station.hls,
                         lastcheckok: station.lastcheckok,
                         lastchecktime: station.lastchecktime
@@ -2006,11 +2171,25 @@
                     url: data.url_resolved || data.url,
                     icon_url: data.icon_url || data.favicon || '',
                     genres: data.genres || [],
+                    tags: data.genres ? data.genres.join(', ') : '',
                     call_letters: '',
                     frequency: '',
                     country: data.country,
                     is_external: true,
-                    external_id: data.id
+                    external_id: data.id,
+                    // Include all Radio Browser fields for station info display
+                    homepage: data.homepage,
+                    countrycode: data.country_code,
+                    country_code: data.country_code,
+                    state: data.metadata?.state,
+                    language: data.language,
+                    languagecodes: data.metadata?.languagecodes,
+                    languages: data.metadata?.languages,
+                    countrysubdivisioncode: data.metadata?.countrysubdivisioncode,
+                    countrysubdivision: data.metadata?.countrysubdivision,
+                    codec: data.codec,
+                    bitrate: data.bitrate,
+                    votes: data.votes
                 };
             } catch (error) {
                 console.error('Error getting external station:', error);
@@ -3626,7 +3805,106 @@
                 }
             });
         }
-        
+
+        // Populate station overview in the station info modal
+        function populateStationOverview(station) {
+            if (!station) return;
+
+            const stationLogoContainer = document.getElementById('stationLogoContainer');
+            const stationLogo = document.getElementById('stationLogo');
+            const stationInfoGrid = document.getElementById('stationInfoGrid');
+
+            // Clear previous content
+            stationInfoGrid.innerHTML = '';
+
+            // Helper function to create info row
+            function createInfoRow(label, value, isLink = false) {
+                if (!value || value === '' || (Array.isArray(value) && value.length === 0)) {
+                    return '';
+                }
+
+                let displayValue = value;
+                if (Array.isArray(value)) {
+                    displayValue = value.join(', ');
+                }
+
+                if (isLink && value) {
+                    displayValue = `<a href="${value}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color); text-decoration: none; word-break: break-all;">${value}</a>`;
+                }
+
+                return `
+                    <div style="display: flex; gap: 12px; padding: 10px; background: var(--card-bg, rgba(255,255,255,0.05)); border-radius: 8px;">
+                        <div style="font-weight: 600; color: var(--text-secondary); min-width: 140px; flex-shrink: 0;">${label}:</div>
+                        <div style="color: var(--text-primary); flex: 1; word-break: break-word;">${displayValue}</div>
+                    </div>
+                `;
+            }
+
+            // Display station logo if available
+            const logoUrl = station.icon_url || station.favicon || '';
+            if (logoUrl) {
+                stationLogo.src = logoUrl;
+                stationLogo.onerror = function() {
+                    stationLogoContainer.style.display = 'none';
+                };
+                stationLogoContainer.style.display = 'block';
+            } else {
+                stationLogoContainer.style.display = 'none';
+            }
+
+            let infoHTML = '';
+
+            // Check if this is an external (Radio Browser) station or Supabase station
+            if (station.is_external) {
+                // Radio Browser station
+                infoHTML += createInfoRow('Station Name', station.name);
+                infoHTML += createInfoRow('Website', station.homepage, true);
+                infoHTML += createInfoRow('Country', station.country);
+                infoHTML += createInfoRow('Country Code', station.country_code || station.countrycode);
+
+                // Country Subdivision (State/Region) - display both code and name if available
+                const subdivisionCode = station.countrysubdivisioncode || (station.metadata && station.metadata.countrysubdivisioncode);
+                if (subdivisionCode) {
+                    infoHTML += createInfoRow('Country Subdivision Code', subdivisionCode);
+                }
+
+                const subdivisionName = station.countrysubdivision || (station.metadata && station.metadata.countrysubdivision);
+                if (subdivisionName) {
+                    infoHTML += createInfoRow('Country Subdivision', subdivisionName);
+                }
+
+                // Languages (full names)
+                const languages = station.languages || (station.metadata && station.metadata.languages);
+                if (languages) {
+                    infoHTML += createInfoRow('Languages', languages);
+                }
+
+                infoHTML += createInfoRow('Language', station.language);
+
+                // Language Codes
+                const langCodes = station.languagecodes || (station.metadata && station.metadata.languagecodes);
+                if (langCodes) {
+                    infoHTML += createInfoRow('Language Codes', langCodes);
+                }
+
+                infoHTML += createInfoRow('Tags', station.tags || (station.genres && Array.isArray(station.genres) ? station.genres.join(', ') : ''));
+                infoHTML += createInfoRow('Audio Codec', station.codec);
+                infoHTML += createInfoRow('Bitrate', station.bitrate ? `${station.bitrate} kbps` : '');
+                infoHTML += createInfoRow('Votes', station.votes);
+                infoHTML += createInfoRow('Popularity', station.click_count || station.clickcount);
+            } else {
+                // Supabase (curated) station
+                infoHTML += createInfoRow('Station Name', station.name);
+                infoHTML += createInfoRow('Call Letters', station.call_letters);
+                infoHTML += createInfoRow('Frequency', station.frequency);
+                infoHTML += createInfoRow('Website', station.website_url, true);
+                infoHTML += createInfoRow('Description', station.description);
+                infoHTML += createInfoRow('Genres', station.genres);
+            }
+
+            stationInfoGrid.innerHTML = infoHTML;
+        }
+
         // Select station
         function selectStation(station) {
             currentStation = station;
@@ -3737,10 +4015,9 @@
             const lowBtn = document.querySelector('.quality-option-modal[data-quality="low"]');
             const standardBtn = document.querySelector('.quality-option-modal[data-quality="standard"]');
             const highBtn = document.querySelector('.quality-option-modal[data-quality="high"]');
-            const qualityBtn = document.getElementById('qualityBtn');
-            
+
             let hasMultipleQualities = false;
-            
+
             // Enable/disable based on available URLs
             if (station.url_low) {
                 lowBtn.classList.remove('disabled');
@@ -3752,13 +4029,12 @@
                     selectedQuality = 'standard';
                     standardBtn.classList.add('selected');
                     lowBtn.classList.remove('selected');
-                    document.getElementById('currentQuality').textContent = 'Standard';
                 }
             }
-            
+
             // Standard URL is always required, so always enabled
             standardBtn.classList.remove('disabled');
-            
+
             if (station.url_high) {
                 highBtn.classList.remove('disabled');
                 hasMultipleQualities = true;
@@ -3769,15 +4045,17 @@
                     selectedQuality = 'standard';
                     standardBtn.classList.add('selected');
                     highBtn.classList.remove('selected');
-                    document.getElementById('currentQuality').textContent = 'Standard';
                 }
             }
-            
-            // Only show quality button if there are multiple quality options
-            if (hasMultipleQualities) {
-                qualityBtn.classList.add('visible');
-            } else {
-                qualityBtn.classList.remove('visible');
+
+            // Update select quality button in station info modal
+            const selectQualityBtn = document.getElementById('selectQualityBtn');
+            if (selectQualityBtn) {
+                if (hasMultipleQualities) {
+                    selectQualityBtn.classList.remove('disabled');
+                } else {
+                    selectQualityBtn.classList.add('disabled');
+                }
             }
         }
         
@@ -3900,7 +4178,92 @@
             
             stationFormModal.classList.add('active');
         }
-        
+
+        // Show station form pre-populated with Radio Browser data for curation
+        function showStationFormForCuration(radioBrowserStation) {
+            // Reset the editing ID since this is a new station
+            editingStationId = null;
+
+            // Set form title
+            stationFormTitle.textContent = 'Add Station to Curated Stations';
+
+            // Populate form with Radio Browser data
+            document.getElementById('stationFormName').value = radioBrowserStation.name || '';
+            document.getElementById('stationFormUrl').value = radioBrowserStation.url_resolved || radioBrowserStation.url || '';
+            document.getElementById('stationFormUrlLow').value = '';
+            document.getElementById('stationFormUrlHigh').value = '';
+            document.getElementById('stationFormCallLetters').value = '';
+            document.getElementById('stationFormFrequency').value = '';
+            document.getElementById('stationFormWebsiteUrl').value = radioBrowserStation.homepage || '';
+            document.getElementById('stationFormDescription').value = '';
+
+            // Convert tags to genres (Radio Browser uses tags, we use genres)
+            const tags = radioBrowserStation.tags || '';
+            const genresArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            document.getElementById('stationFormGenres').value = genresArray.join(', ');
+
+            // Set icon URL
+            document.getElementById('stationFormIconUrl').value = radioBrowserStation.favicon || '';
+
+            // Reset image preview
+            stationFormIconUpload.value = '';
+            iconPreview.style.display = 'none';
+            uploadIconBtn.textContent = '📷 Choose Image';
+            uploadIconBtn.style.background = '';
+
+            // Close any dropdowns
+            document.querySelectorAll('.station-dropdown').forEach(d => {
+                d.classList.remove('active');
+            });
+
+            // Close Radio Browser modal and open station form modal
+            radioDatabaseModal.classList.remove('active');
+            stationFormModal.classList.add('active');
+        }
+
+        // Show station form pre-populated with current station data for curation
+        function showStationFormForCurrentStation() {
+            // Reset the editing ID since this is a new station (curating, not editing)
+            editingStationId = null;
+
+            // Set form title
+            stationFormTitle.textContent = 'Add Station to Curated Stations';
+
+            // Populate form with current station data
+            document.getElementById('stationFormName').value = currentStation.name || '';
+            document.getElementById('stationFormUrl').value = currentStation.url || '';
+            document.getElementById('stationFormUrlLow').value = currentStation.url_low || '';
+            document.getElementById('stationFormUrlHigh').value = currentStation.url_high || '';
+            document.getElementById('stationFormCallLetters').value = currentStation.call_letters || '';
+            document.getElementById('stationFormFrequency').value = currentStation.frequency || '';
+            document.getElementById('stationFormWebsiteUrl').value = currentStation.website_url || '';
+            document.getElementById('stationFormDescription').value = currentStation.description || '';
+
+            // Convert genres array to comma-separated string
+            const genresStr = Array.isArray(currentStation.genres)
+                ? currentStation.genres.join(', ')
+                : (currentStation.genres || '');
+            document.getElementById('stationFormGenres').value = genresStr;
+
+            // Set icon URL
+            document.getElementById('stationFormIconUrl').value = currentStation.icon_url || '';
+
+            // Reset image preview
+            stationFormIconUpload.value = '';
+            iconPreview.style.display = 'none';
+            uploadIconBtn.textContent = '📷 Choose Image';
+            uploadIconBtn.style.background = '';
+
+            // Close any dropdowns
+            document.querySelectorAll('.station-dropdown').forEach(d => {
+                d.classList.remove('active');
+            });
+
+            // Close station info modal and open station form modal
+            stationInfoModal.classList.remove('active');
+            stationFormModal.classList.add('active');
+        }
+
         // Edit station
         function editStation(id) {
             showStationForm(id);
@@ -4163,6 +4526,16 @@
 
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
+            // Show/hide curate button based on admin status
+            const curateStationBtn = document.getElementById('curateStationBtn');
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            if (curateStationBtn) {
+                curateStationBtn.style.display = isAdmin ? 'flex' : 'none';
+            }
+
+            // Populate station overview with current station data
+            populateStationOverview(currentStation);
+
             stationInfoModal.classList.add('active');
         });
 
@@ -4184,6 +4557,27 @@
         // Close station info modal
         closeStationInfoModal.addEventListener('click', () => {
             stationInfoModal.classList.remove('active');
+        });
+
+        // Add current station to playlist button
+        document.getElementById('addCurrentStationToPlaylistBtn').addEventListener('click', () => {
+            showPlaylistSelectorForCurrentStation();
+        });
+
+        // Select quality button in station info modal
+        document.getElementById('selectQualityBtn').addEventListener('click', () => {
+            // Don't open modal if button is disabled
+            if (document.getElementById('selectQualityBtn').classList.contains('disabled')) {
+                return;
+            }
+            qualityModal.classList.add('active');
+        });
+
+        // Curate station button in station info modal (admin only)
+        document.getElementById('curateStationBtn').addEventListener('click', () => {
+            if (currentStation) {
+                showStationFormForCurrentStation();
+            }
         });
 
         // Play random station button
@@ -5376,20 +5770,15 @@
         });
         
         // Quality modal
-        const qualityBtn = document.getElementById('qualityBtn');
+        // Quality button removed from main UI - now only accessible via Station Info modal
         const qualityModal = document.getElementById('qualityModal');
         const closeQualityModal = document.getElementById('closeQualityModal');
-        const currentQualityText = document.getElementById('currentQuality');
-        
+
         // Playback mode modal
         const playbackModeBtn = document.getElementById('playbackModeBtn');
         const playbackModeModal = document.getElementById('playbackModeModal');
         const closePlaybackModeModal = document.getElementById('closePlaybackModeModal');
         const currentModeText = document.getElementById('currentMode');
-        
-        qualityBtn.addEventListener('click', () => {
-            qualityModal.classList.add('active');
-        });
         
         closeQualityModal.addEventListener('click', () => {
             qualityModal.classList.remove('active');
@@ -5421,24 +5810,17 @@
                 qualityModal.querySelectorAll('.quality-option-modal[data-quality]').forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 selectedQuality = newQuality;
-                
-                // Update button text
-                const qualityNames = {
-                    'low': 'Low',
-                    'standard': 'Standard',
-                    'high': 'High'
-                };
-                currentQualityText.textContent = qualityNames[newQuality];
-                
-                // Close modal
-                qualityModal.classList.remove('active');
 
-                // If player was playing, stop and restart with new quality
-                if (wasPlaying && currentStation) {
+                // Close modals
+                qualityModal.classList.remove('active');
+                stationInfoModal.classList.remove('active');
+
+                // If a station is selected, start playing with new quality
+                if (currentStation) {
                     console.log(`Switching to ${newQuality} quality...`);
                     updateStatus(`Switching to ${newQuality} quality...`, 'loading');
 
-                    // Stop the current stream (works for both Live Mode and Simple Mode)
+                    // Stop any current playback
                     if (player) {
                         player.stop();
                     }
@@ -5446,10 +5828,14 @@
                     // Stop metadata-only player so it restarts with new quality URL
                     stopMetadataOnlyPlayer();
 
+                    // Ensure isPlaying is false so the next click will start playing
+                    isPlaying = false;
+
                     // Wait a moment for the stop to complete, then start new stream
                     setTimeout(() => {
+                        // Force play by simulating a click
                         playPauseBtn.click();
-                    }, 200);
+                    }, 300);
                 }
             });
         });
@@ -7211,7 +7597,6 @@
             if (savedQuality) {
                 quality = savedQuality;
                 selectedQuality = savedQuality;
-                document.getElementById('currentQuality').textContent = quality === 'high' ? 'High' : 'Standard';
             }
 
             const savedAutoFallback = localStorage.getItem('autoFallback');

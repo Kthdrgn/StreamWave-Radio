@@ -841,7 +841,12 @@
         .modal-overlay.active {
             display: flex;
         }
-        
+
+        /* Quality modal should appear above other modals when opened from Station Info */
+        #qualityModal {
+            z-index: 1001;
+        }
+
         /* Modal content */
         .modal-content {
             background: var(--modal-bg);
@@ -1694,6 +1699,17 @@
         
         .form-btn-secondary:hover {
             background: var(--card-hover);
+        }
+
+        .form-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .form-btn-primary.disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
         
         /* Quality selector */
@@ -2640,6 +2656,18 @@ body[data-layout="landscape"] .layout-slider {
     flex: 1;
 }
 
+.menu-option-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.menu-option-btn.disabled:hover {
+    transform: none;
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
 /* Specific icon styles for buttons with filled icons */
 #viewLikedTracksBtn svg {
     fill: var(--text-primary);
@@ -2701,4 +2729,63 @@ body[data-layout="landscape"] .layout-slider {
     font-weight: 500 !important;
     color: var(--text-primary) !important;
     flex: 1 !important;
+}
+
+/* Station Overview Section */
+#stationOverviewSection {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+#stationOverviewSection h3 {
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#stationLogoContainer {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#stationLogo {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+#stationLogo:hover {
+    transform: scale(1.05);
+}
+
+#stationInfoGrid {
+    display: grid;
+    gap: 12px;
+}
+
+#stationInfoGrid > div {
+    display: flex;
+    gap: 12px;
+    padding: 10px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+#stationInfoGrid > div:hover {
+    background: var(--card-hover);
+}
+
+#stationInfoGrid a {
+    color: var(--accent-color);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+#stationInfoGrid a:hover {
+    text-decoration: underline;
 }
