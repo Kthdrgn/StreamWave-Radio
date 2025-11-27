@@ -4045,10 +4045,12 @@
         });
 
         // Open overview modal
-        overviewBtn.addEventListener('click', () => {
-            overviewModal.classList.add('active');
-            loadOverviewModal();
-        });
+        if (overviewBtn) {
+            overviewBtn.addEventListener('click', () => {
+                overviewModal.classList.add('active');
+                loadOverviewModal();
+            });
+        }
 
         // Station display click - open overview modal
         stationDisplay.addEventListener('click', () => {
