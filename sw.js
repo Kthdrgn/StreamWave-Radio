@@ -1,7 +1,7 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v5'; // Incremented to force cache update with metadata worker
+const CACHE_NAME = 'radio-player-v6'; // Incremented to force cache update with improved metadata worker debugging
 const urlsToCache = [
     './',
     './index.html',
