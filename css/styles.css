@@ -2463,6 +2463,8 @@ body[data-layout="landscape"] .layout-slider {
 .hamburger-menu-container {
     padding: 15px;
     z-index: 10;
+    display: flex;
+    gap: 10px;
 }
 
 /* Hamburger Button */
