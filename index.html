@@ -938,6 +938,10 @@
         let metadataOnlyPlayerRefreshInterval = 10000; // Refresh metadata player every 10 seconds to keep in sync
         let currentPlaybackAbortController = null; // For cancelling ongoing connection attempts
 
+        // Web Worker for background metadata fetching (not throttled by browser)
+        let metadataWorker = null;
+        let metadataWorkerActive = false;
+
         // CORS proxy configuration (shared between audio player and metadata player)
         const corsProxies = [
             // Self-hosted CORS proxies (highest priority):
@@ -4620,6 +4624,159 @@
                 metadataOnlyPlayerRefreshIntervalId = null;
                 console.log('🔄 Metadata player refresh interval cleared');
             }
+
+            // Also stop the Web Worker if active
+            stopMetadataWorker();
+        }
+
+        // Initialize Web Worker for background metadata fetching
+        function initMetadataWorker() {
+            if (metadataWorker) {
+                return; // Already initialized
+            }
+
+            try {
+                metadataWorker = new Worker('metadata-worker.js');
+
+                // Handle messages from the worker
+                metadataWorker.addEventListener('message', (event) => {
+                    const { type, metadata, error } = event.data;
+
+                    if (type === 'METADATA') {
+                        // Update UI with new metadata
+                        if (metadata && (metadata.title || metadata.artist)) {
+                            console.log('📡 Metadata from worker:', metadata);
+
+                            // Update the display and media session
+                            const title = metadata.title || 'Unknown Track';
+                            const artist = metadata.artist || (currentStation ? currentStation.name : 'Radio Stream');
+                            const album = metadata.album || '';
+
+                            // Update current track
+                            currentTrack.title = title;
+                            currentTrack.artist = artist;
+                            currentTrack.album = album;
+
+                            // Update display
+                            const nowPlayingDiv = document.getElementById('nowPlaying');
+                            if (nowPlayingDiv) {
+                                nowPlayingDiv.innerHTML = `
+                                    <div class="track-title">${title}</div>
+                                    <div class="artist-name">${artist}</div>
+                                `;
+                            }
+
+                            // Update media session for notifications
+                            updateMediaSession(title, artist, album, currentTrack.artworkUrl || (currentStation ? currentStation.icon_url : null));
+
+                            // Update like button and lyrics indicator
+                            updateLikeButton();
+                            updateLyricsIndicator();
+
+                            // Track the song play
+                            trackSongPlay(title, artist);
+
+                            // Fetch lyrics
+                            fetchLyricsForCurrentTrack();
+
+                            // Fetch album art
+                            fetchAlbumArtItunes(title, artist);
+
+                            // Update Cast metadata if casting
+                            updateCastMetadata(title, artist, currentTrack.artworkUrl);
+                        }
+                    } else if (type === 'ERROR') {
+                        console.log('❌ Worker error:', error);
+                    } else if (type === 'STARTED') {
+                        console.log('✅ Metadata worker started');
+                        metadataWorkerActive = true;
+                    } else if (type === 'STOPPED') {
+                        console.log('🛑 Metadata worker stopped');
+                        metadataWorkerActive = false;
+                    }
+                });
+
+                metadataWorker.addEventListener('error', (error) => {
+                    console.error('❌ Metadata worker error:', error);
+                    metadataWorkerActive = false;
+                });
+
+                console.log('✅ Metadata worker initialized');
+            } catch (error) {
+                console.error('❌ Failed to initialize metadata worker:', error);
+                metadataWorker = null;
+            }
+        }
+
+        // Start metadata fetching via Web Worker
+        function startMetadataWorker() {
+            if (!currentStation) {
+                return;
+            }
+
+            // Initialize worker if not already done
+            if (!metadataWorker) {
+                initMetadataWorker();
+            }
+
+            if (!metadataWorker) {
+                console.log('⚠️ Metadata worker not available, falling back to setInterval');
+                startMetadataPlayerRefreshIntervalFallback();
+                return;
+            }
+
+            // Get stream URL based on quality
+            const rawUrl = selectedQuality === 'low' && currentStation.url_low ? currentStation.url_low :
+                          selectedQuality === 'high' && currentStation.url_high ? currentStation.url_high :
+                          currentStation.url;
+
+            if (!rawUrl) {
+                console.log('No stream URL available for metadata fetch');
+                return;
+            }
+
+            // Skip HLS streams - they don't support Icecast metadata
+            if (isHLSStream(rawUrl)) {
+                console.log('HLS streams do not support Icecast metadata, skipping metadata fetch');
+                return;
+            }
+
+            // Configure and start the worker
+            metadataWorker.postMessage({
+                type: 'START',
+                config: {
+                    stationUrl: rawUrl,
+                    interval: metadataOnlyPlayerRefreshInterval,
+                    proxies: corsProxies
+                }
+            });
+
+            console.log('🔄 Starting metadata worker for background updates...');
+        }
+
+        // Stop metadata fetching via Web Worker
+        function stopMetadataWorker() {
+            if (metadataWorker && metadataWorkerActive) {
+                metadataWorker.postMessage({ type: 'STOP' });
+                console.log('🛑 Stopping metadata worker...');
+            }
+        }
+
+        // Fallback to setInterval if Web Worker is not available
+        function startMetadataPlayerRefreshIntervalFallback() {
+            if (metadataOnlyPlayerRefreshIntervalId) {
+                return; // Already running
+            }
+
+            // Fetch immediately
+            fetchMetadataOnce();
+
+            // Start periodic fetching
+            metadataOnlyPlayerRefreshIntervalId = setInterval(() => {
+                fetchMetadataOnce();
+            }, metadataOnlyPlayerRefreshInterval);
+
+            console.log(`🔄 Metadata fetching started (fallback, every ${metadataOnlyPlayerRefreshInterval/1000}s)`);
         }
 
         // Fetch metadata once without continuous playback
@@ -4726,25 +4883,18 @@
             }
         }
 
-        // Start periodic metadata fetching
+        // Start periodic metadata fetching (now uses Web Worker for background updates)
         function startMetadataPlayerRefreshInterval() {
             // Clear any existing interval
             clearMetadataPlayerRefreshInterval();
 
-            // Fetch immediately
-            fetchMetadataOnce();
-
-            // Start periodic fetching
-            metadataOnlyPlayerRefreshIntervalId = setInterval(() => {
-                fetchMetadataOnce();
-            }, metadataOnlyPlayerRefreshInterval);
-
-            console.log(`🔄 Metadata fetching started (every ${metadataOnlyPlayerRefreshInterval/1000}s)`);
+            // Use Web Worker for metadata fetching (not throttled in background)
+            startMetadataWorker();
         }
 
         // Start metadata-only player (periodic fetching for Chromecast sessions)
         function startMetadataOnlyPlayer() {
-            if (!currentStation || metadataOnlyPlayerRefreshIntervalId) {
+            if (!currentStation || metadataWorkerActive || metadataOnlyPlayerRefreshIntervalId) {
                 return; // Already running or no station
             }
 
@@ -7118,7 +7268,13 @@
                 if (!document.hidden && isPlaying && !isPaused) {
                     // App became visible and is playing - fetch metadata immediately to update notification
                     console.log('🔄 App became visible, refreshing metadata...');
-                    fetchMetadataOnce();
+
+                    // Trigger immediate fetch from worker if active, otherwise use fallback
+                    if (metadataWorker && metadataWorkerActive) {
+                        metadataWorker.postMessage({ type: 'FETCH_NOW' });
+                    } else {
+                        fetchMetadataOnce();
+                    }
                 }
             });
         })();
