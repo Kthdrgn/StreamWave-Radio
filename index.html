@@ -102,10 +102,7 @@
                     <span id="currentMode">Live</span>
                     <span style="font-size: 10px;">▼</span>
                 </button> -->
-                <button id="qualityBtn" class="quality-btn">
-                    <span id="currentQuality">Standard</span>
-                    <span style="font-size: 10px;">▼</span>
-                </button>
+                <!-- Quality button removed - now accessible via Station Info modal -->
             </div>
 
             <!-- Status indicator -->
@@ -3839,10 +3836,9 @@
             const lowBtn = document.querySelector('.quality-option-modal[data-quality="low"]');
             const standardBtn = document.querySelector('.quality-option-modal[data-quality="standard"]');
             const highBtn = document.querySelector('.quality-option-modal[data-quality="high"]');
-            const qualityBtn = document.getElementById('qualityBtn');
-            
+
             let hasMultipleQualities = false;
-            
+
             // Enable/disable based on available URLs
             if (station.url_low) {
                 lowBtn.classList.remove('disabled');
@@ -3854,13 +3850,12 @@
                     selectedQuality = 'standard';
                     standardBtn.classList.add('selected');
                     lowBtn.classList.remove('selected');
-                    document.getElementById('currentQuality').textContent = 'Standard';
                 }
             }
-            
+
             // Standard URL is always required, so always enabled
             standardBtn.classList.remove('disabled');
-            
+
             if (station.url_high) {
                 highBtn.classList.remove('disabled');
                 hasMultipleQualities = true;
@@ -3871,15 +3866,7 @@
                     selectedQuality = 'standard';
                     standardBtn.classList.add('selected');
                     highBtn.classList.remove('selected');
-                    document.getElementById('currentQuality').textContent = 'Standard';
                 }
-            }
-            
-            // Only show quality button if there are multiple quality options
-            if (hasMultipleQualities) {
-                qualityBtn.classList.add('visible');
-            } else {
-                qualityBtn.classList.remove('visible');
             }
 
             // Update select quality button in station info modal
@@ -5502,20 +5489,15 @@
         });
         
         // Quality modal
-        const qualityBtn = document.getElementById('qualityBtn');
+        // Quality button removed from main UI - now only accessible via Station Info modal
         const qualityModal = document.getElementById('qualityModal');
         const closeQualityModal = document.getElementById('closeQualityModal');
-        const currentQualityText = document.getElementById('currentQuality');
-        
+
         // Playback mode modal
         const playbackModeBtn = document.getElementById('playbackModeBtn');
         const playbackModeModal = document.getElementById('playbackModeModal');
         const closePlaybackModeModal = document.getElementById('closePlaybackModeModal');
         const currentModeText = document.getElementById('currentMode');
-        
-        qualityBtn.addEventListener('click', () => {
-            qualityModal.classList.add('active');
-        });
         
         closeQualityModal.addEventListener('click', () => {
             qualityModal.classList.remove('active');
@@ -5547,14 +5529,6 @@
                 qualityModal.querySelectorAll('.quality-option-modal[data-quality]').forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 selectedQuality = newQuality;
-                
-                // Update button text
-                const qualityNames = {
-                    'low': 'Low',
-                    'standard': 'Standard',
-                    'high': 'High'
-                };
-                currentQualityText.textContent = qualityNames[newQuality];
 
                 // Close modals
                 qualityModal.classList.remove('active');
@@ -7338,7 +7312,6 @@
             if (savedQuality) {
                 quality = savedQuality;
                 selectedQuality = savedQuality;
-                document.getElementById('currentQuality').textContent = quality === 'high' ? 'High' : 'Standard';
             }
 
             const savedAutoFallback = localStorage.getItem('autoFallback');
