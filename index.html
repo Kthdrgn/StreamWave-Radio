@@ -5555,17 +5555,18 @@
                     'high': 'High'
                 };
                 currentQualityText.textContent = qualityNames[newQuality];
-                
-                // Close modal
-                qualityModal.classList.remove('active');
 
-                // If player was playing, stop and restart with new quality
-                if (wasPlaying && currentStation) {
+                // Close modals
+                qualityModal.classList.remove('active');
+                stationInfoModal.classList.remove('active');
+
+                // If a station is selected, start playing with new quality
+                if (currentStation) {
                     console.log(`Switching to ${newQuality} quality...`);
                     updateStatus(`Switching to ${newQuality} quality...`, 'loading');
 
-                    // Stop the current stream (works for both Live Mode and Simple Mode)
-                    if (player) {
+                    // Stop the current stream if playing (works for both Live Mode and Simple Mode)
+                    if (player && wasPlaying) {
                         player.stop();
                     }
 
