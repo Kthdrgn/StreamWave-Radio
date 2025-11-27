@@ -4640,7 +4640,7 @@
 
                 // Handle messages from the worker
                 metadataWorker.addEventListener('message', (event) => {
-                    const { type, metadata, error } = event.data;
+                    const { type, metadata, error, message } = event.data;
 
                     if (type === 'METADATA') {
                         // Update UI with new metadata
@@ -4688,6 +4688,8 @@
                             // Update Cast metadata if casting
                             updateCastMetadata(title, artist, currentTrack.artworkUrl);
                         }
+                    } else if (type === 'DEBUG') {
+                        console.log('🔍 Worker debug:', message);
                     } else if (type === 'ERROR') {
                         console.log('❌ Worker error:', error);
                     } else if (type === 'STARTED') {

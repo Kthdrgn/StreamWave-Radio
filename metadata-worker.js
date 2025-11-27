@@ -42,34 +42,51 @@ self.addEventListener('message', (event) => {
 
 async function fetchMetadata() {
     if (!currentConfig || !currentConfig.stationUrl) {
+        self.postMessage({
+            type: 'DEBUG',
+            message: 'No config or station URL'
+        });
         return;
     }
 
     try {
         // Try to fetch metadata using the configured proxies
         const proxies = currentConfig.proxies || [];
-        console.log(`[Worker] Fetching metadata for: ${currentConfig.stationUrl}`);
-        console.log(`[Worker] Available proxies: ${proxies.length}`);
+        self.postMessage({
+            type: 'DEBUG',
+            message: `Fetching metadata for: ${currentConfig.stationUrl}, proxies: ${proxies.length}`
+        });
 
         for (let i = 0; i < proxies.length; i++) {
             try {
                 // Replace {STREAM_URL} placeholder with actual stream URL
+                // Note: URL encoding is already handled in the proxy template where needed
                 const proxyUrl = proxies[i].urlTemplate.replace('{STREAM_URL}', currentConfig.stationUrl);
-                console.log(`[Worker] Trying proxy ${i + 1}/${proxies.length} (${proxies[i].name}): ${proxyUrl}`);
+                self.postMessage({
+                    type: 'DEBUG',
+                    message: `Trying proxy ${i + 1}/${proxies.length} (${proxies[i].name}): ${proxyUrl}`
+                });
 
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
                     headers: {
-                        'Range': 'bytes=0-16384' // Request small amount of data
+                        'Range': 'bytes=0-16384', // Request small amount of data
+                        'Icy-MetaData': '1' // Request metadata from Icecast servers
                     }
                 });
 
                 if (!response.ok) {
-                    console.log(`[Worker] Proxy ${proxies[i].name} returned status: ${response.status}`);
+                    self.postMessage({
+                        type: 'DEBUG',
+                        message: `Proxy ${proxies[i].name} returned status: ${response.status}`
+                    });
                     continue;
                 }
 
-                console.log(`[Worker] Successfully fetched from ${proxies[i].name}, extracting metadata...`);
+                self.postMessage({
+                    type: 'DEBUG',
+                    message: `Successfully fetched from ${proxies[i].name}, extracting metadata...`
+                });
 
                 // Try to extract metadata from ICY headers
                 const icyName = response.headers.get('icy-name');
@@ -157,7 +174,10 @@ async function fetchMetadata() {
 
                 // Send metadata back to main thread
                 if (metadata.title || metadata.artist) {
-                    console.log(`[Worker] Metadata found: ${metadata.artist} - ${metadata.title}`);
+                    self.postMessage({
+                        type: 'DEBUG',
+                        message: `Metadata found: ${metadata.artist} - ${metadata.title}`
+                    });
                     self.postMessage({
                         type: 'METADATA',
                         metadata: metadata,
@@ -165,7 +185,10 @@ async function fetchMetadata() {
                     });
                     return; // Success, don't try other proxies
                 } else {
-                    console.log(`[Worker] No metadata found from ${proxies[i].name}, trying next proxy...`);
+                    self.postMessage({
+                        type: 'DEBUG',
+                        message: `No metadata found from ${proxies[i].name}, trying next proxy...`
+                    });
                 }
 
                 // If we got here but no metadata, try next proxy
@@ -173,7 +196,10 @@ async function fetchMetadata() {
 
             } catch (error) {
                 // Try next proxy
-                console.log(`[Worker] Proxy ${proxies[i].name} failed with error: ${error.message}`);
+                self.postMessage({
+                    type: 'DEBUG',
+                    message: `Proxy ${proxies[i].name} failed with error: ${error.message}`
+                });
                 continue;
             }
         }
