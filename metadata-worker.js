@@ -51,7 +51,8 @@ async function fetchMetadata() {
 
         for (let i = 0; i < proxies.length; i++) {
             try {
-                const proxyUrl = proxies[i].url(currentConfig.stationUrl);
+                // Replace {STREAM_URL} placeholder with actual stream URL
+                const proxyUrl = proxies[i].urlTemplate.replace('{STREAM_URL}', currentConfig.stationUrl);
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
                     headers: {

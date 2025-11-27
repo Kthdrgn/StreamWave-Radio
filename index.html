@@ -4744,13 +4744,19 @@
                 return;
             }
 
+            // Convert corsProxies to serializable format (functions can't be sent to workers)
+            const serializableProxies = corsProxies.map(proxy => ({
+                name: proxy.name,
+                urlTemplate: proxy.url('{STREAM_URL}') // Convert function to template string
+            }));
+
             // Configure and start the worker
             metadataWorker.postMessage({
                 type: 'START',
                 config: {
                     stationUrl: rawUrl,
                     interval: metadataOnlyPlayerRefreshInterval,
-                    proxies: corsProxies
+                    proxies: serializableProxies
                 }
             });
 
