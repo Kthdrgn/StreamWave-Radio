@@ -299,8 +299,19 @@
         .metadata-section {
             text-align: center;
             width: 100%;
-            padding: 0 10px;
+            padding: 20px;
             position: relative;
+            background: var(--modal-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+
+        .metadata-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px var(--shadow-color);
         }
         
         .now-playing-label {
@@ -2440,6 +2451,96 @@ body[data-layout="landscape"] .layout-slider {
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
+}
+
+/* Now Playing Modal Content */
+.now-playing-details {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.modal-track-info {
+    text-align: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-song-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.modal-artist-name {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.modal-album-name {
+    font-size: 16px;
+    color: var(--text-quaternary);
+}
+
+.track-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.track-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.track-action-btn:hover {
+    background: var(--card-bg);
+    border-color: var(--text-quaternary);
+    transform: translateX(4px);
+}
+
+.track-action-btn.liked .action-icon {
+    color: #ff3b5c;
+}
+
+.track-action-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.action-icon {
+    font-size: 28px;
+    color: var(--text-secondary);
+    min-width: 40px;
+    text-align: center;
+    transition: color 0.3s ease;
+}
+
+.action-text {
+    flex: 1;
+}
+
+.action-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.action-description {
+    font-size: 13px;
+    color: var(--text-tertiary);
 }
 
 .lyrics-attribution a:hover {

@@ -519,6 +519,45 @@
         </div>
     </div>
 
+    <!-- Now Playing Details Modal -->
+    <div id="nowPlayingModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Now Playing</h2>
+                <button class="modal-close" id="closeNowPlayingModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="now-playing-details">
+                    <!-- Track Info -->
+                    <div class="modal-track-info">
+                        <div class="modal-song-title" id="modalSongTitle">-</div>
+                        <div class="modal-artist-name" id="modalArtistName">-</div>
+                        <div class="modal-album-name" id="modalAlbumName">-</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="track-actions">
+                        <button class="track-action-btn" id="modalLyricsBtn" onclick="showLyricsModal()">
+                            <span class="action-icon">♪</span>
+                            <div class="action-text">
+                                <div class="action-label">Lyrics</div>
+                                <div class="action-description">View song lyrics</div>
+                            </div>
+                        </button>
+
+                        <button class="track-action-btn" id="modalLikeBtn" onclick="toggleLikeTrack()">
+                            <span class="action-icon">♡</span>
+                            <div class="action-text">
+                                <div class="action-label">Like Track</div>
+                                <div class="action-description">Save to your favorites</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Playlists Modal -->
     <div id="playlistsModal" class="modal-overlay">
         <div class="modal-content">
@@ -1143,28 +1182,37 @@
             }
 
             await updateLikeButton();
+
+            // Close the Now Playing modal after liking/unliking
+            closeNowPlayingModal();
         }
-        
+
         // Update like button state
         async function updateLikeButton() {
-            const likeBtn = document.getElementById('likeBtn');
-            if (!likeBtn) return;
+            // Update modal like button if it exists
+            const modalLikeBtn = document.getElementById('modalLikeBtn');
 
             if (!currentTrack.title || !currentTrack.artist) {
-                likeBtn.classList.add('disabled');
-                likeBtn.innerHTML = '♡';
+                if (modalLikeBtn) {
+                    modalLikeBtn.classList.add('disabled');
+                    modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+                }
                 return;
             }
 
-            likeBtn.classList.remove('disabled');
+            if (modalLikeBtn) {
+                modalLikeBtn.classList.remove('disabled');
+            }
 
             const isLiked = await isCurrentTrackLiked();
-            if (isLiked) {
-                likeBtn.classList.add('liked');
-                likeBtn.innerHTML = '♥';
-            } else {
-                likeBtn.classList.remove('liked');
-                likeBtn.innerHTML = '♡';
+            if (modalLikeBtn) {
+                if (isLiked) {
+                    modalLikeBtn.classList.add('liked');
+                    modalLikeBtn.querySelector('.action-icon').textContent = '♥';
+                } else {
+                    modalLikeBtn.classList.remove('liked');
+                    modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+                }
             }
         }
         
@@ -4977,6 +5025,21 @@
             }
         });
 
+        // Now Playing Modal event listeners
+        const nowPlayingModal = document.getElementById('nowPlayingModal');
+        const closeNowPlayingModalBtn = document.getElementById('closeNowPlayingModal');
+        const metadataSection = document.getElementById('metadataSection');
+
+        metadataSection.addEventListener('click', openNowPlayingModal);
+
+        closeNowPlayingModalBtn.addEventListener('click', closeNowPlayingModal);
+
+        nowPlayingModal.addEventListener('click', (e) => {
+            if (e.target === nowPlayingModal) {
+                closeNowPlayingModal();
+            }
+        });
+
         // Close playlist modal
         closePlaylistModal.addEventListener('click', () => {
             playlistModal.classList.remove('active');
@@ -5527,11 +5590,7 @@
                 <div class="song-title">${escapeHtml(title)}</div>
                 ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
                 ${album ? `<div class="album-name">${escapeHtml(album)}</div>` : ''}
-                <button class="like-btn" id="likeBtn" onclick="toggleLikeTrack()">♡</button>
             `;
-            
-            // Update like button state
-            updateLikeButton();
             
             // Try to fetch album art
             fetchAlbumArt(title, artist);
@@ -5797,28 +5856,9 @@
 
         // Update lyrics button in metadata section
         function updateLyricsIndicator() {
-            const metadataSection = document.getElementById('metadataSection');
-
-            // Remove existing lyrics buttons
+            // Lyrics button is now in the Now Playing modal, so just remove any old buttons
             const existingButtons = document.querySelectorAll('.lyrics-btn');
             existingButtons.forEach(button => button.remove());
-
-            // Only add button if we have track metadata
-            if (currentTrack.title && currentTrack.artist && metadataSection) {
-                const lyricsBtn = document.createElement('button');
-                lyricsBtn.className = 'lyrics-btn';
-                lyricsBtn.id = 'lyricsBtn';
-                lyricsBtn.innerHTML = '♪';
-                lyricsBtn.title = currentTrack.hasLyrics ? 'View Lyrics' : 'No lyrics available';
-
-                if (currentTrack.hasLyrics) {
-                    lyricsBtn.onclick = showLyricsModal;
-                } else {
-                    lyricsBtn.classList.add('disabled');
-                }
-
-                metadataSection.appendChild(lyricsBtn);
-            }
         }
 
         // Show lyrics modal
@@ -5826,6 +5866,9 @@
             if (!currentTrack.hasLyrics) {
                 return;
             }
+
+            // Close Now Playing modal if it's open
+            closeNowPlayingModal();
 
             const modal = document.getElementById('lyricsModal');
             const modalTitle = document.getElementById('lyricsModalTitle');
@@ -5853,6 +5896,48 @@
         // Close lyrics modal
         function closeLyricsModal() {
             const modal = document.getElementById('lyricsModal');
+            modal.classList.remove('active');
+        }
+
+        // Open now playing modal
+        function openNowPlayingModal() {
+            // Only open if there's metadata to show
+            if (!currentTrack.title) {
+                return;
+            }
+
+            const modal = document.getElementById('nowPlayingModal');
+
+            // Update modal content
+            document.getElementById('modalSongTitle').textContent = currentTrack.title || '-';
+            document.getElementById('modalArtistName').textContent = currentTrack.artist || '-';
+            document.getElementById('modalAlbumName').textContent = currentTrack.album || '-';
+
+            // Update like button state
+            const modalLikeBtn = document.getElementById('modalLikeBtn');
+            const isLiked = isTrackLiked(currentTrack);
+            if (isLiked) {
+                modalLikeBtn.classList.add('liked');
+                modalLikeBtn.querySelector('.action-icon').textContent = '♥';
+            } else {
+                modalLikeBtn.classList.remove('liked');
+                modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+            }
+
+            // Update lyrics button state
+            const modalLyricsBtn = document.getElementById('modalLyricsBtn');
+            if (currentTrack.hasLyrics) {
+                modalLyricsBtn.classList.remove('disabled');
+            } else {
+                modalLyricsBtn.classList.add('disabled');
+            }
+
+            modal.classList.add('active');
+        }
+
+        // Close now playing modal
+        function closeNowPlayingModal() {
+            const modal = document.getElementById('nowPlayingModal');
             modal.classList.remove('active');
         }
 
