@@ -365,23 +365,6 @@
                         <span>Radio Browser Database</span>
                     </button>
 
-                    <!-- Liked Tracks Button -->
-                    <button class="menu-option-btn" id="viewLikedTracksBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M11.993 5.09691C11.0387 4.25883 9.78328 3.75 8.40796 3.75C5.42122 3.75 3 6.1497 3 9.10988C3 10.473 3.50639 11.7242 4.35199 12.67L12 20.25L19.4216 12.8944L19.641 12.6631C20.4866 11.7172 21 10.473 21 9.10988C21 6.1497 18.5788 3.75 15.592 3.75C14.2167 3.75 12.9613 4.25883 12.007 5.09692L12 5.08998L11.993 5.09691ZM12 7.09938L12.0549 7.14755L12.9079 6.30208L12.9968 6.22399C13.6868 5.61806 14.5932 5.25 15.592 5.25C17.763 5.25 19.5 6.99073 19.5 9.10988C19.5 10.0813 19.1385 10.9674 18.5363 11.6481L18.3492 11.8453L12 18.1381L5.44274 11.6391C4.85393 10.9658 4.5 10.0809 4.5 9.10988C4.5 6.99073 6.23699 5.25 8.40796 5.25C9.40675 5.25 10.3132 5.61806 11.0032 6.22398L11.0921 6.30203L11.9452 7.14752L12 7.09938Z" stroke-width="0"/>
-                        </svg>
-                        <span>Liked Tracks</span>
-                    </button>
-
-                    <!-- Recent Tracks Button -->
-                    <button class="menu-option-btn" id="viewRecentTracksBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 8V12L15 15" stroke-width="2" stroke-linecap="round"/>
-                            <circle cx="12" cy="12" r="9" stroke-width="2"/>
-                        </svg>
-                        <span>Recently Played</span>
-                    </button>
-
                     <!-- My Playlists Button -->
                     <button class="menu-option-btn" id="viewPlaylistsBtn">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -550,6 +533,22 @@
                             <div class="action-text">
                                 <div class="action-label">Like Track</div>
                                 <div class="action-description">Save to your favorites</div>
+                            </div>
+                        </button>
+
+                        <button class="track-action-btn" id="modalViewLikedTracksBtn">
+                            <span class="action-icon">♥</span>
+                            <div class="action-text">
+                                <div class="action-label">Liked Tracks</div>
+                                <div class="action-description">View all your favorites</div>
+                            </div>
+                        </button>
+
+                        <button class="track-action-btn" id="modalViewRecentTracksBtn">
+                            <span class="action-icon">🕐</span>
+                            <div class="action-text">
+                                <div class="action-label">Recently Played</div>
+                                <div class="action-description">View playback history</div>
                             </div>
                         </button>
                     </div>
@@ -1111,7 +1110,6 @@
         const cancelPlaylistForm = document.getElementById('cancelPlaylistForm');
         
         // Liked tracks elements
-        const viewLikedTracksBtn = document.getElementById('viewLikedTracksBtn');
         const likedTracksModal = document.getElementById('likedTracksModal');
         const closeLikedTracksModal = document.getElementById('closeLikedTracksModal');
         const likedTracksList = document.getElementById('likedTracksList');
@@ -4955,12 +4953,6 @@
         }
 
         // Liked Tracks Modal event listeners
-        viewLikedTracksBtn.addEventListener('click', () => {
-            displayLikedTracks();
-            settingsModal.classList.remove('active');
-            likedTracksModal.classList.add('active');
-        });
-        
         closeLikedTracksModal.addEventListener('click', () => {
             likedTracksModal.classList.remove('active');
         });
@@ -4982,17 +4974,10 @@
         downloadLikedBtn.addEventListener('click', downloadLikedTracksFile);
         
         // Recent Tracks Modal
-        const viewRecentTracksBtn = document.getElementById('viewRecentTracksBtn');
         const recentTracksModal = document.getElementById('recentTracksModal');
         const closeRecentTracksModal = document.getElementById('closeRecentTracksModal');
         const clearRecentTracksBtn = document.getElementById('clearRecentTracksBtn');
-        
-        viewRecentTracksBtn.addEventListener('click', () => {
-            displayRecentTracks();
-            settingsModal.classList.remove('active');
-            recentTracksModal.classList.add('active');
-        });
-        
+
         closeRecentTracksModal.addEventListener('click', () => {
             recentTracksModal.classList.remove('active');
         });
@@ -5012,6 +4997,26 @@
         // Download Recent Tracks button
         const downloadRecentBtn = document.getElementById('downloadRecentBtn');
         downloadRecentBtn.addEventListener('click', downloadRecentTracksFile);
+
+        // Modal buttons for Liked Tracks and Recent Tracks
+        const modalViewLikedTracksBtn = document.getElementById('modalViewLikedTracksBtn');
+        const modalViewRecentTracksBtn = document.getElementById('modalViewRecentTracksBtn');
+
+        if (modalViewLikedTracksBtn) {
+            modalViewLikedTracksBtn.addEventListener('click', () => {
+                displayLikedTracks();
+                nowPlayingModal.classList.remove('active');
+                likedTracksModal.classList.add('active');
+            });
+        }
+
+        if (modalViewRecentTracksBtn) {
+            modalViewRecentTracksBtn.addEventListener('click', () => {
+                displayRecentTracks();
+                nowPlayingModal.classList.remove('active');
+                recentTracksModal.classList.add('active');
+            });
+        }
 
         // Lyrics Modal event listeners
         const lyricsModal = document.getElementById('lyricsModal');
