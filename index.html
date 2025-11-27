@@ -2025,6 +2025,19 @@
                 console.error('Error tracking station click locally:', error);
             }
         }
+
+        // Track song play (for analytics and history)
+        async function trackSongPlay(title, artist) {
+            if (!title && !artist) return;
+
+            try {
+                // For now, just log the song play
+                // This can be extended later to save to Supabase or localStorage
+                console.log('📻 Now playing:', artist ? `${artist} - ${title}` : title);
+            } catch (error) {
+                console.error('Error tracking song play:', error);
+            }
+        }
         
         // Get most recent stations (works in both guest and authenticated mode)
         // Includes both internal and external (radio-browser) stations

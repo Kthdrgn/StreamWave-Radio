@@ -1,7 +1,7 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v8'; // Force fresh metadata-worker.js with cache-busting
+const CACHE_NAME = 'radio-player-v9'; // Add trackSongPlay function to fix undefined error
 const urlsToCache = [
     './',
     './index.html',
