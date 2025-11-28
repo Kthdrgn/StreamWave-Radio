@@ -1302,24 +1302,25 @@
                 clearRecentTracksBtn.style.display = 'block';
                 copyAllRecentBtn.style.display = 'block';
                 downloadRecentBtn.style.display = 'block';
-                recentTracksList.innerHTML = recentTracks.map((track, index) => {
-                    const date = new Date(track.timestamp);
+                recentTracksList.innerHTML = rawTracks.map((track, index) => {
+                    const normalizedTrack = window.normalizeTrack(track);
+                    const date = new Date(normalizedTrack.timestamp);
                     const timeAgo = getTimeAgo(date);
 
                     return `
                         <div class="liked-track-item">
-                            ${track.artworkUrl ?
-                                `<img class="liked-track-art" src="${track.artworkUrl}" alt="${escapeHtml(track.title)}">` :
+                            ${normalizedTrack.artworkUrl ?
+                                `<img class="liked-track-art" src="${normalizedTrack.artworkUrl}" alt="${escapeHtml(normalizedTrack.title)}">` :
                                 `<div class="liked-track-art">♪</div>`
                             }
                             <div class="liked-track-info">
-                                <div class="liked-track-title">${escapeHtml(track.title)}</div>
-                                <div class="liked-track-artist">${escapeHtml(track.artist)}</div>
+                                <div class="liked-track-title">${escapeHtml(normalizedTrack.title)}</div>
+                                <div class="liked-track-artist">${escapeHtml(normalizedTrack.artist)}</div>
                                 <div class="liked-track-meta">
-                                    ${escapeHtml(track.station)} • ${timeAgo}
+                                    ${escapeHtml(normalizedTrack.station)} • ${timeAgo}
                                 </div>
                             </div>
-                            <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(track.artist)}', '${escapeHtml(track.title)}', this)">
+                            <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(normalizedTrack.artist)}', '${escapeHtml(normalizedTrack.title)}', this)">
                                 <svg width="14" height="14" viewBox="0 0 256 256" style="vertical-align: middle;">
                                     <path fill="currentColor" d="M216 32H88a16 16 0 0 0-16 16v40H40a16 16 0 0 0-16 16v120a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16v-40h32a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zm-48 192H40V104h128zm48-48h-32V104a16 16 0 0 0-16-16H88V48h128z"/>
                                 </svg>
