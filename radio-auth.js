@@ -359,30 +359,53 @@ async function saveRecentTracks(tracks) {
 // Add to recent tracks
 async function addToRecentTracks(trackInfo) {
     if (!trackInfo.title || !trackInfo.artist) return;
-    
+
     if (window.isGuestMode) {
         // Guest mode - use localStorage
         const recentTracks = await loadRecentTracks();
-        
+
+        // Find existing track to preserve artwork if new one is empty
+        const existingTrack = recentTracks.find(track =>
+            track.title === trackInfo.title && track.artist === trackInfo.artist
+        );
+
         // Remove if already exists
-        const filteredTracks = recentTracks.filter(track => 
+        const filteredTracks = recentTracks.filter(track =>
             !(track.title === trackInfo.title && track.artist === trackInfo.artist)
         );
-        
+
         const newTrack = {
             title: trackInfo.title,
             artist: trackInfo.artist,
             album: trackInfo.album || '',
-            artworkUrl: trackInfo.artworkUrl || '',
+            artworkUrl: trackInfo.artworkUrl || (existingTrack && existingTrack.artworkUrl) || '',
             station: trackInfo.station || 'Unknown Station',
             timestamp: new Date().toISOString()
         };
-        
+
         filteredTracks.unshift(newTrack);
         const limitedTracks = filteredTracks.slice(0, 15);
         saveRecentTracks(limitedTracks);
     } else {
         // Authenticated - insert to Supabase
+        // Check if there's an existing entry to preserve artwork if new one is empty
+        let artworkUrl = trackInfo.artworkUrl || '';
+
+        if (!artworkUrl) {
+            // If new artwork is empty, try to preserve existing artwork
+            const { data: existing } = await supabaseClient
+                .from('recent_tracks')
+                .select('artwork_url')
+                .eq('user_id', window.currentUser.id)
+                .eq('title', trackInfo.title)
+                .eq('artist', trackInfo.artist)
+                .single();
+
+            if (existing && existing.artwork_url) {
+                artworkUrl = existing.artwork_url;
+            }
+        }
+
         // Delete existing entry for this track (to move it to top)
         await supabaseClient
             .from('recent_tracks')
@@ -390,8 +413,8 @@ async function addToRecentTracks(trackInfo) {
             .eq('user_id', window.currentUser.id)
             .eq('title', trackInfo.title)
             .eq('artist', trackInfo.artist);
-        
-        // Insert new entry
+
+        // Insert new entry with preserved or new artwork
         const { error } = await supabaseClient
             .from('recent_tracks')
             .insert([{
@@ -399,10 +422,10 @@ async function addToRecentTracks(trackInfo) {
                 title: trackInfo.title,
                 artist: trackInfo.artist,
                 album: trackInfo.album || '',
-                artwork_url: trackInfo.artworkUrl || '',
+                artwork_url: artworkUrl,
                 station_name: trackInfo.station || 'Unknown Station'
             }]);
-        
+
         if (error) {
             console.error('Error saving recent track:', error);
         }

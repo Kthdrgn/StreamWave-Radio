@@ -74,6 +74,15 @@
                 </div>
             </div>
 
+            <!-- Currently playing station display -->
+            <div id="stationDisplay" class="station-display" style="display: flex;">
+                <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
+                <div class="station-display-info">
+                    <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
+                    <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
+                </div>
+            </div>
+
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
@@ -81,6 +90,11 @@
 
             <!-- Metadata display -->
             <div class="metadata-section" id="metadataSection">
+                <div class="lyrics-indicator" id="lyricsIndicator" style="display: none;" title="Lyrics available">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 18V5L21 3V16M9 18C9 19.66 7.66 21 6 21C4.34 21 3 19.66 3 18C3 16.34 4.34 15 6 15C7.66 15 9 16.34 9 18ZM21 16C21 17.66 19.66 19 18 19C16.34 19 15 17.66 15 16C15 14.34 16.34 13 18 13C19.66 13 21 14.34 21 16ZM9 10V7L21 5V8L9 10Z" fill="currentColor"/>
+                    </svg>
+                </div>
                 <div class="now-playing-label">NOW PLAYING</div>
                 <div class="no-metadata">Select a station to start streaming</div>
             </div>
@@ -109,16 +123,6 @@
             <div class="status-indicator">
                 <div class="status-dot" id="statusDot"></div>
                 <span id="statusText">Not connected</span>
-            </div>
-
-            <!-- Currently playing station display -->
-            <div id="stationDisplay" class="station-display" style="display: flex;">
-                <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
-                <div class="station-display-info">
-                    <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
-                    <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
-                </div>
-                <div class="station-display-change">BROWSE</div>
             </div>
         </div><!-- Close tv-right-column -->
     </div><!-- Close player-container -->
@@ -461,7 +465,7 @@
     <div id="recentTracksModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Recently Played Tracks</h2>
+                <h2 class="modal-title">Recent Songs</h2>
                 <button class="modal-close" id="closeRecentTracksModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -525,36 +529,33 @@
 
                     <!-- Action Buttons -->
                     <div class="track-actions">
-                        <button class="track-action-btn" id="modalLyricsBtn" onclick="showLyricsModal()">
-                            <span class="action-icon">♪</span>
-                            <div class="action-text">
-                                <div class="action-label">Lyrics</div>
-                                <div class="action-description">View song lyrics</div>
-                            </div>
+                        <button class="menu-option-btn" id="modalLyricsBtn" onclick="showLyricsModal()">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18V5L21 3V16M9 18C9 19.66 7.66 21 6 21C4.34 21 3 19.66 3 18C3 16.34 4.34 15 6 15C7.66 15 9 16.34 9 18ZM21 16C21 17.66 19.66 19 18 19C16.34 19 15 17.66 15 16C15 14.34 16.34 13 18 13C19.66 13 21 14.34 21 16ZM9 10V7L21 5V8L9 10Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Lyrics</span>
                         </button>
 
-                        <button class="track-action-btn" id="modalLikeBtn" onclick="toggleLikeTrack()">
-                            <span class="action-icon">♡</span>
-                            <div class="action-text">
-                                <div class="action-label">Like Track</div>
-                                <div class="action-description">Save to your favorites</div>
-                            </div>
+                        <button class="menu-option-btn" id="modalLikeBtn" onclick="toggleLikeTrack()">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69365 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69365 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.57831 8.50903 2.99871 7.05 2.99871C5.59096 2.99871 4.19169 3.57831 3.16 4.61C2.1283 5.64169 1.54871 7.04096 1.54871 8.5C1.54871 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6054C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.0621 22.0329 6.39464C21.7563 5.72718 21.351 5.12075 20.84 4.61Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Like This Song</span>
                         </button>
 
-                        <button class="track-action-btn" id="modalViewLikedTracksBtn">
-                            <span class="action-icon">♥</span>
-                            <div class="action-text">
-                                <div class="action-label">Liked Tracks</div>
-                                <div class="action-description">View all your favorites</div>
-                            </div>
+                        <button class="menu-option-btn" id="modalViewLikedTracksBtn">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69365 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69365 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.57831 8.50903 2.99871 7.05 2.99871C5.59096 2.99871 4.19169 3.57831 3.16 4.61C2.1283 5.64169 1.54871 7.04096 1.54871 8.5C1.54871 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6054C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.0621 22.0329 6.39464C21.7563 5.72718 21.351 5.12075 20.84 4.61Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
+                            </svg>
+                            <span>View Liked Songs</span>
                         </button>
 
-                        <button class="track-action-btn" id="modalViewRecentTracksBtn">
-                            <span class="action-icon">🕐</span>
-                            <div class="action-text">
-                                <div class="action-label">Recently Played</div>
-                                <div class="action-description">View playback history</div>
-                            </div>
+                        <button class="menu-option-btn" id="modalViewRecentTracksBtn">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 6V12L16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Recent Songs</span>
                         </button>
                     </div>
                 </div>
@@ -697,7 +698,7 @@
                             </div>
                             <div class="filter-option" data-sort="recent">
                                 <span class="filter-option-icon">🕐</span>
-                                <span>Recently Played</span>
+                                <span>Recent Songs</span>
                             </div>
                         </div>
                     </div>
@@ -1251,7 +1252,7 @@
             if (!currentTrack.title || !currentTrack.artist) {
                 if (modalLikeBtn) {
                     modalLikeBtn.classList.add('disabled');
-                    modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+                    modalLikeBtn.querySelector('span').textContent = 'Like This Song';
                 }
                 return;
             }
@@ -1264,14 +1265,14 @@
             if (modalLikeBtn) {
                 if (isLiked) {
                     modalLikeBtn.classList.add('liked');
-                    modalLikeBtn.querySelector('.action-icon').textContent = '♥';
+                    modalLikeBtn.querySelector('span').textContent = 'Unlike This Song';
                 } else {
                     modalLikeBtn.classList.remove('liked');
-                    modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+                    modalLikeBtn.querySelector('span').textContent = 'Like This Song';
                 }
             }
         }
-        
+
         // ======================
         // RECENT TRACKS MANAGEMENT
         // ======================
@@ -1305,24 +1306,25 @@
                 clearRecentTracksBtn.style.display = 'block';
                 copyAllRecentBtn.style.display = 'block';
                 downloadRecentBtn.style.display = 'block';
-                recentTracksList.innerHTML = recentTracks.map((track, index) => {
-                    const date = new Date(track.timestamp);
+                recentTracksList.innerHTML = rawTracks.map((track, index) => {
+                    const normalizedTrack = window.normalizeTrack(track);
+                    const date = new Date(normalizedTrack.timestamp);
                     const timeAgo = getTimeAgo(date);
 
                     return `
                         <div class="liked-track-item">
-                            ${track.artworkUrl ?
-                                `<img class="liked-track-art" src="${track.artworkUrl}" alt="${escapeHtml(track.title)}">` :
+                            ${normalizedTrack.artworkUrl ?
+                                `<img class="liked-track-art" src="${normalizedTrack.artworkUrl}" alt="${escapeHtml(normalizedTrack.title)}">` :
                                 `<div class="liked-track-art">♪</div>`
                             }
                             <div class="liked-track-info">
-                                <div class="liked-track-title">${escapeHtml(track.title)}</div>
-                                <div class="liked-track-artist">${escapeHtml(track.artist)}</div>
+                                <div class="liked-track-title">${escapeHtml(normalizedTrack.title)}</div>
+                                <div class="liked-track-artist">${escapeHtml(normalizedTrack.artist)}</div>
                                 <div class="liked-track-meta">
-                                    ${escapeHtml(track.station)} • ${timeAgo}
+                                    ${escapeHtml(normalizedTrack.station)} • ${timeAgo}
                                 </div>
                             </div>
-                            <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(track.artist)}', '${escapeHtml(track.title)}', this)">
+                            <button class="copy-track-btn" onclick="copySingleTrack('${escapeHtml(normalizedTrack.artist)}', '${escapeHtml(normalizedTrack.title)}', this)">
                                 <svg width="14" height="14" viewBox="0 0 256 256" style="vertical-align: middle;">
                                     <path fill="currentColor" d="M216 32H88a16 16 0 0 0-16 16v40H40a16 16 0 0 0-16 16v120a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16v-40h32a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zm-48 192H40V104h128zm48-48h-32V104a16 16 0 0 0-16-16H88V48h128z"/>
                                 </svg>
@@ -6198,7 +6200,7 @@
 
                 // LrcLib returns plainLyrics and syncedLyrics
                 // We'll use plainLyrics for radio streams since we can't sync
-                if (data.plainLyrics) {
+                if (data.plainLyrics && data.plainLyrics.trim().length > 0) {
                     return {
                         lyrics: data.plainLyrics,
                         trackName: data.trackName,
@@ -6284,6 +6286,14 @@
             // Lyrics button is now in the Now Playing modal, so just remove any old buttons
             const existingButtons = document.querySelectorAll('.lyrics-btn');
             existingButtons.forEach(button => button.remove());
+
+            // Show/hide the discreet lyrics indicator in the metadata section
+            const lyricsIndicator = document.getElementById('lyricsIndicator');
+            if (lyricsIndicator) {
+                const shouldShow = currentTrack.hasLyrics;
+                lyricsIndicator.style.display = shouldShow ? 'block' : 'none';
+                console.log(`Lyrics indicator ${shouldShow ? 'SHOWN' : 'hidden'} for: "${currentTrack.artist}" - "${currentTrack.title}"`);
+            }
         }
 
         // Show lyrics modal
@@ -6325,7 +6335,7 @@
         }
 
         // Open now playing modal
-        function openNowPlayingModal() {
+        async function openNowPlayingModal() {
             // Only open if there's metadata to show
             if (!currentTrack.title) {
                 return;
@@ -6340,13 +6350,13 @@
 
             // Update like button state
             const modalLikeBtn = document.getElementById('modalLikeBtn');
-            const isLiked = isTrackLiked(currentTrack);
+            const isLiked = await window.isTrackLiked(currentTrack.title, currentTrack.artist);
             if (isLiked) {
                 modalLikeBtn.classList.add('liked');
-                modalLikeBtn.querySelector('.action-icon').textContent = '♥';
+                modalLikeBtn.querySelector('span').textContent = 'Unlike This Song';
             } else {
                 modalLikeBtn.classList.remove('liked');
-                modalLikeBtn.querySelector('.action-icon').textContent = '♡';
+                modalLikeBtn.querySelector('span').textContent = 'Like This Song';
             }
 
             // Update lyrics button state
