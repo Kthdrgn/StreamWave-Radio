@@ -2668,6 +2668,15 @@ body[data-layout="landscape"] .layout-slider {
     border-color: var(--border-color);
 }
 
+.menu-option-btn.liked svg {
+    stroke: #ff3b5c;
+    fill: #ff3b5c;
+}
+
+.menu-option-btn.liked span {
+    color: #ff3b5c;
+}
+
 /* Specific icon styles for buttons with filled icons */
 #viewLikedTracksBtn svg {
     fill: var(--text-primary);
