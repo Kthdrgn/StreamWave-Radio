@@ -356,6 +356,8 @@
             opacity: 0.5;
             color: var(--text-tertiary);
             transition: opacity 0.3s ease;
+            z-index: 10;
+            pointer-events: none;
         }
 
         .lyrics-indicator:hover {

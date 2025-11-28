@@ -6200,7 +6200,7 @@
 
                 // LrcLib returns plainLyrics and syncedLyrics
                 // We'll use plainLyrics for radio streams since we can't sync
-                if (data.plainLyrics) {
+                if (data.plainLyrics && data.plainLyrics.trim().length > 0) {
                     return {
                         lyrics: data.plainLyrics,
                         trackName: data.trackName,
@@ -6290,7 +6290,9 @@
             // Show/hide the discreet lyrics indicator in the metadata section
             const lyricsIndicator = document.getElementById('lyricsIndicator');
             if (lyricsIndicator) {
-                lyricsIndicator.style.display = currentTrack.hasLyrics ? 'block' : 'none';
+                const shouldShow = currentTrack.hasLyrics;
+                lyricsIndicator.style.display = shouldShow ? 'block' : 'none';
+                console.log(`Lyrics indicator ${shouldShow ? 'SHOWN' : 'hidden'} for: "${currentTrack.artist}" - "${currentTrack.title}"`);
             }
         }
 
