@@ -6322,7 +6322,7 @@
         }
 
         // Open now playing modal
-        function openNowPlayingModal() {
+        async function openNowPlayingModal() {
             // Only open if there's metadata to show
             if (!currentTrack.title) {
                 return;
@@ -6337,7 +6337,7 @@
 
             // Update like button state
             const modalLikeBtn = document.getElementById('modalLikeBtn');
-            const isLiked = isTrackLiked(currentTrack);
+            const isLiked = await window.isTrackLiked(currentTrack.title, currentTrack.artist);
             if (isLiked) {
                 modalLikeBtn.classList.add('liked');
                 modalLikeBtn.querySelector('span').textContent = 'Unlike Track';
