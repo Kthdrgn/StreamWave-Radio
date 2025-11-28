@@ -346,6 +346,26 @@
             color: var(--text-tertiary);
             font-style: italic;
         }
+
+        .lyrics-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 18px;
+            height: 18px;
+            opacity: 0.5;
+            color: var(--text-tertiary);
+            transition: opacity 0.3s ease;
+        }
+
+        .lyrics-indicator:hover {
+            opacity: 0.8;
+        }
+
+        .lyrics-indicator svg {
+            width: 100%;
+            height: 100%;
+        }
         
         /* Like button */
         .like-btn {

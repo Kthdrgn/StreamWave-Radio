@@ -90,6 +90,11 @@
 
             <!-- Metadata display -->
             <div class="metadata-section" id="metadataSection">
+                <div class="lyrics-indicator" id="lyricsIndicator" style="display: none;" title="Lyrics available">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 18V5L21 3V16M9 18C9 19.66 7.66 21 6 21C4.34 21 3 19.66 3 18C3 16.34 4.34 15 6 15C7.66 15 9 16.34 9 18ZM21 16C21 17.66 19.66 19 18 19C16.34 19 15 17.66 15 16C15 14.34 16.34 13 18 13C19.66 13 21 14.34 21 16ZM9 10V7L21 5V8L9 10Z" fill="currentColor"/>
+                    </svg>
+                </div>
                 <div class="now-playing-label">NOW PLAYING</div>
                 <div class="no-metadata">Select a station to start streaming</div>
             </div>
@@ -6281,6 +6286,12 @@
             // Lyrics button is now in the Now Playing modal, so just remove any old buttons
             const existingButtons = document.querySelectorAll('.lyrics-btn');
             existingButtons.forEach(button => button.remove());
+
+            // Show/hide the discreet lyrics indicator in the metadata section
+            const lyricsIndicator = document.getElementById('lyricsIndicator');
+            if (lyricsIndicator) {
+                lyricsIndicator.style.display = currentTrack.hasLyrics ? 'block' : 'none';
+            }
         }
 
         // Show lyrics modal
