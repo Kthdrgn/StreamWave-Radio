@@ -2963,6 +2963,19 @@ body[data-layout="landscape"] .layout-slider {
 /* Bottom padding for modals to prevent content being hidden by bottom nav */
 #browseStationsModal .modal-body,
 #radioDatabaseModal .modal-body,
-#overviewModal .modal-body {
+#overviewModal .modal-body,
+#settingsModal .modal-body,
+#qualityModal .modal-body,
+#playbackModeModal .modal-body,
+#hamburgerMenuModal .modal-body,
+#likedTracksModal .modal-body,
+#recentTracksModal .modal-body,
+#lyricsModal .modal-body,
+#nowPlayingModal .modal-body,
+#stationInfoModal .modal-body,
+#playlistsModal .modal-body,
+#playlistViewModal .modal-body,
+#playlistFormModal .modal-body,
+#stationFormModal .modal-body {
     padding-bottom: 100px;
 }
