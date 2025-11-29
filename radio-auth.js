@@ -144,17 +144,30 @@ async function migrateGuestData() {
         const guestRecentTracks = localStorage.getItem('recentTracks');
         if (guestRecentTracks) {
             const tracks = JSON.parse(guestRecentTracks);
+            console.log(`🔄 Migrating ${tracks.length} recent tracks from localStorage to Supabase...`);
+
             for (const track of tracks) {
-                await supabaseClient
+                const trackData = {
+                    user_id: window.currentUser.id,
+                    title: track.title,
+                    artist: track.artist,
+                    album: track.album || '',
+                    artwork_url: track.artworkUrl || '',
+                    station_name: track.station || 'Unknown Station'
+                };
+
+                console.log('💾 Migrating recent track:', trackData);
+
+                const { data: insertedData, error } = await supabaseClient
                     .from('recent_tracks')
-                    .insert([{
-                        user_id: window.currentUser.id,
-                        title: track.title,
-                        artist: track.artist,
-                        album: track.album || '',
-                        artwork_url: track.artworkUrl || '',
-                        station_name: track.station || 'Unknown Station'
-                    }]);
+                    .insert([trackData])
+                    .select();
+
+                if (error) {
+                    console.error('❌ Error migrating recent track:', error);
+                } else {
+                    console.log('✅ Migrated track successfully:', insertedData);
+                }
             }
             console.log(`✅ Migrated ${tracks.length} recent tracks`);
         }
@@ -348,9 +361,13 @@ async function clearAllLikedTracks() {
 
 // Load recent tracks
 async function loadRecentTracks() {
+    console.log('📥 loadRecentTracks called, mode:', window.isGuestMode ? 'guest' : 'authenticated');
+
     if (window.isGuestMode) {
         const stored = localStorage.getItem('recentTracks');
-        return stored ? JSON.parse(stored) : [];
+        const tracks = stored ? JSON.parse(stored) : [];
+        console.log('✅ Loaded from localStorage:', tracks.length, 'tracks');
+        return tracks;
     } else {
         const { data, error } = await supabaseClient
             .from('recent_tracks')
@@ -358,12 +375,17 @@ async function loadRecentTracks() {
             .eq('user_id', window.currentUser.id)
             .order('played_at', { ascending: false })
             .limit(15);
-        
+
         if (error) {
-            console.error('Error loading recent tracks:', error);
+            console.error('❌ Error loading recent tracks:', error);
             return [];
         }
-        
+
+        console.log('✅ Loaded from Supabase:', data ? data.length : 0, 'tracks');
+        if (data && data.length > 0) {
+            console.log('📊 Recent tracks:', data.map(t => ({ id: t.id, title: t.title, artist: t.artist, played_at: t.played_at })));
+        }
+
         return data || [];
     }
 }
@@ -377,16 +399,33 @@ async function saveRecentTracks(tracks) {
 
 // Add to recent tracks
 async function addToRecentTracks(trackInfo) {
-    if (!trackInfo.title || !trackInfo.artist) return;
+    console.log('🎵 addToRecentTracks called with:', {
+        title: trackInfo.title,
+        artist: trackInfo.artist,
+        album: trackInfo.album,
+        artworkUrl: trackInfo.artworkUrl,
+        station: trackInfo.station,
+        isGuestMode: window.isGuestMode
+    });
+
+    if (!trackInfo.title || !trackInfo.artist) {
+        console.warn('⚠️ Cannot add to recent tracks - missing title or artist');
+        return;
+    }
 
     if (window.isGuestMode) {
         // Guest mode - use localStorage
         const recentTracks = await loadRecentTracks();
+        console.log('📦 Guest mode - current recent tracks count:', recentTracks.length);
 
         // Find existing track to preserve artwork if new one is empty
         const existingTrack = recentTracks.find(track =>
             track.title === trackInfo.title && track.artist === trackInfo.artist
         );
+
+        if (existingTrack) {
+            console.log('🔄 Found existing track in recent tracks, will move to top');
+        }
 
         // Remove if already exists
         const filteredTracks = recentTracks.filter(track =>
@@ -404,13 +443,24 @@ async function addToRecentTracks(trackInfo) {
 
         filteredTracks.unshift(newTrack);
         const limitedTracks = filteredTracks.slice(0, 15);
+
+        console.log('💾 Storing to localStorage:', {
+            track: newTrack,
+            totalTracks: limitedTracks.length,
+            removedCount: filteredTracks.length - limitedTracks.length
+        });
+
         saveRecentTracks(limitedTracks);
+        console.log('✅ Guest mode track saved successfully');
     } else {
         // Authenticated - insert to Supabase
+        console.log('🔐 Authenticated mode - saving to Supabase');
+
         // Check if there's an existing entry to preserve artwork if new one is empty
         let artworkUrl = trackInfo.artworkUrl || '';
 
         if (!artworkUrl) {
+            console.log('🔍 No artwork provided, checking for existing artwork...');
             // If new artwork is empty, try to preserve existing artwork
             const { data: existing } = await supabaseClient
                 .from('recent_tracks')
@@ -422,113 +472,206 @@ async function addToRecentTracks(trackInfo) {
 
             if (existing && existing.artwork_url) {
                 artworkUrl = existing.artwork_url;
+                console.log('✅ Preserved existing artwork URL:', artworkUrl);
+            } else {
+                console.log('ℹ️ No existing artwork found to preserve');
             }
         }
 
         // Delete existing entry for this track (to move it to top)
-        await supabaseClient
+        console.log('🗑️ Deleting existing entry for this track (if exists)...');
+        const { data: deletedRows, error: deleteError } = await supabaseClient
             .from('recent_tracks')
             .delete()
             .eq('user_id', window.currentUser.id)
             .eq('title', trackInfo.title)
-            .eq('artist', trackInfo.artist);
+            .eq('artist', trackInfo.artist)
+            .select();
+
+        if (deleteError) {
+            console.error('❌ Error deleting existing track:', deleteError);
+        } else if (deletedRows && deletedRows.length > 0) {
+            console.log('✅ Deleted existing track:', {
+                count: deletedRows.length,
+                deletedIds: deletedRows.map(r => r.id)
+            });
+        } else {
+            console.log('ℹ️ No existing track to delete');
+        }
 
         // Insert new entry with preserved or new artwork
-        const { error } = await supabaseClient
+        const trackData = {
+            user_id: window.currentUser.id,
+            title: trackInfo.title,
+            artist: trackInfo.artist,
+            album: trackInfo.album || '',
+            artwork_url: artworkUrl,
+            station_name: trackInfo.station || 'Unknown Station'
+        };
+
+        console.log('💾 Inserting new track to recent_tracks:', trackData);
+
+        const { data: insertedData, error } = await supabaseClient
             .from('recent_tracks')
-            .insert([{
-                user_id: window.currentUser.id,
-                title: trackInfo.title,
-                artist: trackInfo.artist,
-                album: trackInfo.album || '',
-                artwork_url: artworkUrl,
-                station_name: trackInfo.station || 'Unknown Station'
-            }]);
+            .insert([trackData])
+            .select();
 
         if (error) {
-            console.error('Error saving recent track:', error);
+            console.error('❌ Error saving recent track:', error);
             return;
         }
 
+        console.log('✅ Track inserted successfully:', insertedData);
+
         // Cleanup: Keep only the 15 most recent tracks for this user
         // Get all tracks ordered by played_at
+        console.log('🧹 Starting cleanup - checking total track count...');
         const { data: allTracks } = await supabaseClient
             .from('recent_tracks')
-            .select('id, played_at')
+            .select('id, played_at, title, artist')
             .eq('user_id', window.currentUser.id)
             .order('played_at', { ascending: false });
 
+        console.log('📊 Total tracks after insert:', allTracks ? allTracks.length : 0);
+
         if (allTracks && allTracks.length > 15) {
             // Get IDs of tracks to delete (everything after the first 15)
-            const tracksToDelete = allTracks.slice(15).map(track => track.id);
+            const tracksToDelete = allTracks.slice(15);
+            const idsToDelete = tracksToDelete.map(track => track.id);
+
+            console.log('🗑️ Need to delete old tracks:', {
+                totalTracks: allTracks.length,
+                keeping: 15,
+                deleting: tracksToDelete.length,
+                tracksToDelete: tracksToDelete.map(t => ({ id: t.id, title: t.title, artist: t.artist }))
+            });
 
             // Delete old tracks
-            await supabaseClient
+            const { data: cleanupDeleted, error: cleanupError } = await supabaseClient
                 .from('recent_tracks')
                 .delete()
-                .in('id', tracksToDelete);
+                .in('id', idsToDelete)
+                .select();
+
+            if (cleanupError) {
+                console.error('❌ Error during cleanup:', cleanupError);
+            } else {
+                console.log('✅ Cleanup complete - deleted tracks:', {
+                    count: cleanupDeleted ? cleanupDeleted.length : 0,
+                    deletedIds: cleanupDeleted ? cleanupDeleted.map(r => r.id) : []
+                });
+            }
+        } else {
+            console.log('✅ No cleanup needed - total tracks:', allTracks ? allTracks.length : 0);
         }
+
+        console.log('✅ addToRecentTracks completed successfully');
     }
 }
 
 // Clear all recent tracks
 async function clearAllRecentTracks() {
+    console.log('🗑️ clearAllRecentTracks called, mode:', window.isGuestMode ? 'guest' : 'authenticated');
+
     if (window.isGuestMode) {
+        const currentTracks = await loadRecentTracks();
+        console.log('📊 Clearing tracks from localStorage, count:', currentTracks.length);
         saveRecentTracks([]);
         console.log('✅ Cleared all recent tracks (guest mode)');
     } else {
-        const { error } = await supabaseClient
+        // First, get count of tracks to be deleted for logging
+        const { data: tracksToDelete, error: selectError } = await supabaseClient
+            .from('recent_tracks')
+            .select('id, title, artist')
+            .eq('user_id', window.currentUser.id);
+
+        if (selectError) {
+            console.error('❌ Error fetching tracks for deletion:', selectError);
+        } else {
+            console.log('📊 Found tracks to delete:', {
+                count: tracksToDelete ? tracksToDelete.length : 0,
+                tracks: tracksToDelete ? tracksToDelete.map(t => ({ id: t.id, title: t.title, artist: t.artist })) : []
+            });
+        }
+
+        // Delete all tracks
+        const { data: deletedData, error } = await supabaseClient
             .from('recent_tracks')
             .delete()
-            .eq('user_id', window.currentUser.id);
+            .eq('user_id', window.currentUser.id)
+            .select();
 
         if (error) {
             console.error('❌ Error clearing recent tracks:', error);
             throw error; // Re-throw so calling code can handle it
         }
 
-        console.log('✅ Cleared all recent tracks from database');
+        console.log('✅ Cleared all recent tracks from database:', {
+            deletedCount: deletedData ? deletedData.length : 0,
+            deletedIds: deletedData ? deletedData.map(r => r.id) : []
+        });
     }
 }
 
 // Cleanup old recent tracks (keep only last 15 per user)
 // This can be called manually to clean up existing data
 async function cleanupOldRecentTracks() {
+    console.log('🧹 cleanupOldRecentTracks called');
+
     if (window.isGuestMode) {
-        console.log('Cleanup not needed in guest mode');
+        console.log('ℹ️ Cleanup not needed in guest mode');
         return;
     }
 
     try {
-        console.log('🧹 Cleaning up old recent tracks...');
+        console.log('🔍 Checking for old recent tracks to clean up...');
 
         // Get all tracks for the current user ordered by played_at
-        const { data: allTracks } = await supabaseClient
+        const { data: allTracks, error: fetchError } = await supabaseClient
             .from('recent_tracks')
-            .select('id, played_at')
+            .select('id, played_at, title, artist')
             .eq('user_id', window.currentUser.id)
             .order('played_at', { ascending: false });
 
+        if (fetchError) {
+            console.error('❌ Error fetching tracks for cleanup:', fetchError);
+            return;
+        }
+
+        console.log('📊 Current total tracks:', allTracks ? allTracks.length : 0);
+
         if (allTracks && allTracks.length > 15) {
             // Get IDs of tracks to delete (everything after the first 15)
-            const tracksToDelete = allTracks.slice(15).map(track => track.id);
+            const tracksToDelete = allTracks.slice(15);
+            const idsToDelete = tracksToDelete.map(track => track.id);
+
+            console.log('🗑️ Deleting old tracks:', {
+                totalTracks: allTracks.length,
+                keeping: 15,
+                deleting: tracksToDelete.length,
+                tracksToDelete: tracksToDelete.map(t => ({ id: t.id, title: t.title, artist: t.artist, played_at: t.played_at }))
+            });
 
             // Delete old tracks
-            const { error } = await supabaseClient
+            const { data: deletedData, error } = await supabaseClient
                 .from('recent_tracks')
                 .delete()
-                .in('id', tracksToDelete);
+                .in('id', idsToDelete)
+                .select();
 
             if (error) {
-                console.error('Error cleaning up old tracks:', error);
+                console.error('❌ Error cleaning up old tracks:', error);
             } else {
-                console.log(`✅ Deleted ${tracksToDelete.length} old tracks`);
+                console.log('✅ Cleanup complete - deleted tracks:', {
+                    count: deletedData ? deletedData.length : 0,
+                    deletedIds: deletedData ? deletedData.map(r => r.id) : []
+                });
             }
         } else {
             console.log('✅ No cleanup needed - you have 15 or fewer tracks');
         }
     } catch (error) {
-        console.error('Error during cleanup:', error);
+        console.error('❌ Error during cleanup:', error);
     }
 }
 
