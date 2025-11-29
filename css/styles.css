@@ -2881,16 +2881,12 @@ body[data-layout="landscape"] .layout-slider {
     white-space: nowrap;
 }
 
-/* Media query for mobile devices - show bottom nav and adjust spacing */
-@media (max-width: 767px) {
-    .player-container {
-        margin-bottom: 80px;
-    }
+/* Always show bottom nav and adjust spacing for all screen sizes */
+.player-container {
+    margin-bottom: 80px;
 }
 
-/* Media query for larger screens - hide bottom nav */
-@media (min-width: 768px) {
-    .bottom-nav {
-        display: none;
-    }
+/* Hide top navigation buttons since we now use bottom nav */
+.hamburger-menu-wrapper {
+    display: none !important;
 }
