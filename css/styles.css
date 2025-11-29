@@ -149,8 +149,7 @@
         }
         
         /* Force the internal SVG to render at same size as other icons */
-        google-cast-launcher svg,
-        #castButton svg {
+        google-cast-launcher.artwork-cast-btn svg {
             width: 28px !important;
             height: 28px !important;
         }
