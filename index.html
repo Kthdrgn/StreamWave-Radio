@@ -4966,8 +4966,13 @@
                         // Stop metadata-only player
                         stopMetadataOnlyPlayer();
 
+                        // Reset play/pause button state
+                        updatePlayPauseButton(false);
+                        const wasCastingAndPlaying = isPlaying;
+                        isPlaying = false;
+
                         // Resume local playback if desired
-                        if (currentStation && isPlaying) {
+                        if (currentStation && wasCastingAndPlaying) {
                             setTimeout(() => {
                                 playPauseBtn.click();
                             }, 300);
