@@ -356,24 +356,6 @@
             </div>
             <div class="modal-body">
                 <div class="menu-options">
-                    <!-- Browse Stations Button -->
-                    <button class="menu-option-btn" id="browseMenuBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>Curated Stations</span>
-                    </button>
-
-                    <!-- Radio Database Button -->
-                    <button class="menu-option-btn" id="radioDatabaseBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
-                            <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
-                            <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        <span>Radio Browser Database</span>
-                    </button>
-
                     <!-- My Playlists Button -->
                     <button class="menu-option-btn" id="viewPlaylistsBtn">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -382,12 +364,12 @@
                         <span>My Playlists</span>
                     </button>
 
-                    <!-- Add Playlist Button -->
+                    <!-- Create Playlist Button -->
                     <button class="menu-option-btn" id="createPlaylistMenuBtn">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span>Add Playlist</span>
+                        <span>Create Playlist</span>
                     </button>
 
                     <!-- Divider -->
@@ -1006,6 +988,39 @@
         </div>
     </div>
 
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <button id="bottomNavOverview" class="bottom-nav-btn" title="Overview">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="13" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="3" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="13" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+            </svg>
+            <span>Overview</span>
+        </button>
+        <button id="bottomNavCurated" class="bottom-nav-btn" title="Curated Stations">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Curated</span>
+        </button>
+        <button id="bottomNavDatabase" class="bottom-nav-btn" title="Radio Database">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
+                <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
+                <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Database</span>
+        </button>
+        <button id="bottomNavMenu" class="bottom-nav-btn" title="Menu">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6H20M4 12H20M4 18H20" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Menu</span>
+        </button>
+    </nav>
+
     <script>
         // ======================
         // GLOBAL VARIABLES
@@ -1093,7 +1108,6 @@
         const hamburgerMenuModal = document.getElementById('hamburgerMenuModal');
         const closeHamburgerMenuModal = document.getElementById('closeHamburgerMenuModal');
         const settingsMenuBtn = document.getElementById('settingsMenuBtn');
-        const browseMenuBtn = document.getElementById('browseMenuBtn');
 
         // Station Display
         const stationDisplay = document.getElementById('stationDisplay');
@@ -1175,7 +1189,6 @@
         const clearAllLikesBtn = document.getElementById('clearAllLikesBtn');
 
         // Radio Database elements
-        const radioDatabaseBtn = document.getElementById('radioDatabaseBtn');
         const radioDatabaseModal = document.getElementById('radioDatabaseModal');
         const closeRadioDatabaseModal = document.getElementById('closeRadioDatabaseModal');
         const radioDatabaseSearchInput = document.getElementById('radioDatabaseSearchInput');
@@ -4504,28 +4517,6 @@
             settingsModal.classList.add('active');
         });
 
-        // Browse menu button - opens browse stations modal
-        browseMenuBtn.addEventListener('click', () => {
-            console.log('Opening browse stations modal', {
-                stationsLength: stations.length,
-                filteredStationsLength: filteredStations.length
-            });
-            hamburgerMenuModal.classList.remove('active');
-            lastOpenedModal = 'browse';
-            browseStationsModal.classList.add('active');
-            // Ensure stations are displayed
-            if (stations.length > 0) {
-                if (filteredStations.length === 0) {
-                    console.log('Initializing filteredStations');
-                    filteredStations = [...stations];
-                }
-                console.log('Calling renderStationList');
-                renderStationList();
-            } else {
-                console.log('No stations loaded yet');
-            }
-        });
-
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
             // Show/hide curate button based on admin status
@@ -4615,9 +4606,69 @@
             }
         });
 
-        // Radio Database button - opens radio database modal
-        radioDatabaseBtn.addEventListener('click', () => {
-            hamburgerMenuModal.classList.remove('active');
+        // Bottom Navigation Event Listeners
+
+        // Function to close all modals
+        function closeAllModals() {
+            const allModals = [
+                hamburgerMenuModal,
+                playlistsModal,
+                browseStationsModal,
+                settingsModal,
+                overviewModal,
+                stationInfoModal,
+                playlistModal,
+                playlistFormModal,
+                likedTracksModal,
+                radioDatabaseModal,
+                playlistSelectorModal,
+                stationFormModal,
+                recentTracksModal,
+                lyricsModal,
+                nowPlayingModal,
+                qualityModal,
+                playbackModeModal
+            ];
+
+            allModals.forEach(modal => {
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        }
+
+        // Bottom nav - Overview button
+        document.getElementById('bottomNavOverview').addEventListener('click', () => {
+            closeAllModals();
+            overviewModal.classList.add('active');
+            loadOverviewModal();
+        });
+
+        // Bottom nav - Curated Stations button
+        document.getElementById('bottomNavCurated').addEventListener('click', () => {
+            closeAllModals();
+            console.log('Opening browse stations modal from bottom nav', {
+                stationsLength: stations.length,
+                filteredStationsLength: filteredStations.length
+            });
+            lastOpenedModal = 'browse';
+            browseStationsModal.classList.add('active');
+            // Ensure stations are displayed
+            if (stations.length > 0) {
+                if (filteredStations.length === 0) {
+                    console.log('Initializing filteredStations');
+                    filteredStations = [...stations];
+                }
+                console.log('Calling renderStationList');
+                renderStationList();
+            } else {
+                console.log('No stations loaded yet');
+            }
+        });
+
+        // Bottom nav - Radio Database button
+        document.getElementById('bottomNavDatabase').addEventListener('click', () => {
+            closeAllModals();
             radioDatabaseModal.classList.add('active');
             // Clear input values
             radioDatabaseCountry.value = '';
@@ -4627,6 +4678,12 @@
             if (radioDatabaseCountry.children.length === 1) {
                 loadRadioBrowserFilters();
             }
+        });
+
+        // Bottom nav - Menu button
+        document.getElementById('bottomNavMenu').addEventListener('click', () => {
+            closeAllModals();
+            hamburgerMenuModal.classList.add('active');
         });
 
         // Close Radio Database modal
