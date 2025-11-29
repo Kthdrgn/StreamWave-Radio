@@ -475,15 +475,19 @@ async function addToRecentTracks(trackInfo) {
 async function clearAllRecentTracks() {
     if (window.isGuestMode) {
         saveRecentTracks([]);
+        console.log('✅ Cleared all recent tracks (guest mode)');
     } else {
         const { error } = await supabaseClient
             .from('recent_tracks')
             .delete()
             .eq('user_id', window.currentUser.id);
-        
+
         if (error) {
-            console.error('Error clearing recent tracks:', error);
+            console.error('❌ Error clearing recent tracks:', error);
+            throw error; // Re-throw so calling code can handle it
         }
+
+        console.log('✅ Cleared all recent tracks from database');
     }
 }
 

@@ -1377,8 +1377,13 @@
         // Clear all recent tracks
         async function clearAllRecentTracks() {
             if (confirm('Are you sure you want to clear all recently played tracks?')) {
-                await window.clearAllRecentTracks();
-                await displayRecentTracks();
+                try {
+                    await window.clearAllRecentTracks();
+                    await displayRecentTracks();
+                } catch (error) {
+                    console.error('Failed to clear recent tracks:', error);
+                    alert('Failed to clear recent tracks. Please check the console for details.');
+                }
             }
         }
         
