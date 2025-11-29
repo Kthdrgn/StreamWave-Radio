@@ -269,8 +269,8 @@ async function addLikedTrack(trackInfo) {
             .eq('user_id', window.currentUser.id)
             .eq('title', trackInfo.title)
             .eq('artist', trackInfo.artist)
-            .single();
-        
+            .maybeSingle();
+
         if (existing) {
             return false; // Already liked
         }
@@ -418,7 +418,7 @@ async function addToRecentTracks(trackInfo) {
                 .eq('user_id', window.currentUser.id)
                 .eq('title', trackInfo.title)
                 .eq('artist', trackInfo.artist)
-                .single();
+                .maybeSingle();
 
             if (existing && existing.artwork_url) {
                 artworkUrl = existing.artwork_url;
