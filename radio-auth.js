@@ -69,6 +69,9 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 function updateAuthUI() {
     // Update auth button with user info
     updateAuthButton();
+
+    // Show/hide Add Station button based on admin status
+    updateAddStationButton();
 }
 
 // Update auth button text
@@ -81,6 +84,22 @@ function updateAuthButton() {
             authBtnText.textContent = `Signed in as ${displayName}`;
         } else {
             authBtnText.textContent = 'Sign In';
+        }
+    }
+}
+
+// Update Add Station button visibility based on admin status
+function updateAddStationButton() {
+    const addStationBtn = document.getElementById('addStationBtn');
+    if (addStationBtn) {
+        // Check if current user is admin
+        const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+
+        // Show button only if user is admin
+        if (isAdmin) {
+            addStationBtn.style.display = '';
+        } else {
+            addStationBtn.style.display = 'none';
         }
     }
 }
