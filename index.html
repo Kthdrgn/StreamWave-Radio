@@ -5003,16 +5003,25 @@
                 );
                 
                 console.log('✅ Cast SDK initialized successfully');
-                
+
+                // Prevent cast button from opening station info modal
+                const castButton = document.getElementById('castButton');
+                if (castButton) {
+                    castButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        console.log('Cast button clicked, prevented station modal from opening');
+                    });
+                }
+
                 // Check cast state
                 setTimeout(() => {
                     const castState = castContext.getCastState();
                     console.log('Cast state:', castState);
-                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE, 
+                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE,
                                 'NOT_CONNECTED:', cast.framework.CastState.NOT_CONNECTED,
                                 'CONNECTING:', cast.framework.CastState.CONNECTING,
                                 'CONNECTED:', cast.framework.CastState.CONNECTED);
-                    
+
                     // Check if button exists and is visible
                     const button = document.getElementById('castButton');
                     console.log('Cast button element:', button);

@@ -158,21 +158,21 @@
         /* Chromecast button in station display - upper right corner */
         .station-cast-btn {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 8px;
+            right: 8px;
             --connected-color: var(--primary-color);
             --disconnected-color: var(--text-primary);
             cursor: pointer;
             background: rgba(0, 0, 0, 0.05);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-radius: 6px;
-            padding: 6px;
+            border-radius: 8px;
+            padding: 8px;
             transition: all 0.3s ease;
             opacity: 0.8;
             z-index: 5;
-            width: 32px !important;
-            height: 32px !important;
+            width: 44px !important;
+            height: 44px !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
@@ -182,13 +182,13 @@
         .station-cast-btn:hover {
             opacity: 1;
             background: var(--button-hover);
-            transform: scale(1.1);
+            transform: scale(1.05);
             border-color: var(--border-hover);
         }
 
         .station-cast-btn svg {
-            width: 20px !important;
-            height: 20px !important;
+            width: 28px !important;
+            height: 28px !important;
         }
 
         .icon-btn:hover svg {
