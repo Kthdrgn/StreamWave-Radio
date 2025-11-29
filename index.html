@@ -75,7 +75,7 @@
             </div>
 
             <!-- Currently playing station display -->
-            <div id="stationDisplay" class="station-display" style="display: flex;">
+            <div id="stationDisplay" class="station-display disabled" style="display: flex;">
                 <img id="stationDisplayIcon" class="station-display-icon" src="icons/icon-512x512.png" alt="StreamWave Radio" style="display: block;">
                 <div class="station-display-info">
                     <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
@@ -929,19 +929,19 @@
                         </div>
                     </div>
                     <div class="filter-controls" style="margin-top: 10px;">
-                        <select id="radioDatabaseCountry" class="form-input" style="flex: 1; min-width: 150px;">
+                        <select id="radioDatabaseCountry" class="form-input">
                             <option value="">All Countries</option>
                         </select>
 
-                        <select id="radioDatabaseLanguage" class="form-input" style="flex: 1; min-width: 150px;">
+                        <select id="radioDatabaseLanguage" class="form-input">
                             <option value="">All Languages</option>
                         </select>
 
-                        <select id="radioDatabaseTag" class="form-input" style="flex: 1; min-width: 150px;">
+                        <select id="radioDatabaseTag" class="form-input">
                             <option value="">All Tags</option>
                         </select>
 
-                        <select id="radioDatabaseSort" class="form-input" style="flex: 1; min-width: 150px;">
+                        <select id="radioDatabaseSort" class="form-input">
                             <option value="votes">Most Popular</option>
                             <option value="name">Name (A-Z)</option>
                             <option value="clickcount">Most Clicked</option>
@@ -4229,9 +4229,10 @@
             } else {
                 trackStationClick(station.id);
             }
-            
-            // Update display - keep it visible along with buttons
+
+            // Update display - keep it visible along with buttons and enable clicking
             stationDisplay.style.display = 'flex';
+            stationDisplay.classList.remove('disabled');
             // Don't hide the selector buttons anymore
             // stationSelectorButtons.style.display = 'none';
             stationDisplayIcon.src = station.icon_url || '';
@@ -4809,6 +4810,11 @@
 
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
+            // Only open if a station is loaded
+            if (!currentStation) {
+                return;
+            }
+
             // Show/hide curate button based on admin status
             const curateStationBtn = document.getElementById('curateStationBtn');
             const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
@@ -6853,11 +6859,6 @@
 
         // Open now playing modal
         async function openNowPlayingModal() {
-            // Only open if there's metadata to show
-            if (!currentTrack.title) {
-                return;
-            }
-
             const modal = document.getElementById('nowPlayingModal');
 
             // Update modal content
