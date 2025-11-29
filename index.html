@@ -5142,10 +5142,10 @@
             const isDeviceAvailable = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
 
             if (castButton) {
-                castButton.style.display = isDeviceAvailable ? 'block' : 'none';
+                castButton.style.display = isDeviceAvailable ? 'flex' : 'none';
             }
             if (castButtonPortrait) {
-                castButtonPortrait.style.display = isDeviceAvailable ? 'block' : 'none';
+                castButtonPortrait.style.display = isDeviceAvailable ? 'flex' : 'none';
             }
 
             console.log('Chromecast buttons visibility:', isDeviceAvailable ? 'visible' : 'hidden');
