@@ -1700,6 +1700,10 @@
 
         const RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
 
+        // Cache original filter data for dynamic filtering
+        let originalLanguages = [];
+        let originalTags = [];
+
         // Load countries, languages, and tags for the dropdowns
         async function loadRadioBrowserFilters() {
             try {
@@ -1720,29 +1724,180 @@
                 const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`);
                 const languages = await languagesRes.json();
 
-                languages.forEach(lang => {
-                    if (lang.name && lang.stationcount > 0) {
-                        const option = document.createElement('option');
-                        option.value = lang.name;
-                        option.textContent = `${lang.name} (${lang.stationcount})`;
-                        radioDatabaseLanguage.appendChild(option);
-                    }
+                // Cache original languages
+                originalLanguages = languages.filter(lang => lang.name && lang.stationcount > 0);
+
+                originalLanguages.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.name;
+                    option.textContent = `${lang.name} (${lang.stationcount})`;
+                    radioDatabaseLanguage.appendChild(option);
                 });
 
                 // Load top tags
                 const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`);
                 const tags = await tagsRes.json();
 
-                tags.forEach(tag => {
-                    if (tag.name && tag.stationcount > 0) {
-                        const option = document.createElement('option');
-                        option.value = tag.name;
-                        option.textContent = `${tag.name} (${tag.stationcount})`;
-                        radioDatabaseTag.appendChild(option);
-                    }
+                // Cache original tags
+                originalTags = tags.filter(tag => tag.name && tag.stationcount > 0);
+
+                originalTags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.name;
+                    option.textContent = `${tag.name} (${tag.stationcount})`;
+                    radioDatabaseTag.appendChild(option);
                 });
             } catch (error) {
                 console.error('Error loading Radio Browser filters:', error);
+            }
+        }
+
+        // Update language options based on selected country
+        async function updateLanguageOptions(country) {
+            if (!country) {
+                // Reset to original languages
+                restoreLanguageOptions();
+                return;
+            }
+
+            try {
+                // Fetch stations from selected country
+                const params = new URLSearchParams();
+                params.append('country', country);
+                params.append('limit', '10000');
+                params.append('hidebroken', 'true');
+
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const stations = await response.json();
+
+                // Extract unique languages and count stations
+                const languageMap = new Map();
+                stations.forEach(station => {
+                    if (station.language) {
+                        const lang = station.language;
+                        languageMap.set(lang, (languageMap.get(lang) || 0) + 1);
+                    }
+                });
+
+                // Sort by station count
+                const languages = Array.from(languageMap.entries())
+                    .sort((a, b) => b[1] - a[1]);
+
+                // Update dropdown
+                const currentValue = radioDatabaseLanguage.value;
+                radioDatabaseLanguage.innerHTML = '<option value="">All Languages</option>';
+
+                languages.forEach(([lang, count]) => {
+                    const option = document.createElement('option');
+                    option.value = lang;
+                    option.textContent = `${lang} (${count})`;
+                    radioDatabaseLanguage.appendChild(option);
+                });
+
+                // Restore previous selection if still available
+                if (currentValue && languages.some(([lang]) => lang === currentValue)) {
+                    radioDatabaseLanguage.value = currentValue;
+                } else if (currentValue) {
+                    // Language no longer available, clear it
+                    radioDatabaseLanguage.value = '';
+                }
+            } catch (error) {
+                console.error('Error updating language options:', error);
+            }
+        }
+
+        // Update tag options based on selected country and language
+        async function updateTagOptions(country, language) {
+            if (!country && !language) {
+                // Reset to original tags
+                restoreTagOptions();
+                return;
+            }
+
+            try {
+                // Fetch stations with selected filters
+                const params = new URLSearchParams();
+                if (country) params.append('country', country);
+                if (language) params.append('language', language);
+                params.append('limit', '10000');
+                params.append('hidebroken', 'true');
+
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const stations = await response.json();
+
+                // Extract unique tags and count stations
+                const tagMap = new Map();
+                stations.forEach(station => {
+                    if (station.tags) {
+                        // Tags are comma-separated
+                        const tags = station.tags.split(',').map(t => t.trim()).filter(t => t);
+                        tags.forEach(tag => {
+                            tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+                        });
+                    }
+                });
+
+                // Sort by station count
+                const tags = Array.from(tagMap.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 100); // Limit to top 100 tags
+
+                // Update dropdown
+                const currentValue = radioDatabaseTag.value;
+                radioDatabaseTag.innerHTML = '<option value="">All Tags</option>';
+
+                tags.forEach(([tag, count]) => {
+                    const option = document.createElement('option');
+                    option.value = tag;
+                    option.textContent = `${tag} (${count})`;
+                    radioDatabaseTag.appendChild(option);
+                });
+
+                // Restore previous selection if still available
+                if (currentValue && tags.some(([tag]) => tag === currentValue)) {
+                    radioDatabaseTag.value = currentValue;
+                } else if (currentValue) {
+                    // Tag no longer available, clear it
+                    radioDatabaseTag.value = '';
+                }
+            } catch (error) {
+                console.error('Error updating tag options:', error);
+            }
+        }
+
+        // Restore original language options
+        function restoreLanguageOptions() {
+            const currentValue = radioDatabaseLanguage.value;
+            radioDatabaseLanguage.innerHTML = '<option value="">All Languages</option>';
+
+            originalLanguages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang.name;
+                option.textContent = `${lang.name} (${lang.stationcount})`;
+                radioDatabaseLanguage.appendChild(option);
+            });
+
+            // Restore previous selection if it exists in original list
+            if (currentValue && originalLanguages.some(lang => lang.name === currentValue)) {
+                radioDatabaseLanguage.value = currentValue;
+            }
+        }
+
+        // Restore original tag options
+        function restoreTagOptions() {
+            const currentValue = radioDatabaseTag.value;
+            radioDatabaseTag.innerHTML = '<option value="">All Tags</option>';
+
+            originalTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.name;
+                option.textContent = `${tag.name} (${tag.stationcount})`;
+                radioDatabaseTag.appendChild(option);
+            });
+
+            // Restore previous selection if it exists in original list
+            if (currentValue && originalTags.some(tag => tag.name === currentValue)) {
+                radioDatabaseTag.value = currentValue;
             }
         }
 
@@ -4852,6 +5007,10 @@
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
 
+            // Restore original filter options
+            restoreLanguageOptions();
+            restoreTagOptions();
+
             // Hide clear button
             radioDatabaseClearBtn.style.display = 'none';
 
@@ -4860,10 +5019,13 @@
         });
 
         // Radio Database filter changes - trigger search
-        radioDatabaseCountry.addEventListener('change', () => {
+        radioDatabaseCountry.addEventListener('change', async () => {
             const clearBtn = document.getElementById('radioDatabaseClearBtn');
-            const hasFilters = radioDatabaseCountry.value !== '' ||
-                              radioDatabaseLanguage.value !== '' ||
+            const country = radioDatabaseCountry.value;
+            const language = radioDatabaseLanguage.value;
+
+            const hasFilters = country !== '' ||
+                              language !== '' ||
                               radioDatabaseTag.value !== '' ||
                               radioDatabaseSearchInput.value.trim() !== '';
 
@@ -4872,14 +5034,21 @@
             } else {
                 clearBtn.style.display = 'none';
             }
+
+            // Update dependent filters
+            await updateLanguageOptions(country);
+            await updateTagOptions(country, radioDatabaseLanguage.value);
 
             searchRadioBrowser();
         });
 
-        radioDatabaseLanguage.addEventListener('change', () => {
+        radioDatabaseLanguage.addEventListener('change', async () => {
             const clearBtn = document.getElementById('radioDatabaseClearBtn');
-            const hasFilters = radioDatabaseCountry.value !== '' ||
-                              radioDatabaseLanguage.value !== '' ||
+            const country = radioDatabaseCountry.value;
+            const language = radioDatabaseLanguage.value;
+
+            const hasFilters = country !== '' ||
+                              language !== '' ||
                               radioDatabaseTag.value !== '' ||
                               radioDatabaseSearchInput.value.trim() !== '';
 
@@ -4888,6 +5057,9 @@
             } else {
                 clearBtn.style.display = 'none';
             }
+
+            // Update tag options based on country and language
+            await updateTagOptions(country, language);
 
             searchRadioBrowser();
         });
