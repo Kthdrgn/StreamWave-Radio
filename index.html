@@ -1110,7 +1110,44 @@
         let playbackMode = 'live'; // 'live' or 'simple'
         let quality = 'standard'; // 'high' or 'standard'
         let selectedQuality = 'standard'; // Current quality selection for streams
-        
+
+        // ======================
+        // Radio Database State Persistence
+        // ======================
+
+        // Save radio database state to sessionStorage
+        function saveRadioDatabaseState() {
+            const state = {
+                searchTerm: radioDatabaseSearchInput.value,
+                country: radioDatabaseCountry.value,
+                language: radioDatabaseLanguage.value,
+                tag: radioDatabaseTag.value,
+                sortBy: radioDatabaseSort.value,
+                currentPage: radioDatabaseCurrentPage,
+                viewMode: radioDatabaseViewMode
+            };
+            sessionStorage.setItem('radioDatabaseState', JSON.stringify(state));
+        }
+
+        // Load radio database state from sessionStorage
+        function loadRadioDatabaseState() {
+            const stateJson = sessionStorage.getItem('radioDatabaseState');
+            if (stateJson) {
+                try {
+                    return JSON.parse(stateJson);
+                } catch (error) {
+                    console.error('Error parsing radio database state:', error);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Clear radio database state from sessionStorage
+        function clearRadioDatabaseState() {
+            sessionStorage.removeItem('radioDatabaseState');
+        }
+
         // ======================
         // DOM Elements
         // ======================
@@ -1953,6 +1990,8 @@
                         </div>
                     `;
                     radioDatabasePagination.style.display = 'none';
+                    // Save state even with no results
+                    saveRadioDatabaseState();
                     return;
                 }
 
@@ -1964,6 +2003,9 @@
 
                 // Update pagination controls
                 updateRadioDatabasePagination(results.length);
+
+                // Save state after successful search
+                saveRadioDatabaseState();
             } catch (error) {
                 console.error('Error searching Radio Browser:', error);
                 radioDatabaseLoading.style.display = 'none';
@@ -4929,22 +4971,63 @@
         });
 
         // Bottom nav - Radio Database button
-        document.getElementById('bottomNavDatabase').addEventListener('click', () => {
+        document.getElementById('bottomNavDatabase').addEventListener('click', async () => {
             closeAllModals();
             radioDatabaseModal.classList.add('active');
-            // Clear input values
-            radioDatabaseSearchInput.value = '';
-            radioDatabaseCountry.value = '';
-            radioDatabaseLanguage.value = '';
-            radioDatabaseTag.value = '';
-            // Hide clear button initially
-            document.getElementById('radioDatabaseClearBtn').style.display = 'none';
+
             // Load filters if not already loaded (checking if only default option exists)
             if (radioDatabaseCountry.children.length === 1) {
-                loadRadioBrowserFilters();
+                await loadRadioBrowserFilters();
             }
-            // Auto-populate with default search (Most Popular)
-            searchRadioBrowser();
+
+            // Try to restore saved state from sessionStorage
+            const savedState = loadRadioDatabaseState();
+
+            if (savedState) {
+                // Restore search input
+                radioDatabaseSearchInput.value = savedState.searchTerm || '';
+
+                // Restore filters
+                radioDatabaseCountry.value = savedState.country || '';
+                radioDatabaseLanguage.value = savedState.language || '';
+                radioDatabaseTag.value = savedState.tag || '';
+                radioDatabaseSort.value = savedState.sortBy || 'votes';
+
+                // Restore view mode
+                radioDatabaseViewMode = savedState.viewMode || 'list';
+                updateRadioDatabaseViewUI();
+
+                // Update dependent filters based on country selection
+                if (savedState.country) {
+                    await updateLanguageOptions(savedState.country);
+                }
+                if (savedState.country || savedState.language) {
+                    await updateTagOptions(savedState.country, savedState.language);
+                }
+
+                // Show/hide clear button based on filters
+                const hasFilters = savedState.searchTerm || savedState.country ||
+                                  savedState.language || savedState.tag;
+                document.getElementById('radioDatabaseClearBtn').style.display = hasFilters ? 'flex' : 'none';
+
+                // Trigger search with saved page
+                searchRadioBrowser(savedState.currentPage || 1);
+            } else {
+                // No saved state - clear input values and start fresh
+                radioDatabaseSearchInput.value = '';
+                radioDatabaseCountry.value = '';
+                radioDatabaseLanguage.value = '';
+                radioDatabaseTag.value = '';
+                radioDatabaseSort.value = 'votes';
+                radioDatabaseViewMode = 'list';
+                updateRadioDatabaseViewUI();
+
+                // Hide clear button initially
+                document.getElementById('radioDatabaseClearBtn').style.display = 'none';
+
+                // Auto-populate with default search (Most Popular)
+                searchRadioBrowser();
+            }
         });
 
         // Bottom nav - Menu button
@@ -5014,7 +5097,10 @@
             // Hide clear button
             radioDatabaseClearBtn.style.display = 'none';
 
-            // Trigger search with defaults
+            // Clear saved state from sessionStorage
+            clearRadioDatabaseState();
+
+            // Trigger search with defaults (this will save the cleared state)
             searchRadioBrowser();
         });
 
@@ -8024,6 +8110,8 @@
                     radioDatabaseResults.classList.remove('grid-view');
                 }
             }
+            // Save state after view mode change
+            saveRadioDatabaseState();
         }
 
         // Update radio database view toggle UI
