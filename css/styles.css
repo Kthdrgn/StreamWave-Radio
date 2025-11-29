@@ -154,7 +154,41 @@
             width: 28px !important;
             height: 28px !important;
         }
-        
+
+        /* Chromecast button on artwork - discreet in upper right corner */
+        .artwork-cast-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            --connected-color: var(--primary-color);
+            --disconnected-color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 6px;
+            padding: 6px;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            z-index: 5;
+            width: 32px !important;
+            height: 32px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .artwork-cast-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.5);
+            transform: scale(1.1);
+        }
+
+        .artwork-cast-btn svg {
+            width: 20px !important;
+            height: 20px !important;
+        }
+
         .icon-btn:hover svg {
             transform: scale(1.1);
         }

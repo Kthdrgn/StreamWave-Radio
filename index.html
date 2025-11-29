@@ -50,6 +50,8 @@
         <div class="tv-left-column">
             <div class="artwork-container" id="artworkContainer">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
+                <!-- Chromecast button on artwork -->
+                <google-cast-launcher id="castButton" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
         </div>
 
@@ -86,6 +88,8 @@
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
+                <!-- Chromecast button on artwork -->
+                <google-cast-launcher id="castButtonPortrait" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Metadata display -->
@@ -1137,8 +1141,21 @@
 
         // Helper function to update both artwork containers
         function updateArtwork(html) {
+            // Preserve Chromecast buttons before updating
+            const castButton = artworkContainer.querySelector('#castButton');
+            const castButtonPortrait = artworkContainerPortrait.querySelector('#castButtonPortrait');
+
+            // Update artwork content
             artworkContainer.innerHTML = html;
             artworkContainerPortrait.innerHTML = html;
+
+            // Re-append Chromecast buttons if they existed
+            if (castButton) {
+                artworkContainer.appendChild(castButton);
+            }
+            if (castButtonPortrait) {
+                artworkContainerPortrait.appendChild(castButtonPortrait);
+            }
         }
         const metadataDiv = document.getElementById('metadataSection');
         const statusDot = document.getElementById('statusDot');
@@ -4911,26 +4928,6 @@
                         // Start metadata-only player to continue receiving metadata locally
                         startMetadataOnlyPlayer();
 
-                        // Add update listener to keep button in sync with Cast state
-                        castSession.addUpdateListener((isAlive) => {
-                            if (isAlive && castSession) {
-                                const media = castSession.getMediaSession();
-                                if (media) {
-                                    const playerState = media.playerState;
-                                    console.log('Cast media status changed:', playerState);
-                                    if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
-                                        updatePlayPauseButton(true);
-                                        updateStatus('Casting...', 'playing');
-                                    } else if (playerState === 'PAUSED') {
-                                        updatePlayPauseButton(false);
-                                        updateStatus('Paused (Casting)', 'stopped');
-                                    } else if (playerState === 'IDLE') {
-                                        updatePlayPauseButton(false);
-                                    }
-                                }
-                            }
-                        });
-
                         // Wait a moment for session to fully establish before loading media
                         setTimeout(() => {
                             if (currentStation && castSession) {
@@ -4949,8 +4946,13 @@
                         // Stop metadata-only player
                         stopMetadataOnlyPlayer();
 
+                        // Reset play/pause button state
+                        updatePlayPauseButton(false);
+                        const wasCastingAndPlaying = isPlaying;
+                        isPlaying = false;
+
                         // Resume local playback if desired
-                        if (currentStation && isPlaying) {
+                        if (currentStation && wasCastingAndPlaying) {
                             setTimeout(() => {
                                 playPauseBtn.click();
                             }, 300);
@@ -4964,6 +4966,22 @@
         
         function onCastStateChanged(event) {
             console.log('Cast state changed:', event.castState);
+
+            // Show/hide Chromecast buttons based on device availability
+            const castButton = document.getElementById('castButton');
+            const castButtonPortrait = document.getElementById('castButtonPortrait');
+
+            // Show buttons only when Chromecast devices are available
+            const isDeviceAvailable = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
+
+            if (castButton) {
+                castButton.style.display = isDeviceAvailable ? 'block' : 'none';
+            }
+            if (castButtonPortrait) {
+                castButtonPortrait.style.display = isDeviceAvailable ? 'block' : 'none';
+            }
+
+            console.log('Chromecast buttons visibility:', isDeviceAvailable ? 'visible' : 'hidden');
         }
         
         function loadMediaToCast() {
@@ -5013,6 +5031,29 @@
                         playPauseBtn.disabled = false;
                         updatePlayPauseButton(true);
                         isPlaying = true;
+
+                        // Add listener to media session to keep button in sync with Cast state
+                        const media = castSession.getMediaSession();
+                        if (media) {
+                            media.addUpdateListener((isAlive) => {
+                                if (isAlive && castSession) {
+                                    const updatedMedia = castSession.getMediaSession();
+                                    if (updatedMedia) {
+                                        const playerState = updatedMedia.playerState;
+                                        console.log('Cast media status changed:', playerState);
+                                        if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
+                                            updatePlayPauseButton(true);
+                                            updateStatus('Casting...', 'playing');
+                                        } else if (playerState === 'PAUSED') {
+                                            updatePlayPauseButton(false);
+                                            updateStatus('Paused (Casting)', 'stopped');
+                                        } else if (playerState === 'IDLE') {
+                                            updatePlayPauseButton(false);
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     },
                     (errorCode) => {
                         console.error('❌ Failed to load media:', errorCode);
@@ -6950,23 +6991,29 @@
                     if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
                         // Pause the cast
                         console.log('Pausing Cast playback...');
-                        media.pause(new chrome.cast.media.PauseRequest()).then(() => {
-                            console.log('✅ Cast paused');
-                            updatePlayPauseButton(false);
-                            updateStatus('Paused (Casting)', 'stopped');
-                        }).catch(error => {
-                            console.error('Failed to pause Cast:', error);
-                        });
+                        media.pause(new chrome.cast.media.PauseRequest(),
+                            () => {
+                                console.log('✅ Cast paused');
+                                updatePlayPauseButton(false);
+                                updateStatus('Paused (Casting)', 'stopped');
+                            },
+                            (error) => {
+                                console.error('Failed to pause Cast:', error);
+                            }
+                        );
                     } else if (playerState === 'PAUSED') {
                         // Resume the cast
                         console.log('Resuming Cast playback...');
-                        media.play(new chrome.cast.media.PlayRequest()).then(() => {
-                            console.log('✅ Cast resumed');
-                            updatePlayPauseButton(true);
-                            updateStatus('Casting...', 'playing');
-                        }).catch(error => {
-                            console.error('Failed to resume Cast:', error);
-                        });
+                        media.play(new chrome.cast.media.PlayRequest(),
+                            () => {
+                                console.log('✅ Cast resumed');
+                                updatePlayPauseButton(true);
+                                updateStatus('Casting...', 'playing');
+                            },
+                            (error) => {
+                                console.error('Failed to resume Cast:', error);
+                            }
+                        );
                     } else {
                         console.log('Cast player in unknown state:', playerState);
                     }
