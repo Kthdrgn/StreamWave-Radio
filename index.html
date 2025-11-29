@@ -50,8 +50,6 @@
         <div class="tv-left-column">
             <div class="artwork-container" id="artworkContainer">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
-                <!-- Chromecast button on artwork -->
-                <google-cast-launcher id="castButton" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
         </div>
 
@@ -83,13 +81,13 @@
                     <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
                     <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
                 </div>
+                <!-- Chromecast button in station display -->
+                <google-cast-launcher id="castButton" class="station-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
-                <!-- Chromecast button on artwork -->
-                <google-cast-launcher id="castButtonPortrait" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Metadata display -->
@@ -1187,21 +1185,9 @@
 
         // Helper function to update both artwork containers
         function updateArtwork(html) {
-            // Preserve Chromecast buttons before updating
-            const castButton = artworkContainer.querySelector('#castButton');
-            const castButtonPortrait = artworkContainerPortrait.querySelector('#castButtonPortrait');
-
             // Update artwork content
             artworkContainer.innerHTML = html;
             artworkContainerPortrait.innerHTML = html;
-
-            // Re-append Chromecast buttons if they existed
-            if (castButton) {
-                artworkContainer.appendChild(castButton);
-            }
-            if (castButtonPortrait) {
-                artworkContainerPortrait.appendChild(castButtonPortrait);
-            }
         }
         const metadataDiv = document.getElementById('metadataSection');
         const statusDot = document.getElementById('statusDot');
@@ -5275,16 +5261,25 @@
                 );
                 
                 console.log('✅ Cast SDK initialized successfully');
-                
+
+                // Prevent cast button from opening station info modal
+                const castButton = document.getElementById('castButton');
+                if (castButton) {
+                    castButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        console.log('Cast button clicked, prevented station modal from opening');
+                    });
+                }
+
                 // Check cast state
                 setTimeout(() => {
                     const castState = castContext.getCastState();
                     console.log('Cast state:', castState);
-                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE, 
+                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE,
                                 'NOT_CONNECTED:', cast.framework.CastState.NOT_CONNECTED,
                                 'CONNECTING:', cast.framework.CastState.CONNECTING,
                                 'CONNECTED:', cast.framework.CastState.CONNECTED);
-                    
+
                     // Check if button exists and is visible
                     const button = document.getElementById('castButton');
                     console.log('Cast button element:', button);
@@ -5392,21 +5387,17 @@
         function onCastStateChanged(event) {
             console.log('Cast state changed:', event.castState);
 
-            // Show/hide Chromecast buttons based on device availability
+            // Show/hide Chromecast button based on device availability
             const castButton = document.getElementById('castButton');
-            const castButtonPortrait = document.getElementById('castButtonPortrait');
 
-            // Show buttons only when Chromecast devices are available
+            // Show button only when Chromecast devices are available
             const isDeviceAvailable = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
 
             if (castButton) {
-                castButton.style.display = isDeviceAvailable ? 'block' : 'none';
-            }
-            if (castButtonPortrait) {
-                castButtonPortrait.style.display = isDeviceAvailable ? 'block' : 'none';
+                castButton.style.display = isDeviceAvailable ? 'flex' : 'none';
             }
 
-            console.log('Chromecast buttons visibility:', isDeviceAvailable ? 'visible' : 'hidden');
+            console.log('Chromecast button visibility:', isDeviceAvailable ? 'visible' : 'hidden');
         }
         
         function loadMediaToCast() {

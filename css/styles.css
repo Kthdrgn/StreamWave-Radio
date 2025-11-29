@@ -155,38 +155,40 @@
             height: 28px !important;
         }
 
-        /* Chromecast button on artwork - discreet in upper right corner */
-        .artwork-cast-btn {
+        /* Chromecast button in station display - upper right corner */
+        .station-cast-btn {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 8px;
+            right: 8px;
             --connected-color: var(--primary-color);
-            --disconnected-color: rgba(255, 255, 255, 0.6);
+            --disconnected-color: var(--text-primary);
             cursor: pointer;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.05);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-radius: 6px;
-            padding: 6px;
+            border-radius: 8px;
+            padding: 8px;
             transition: all 0.3s ease;
-            opacity: 0.7;
+            opacity: 0.8;
             z-index: 5;
-            width: 32px !important;
-            height: 32px !important;
+            width: 44px !important;
+            height: 44px !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
+            border: 1px solid var(--border-color);
         }
 
-        .artwork-cast-btn:hover {
+        .station-cast-btn:hover {
             opacity: 1;
-            background: rgba(0, 0, 0, 0.5);
-            transform: scale(1.1);
+            background: var(--button-hover);
+            transform: scale(1.05);
+            border-color: var(--border-hover);
         }
 
-        .artwork-cast-btn svg {
-            width: 20px !important;
-            height: 20px !important;
+        .station-cast-btn svg {
+            width: 28px !important;
+            height: 28px !important;
         }
 
         .icon-btn:hover svg {
@@ -259,6 +261,7 @@
             align-items: center;
             gap: 15px;
             cursor: pointer;
+            position: relative;
         }
         
         .station-display:hover {
