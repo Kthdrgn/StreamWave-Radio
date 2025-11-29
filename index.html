@@ -1108,7 +1108,6 @@
         const hamburgerMenuModal = document.getElementById('hamburgerMenuModal');
         const closeHamburgerMenuModal = document.getElementById('closeHamburgerMenuModal');
         const settingsMenuBtn = document.getElementById('settingsMenuBtn');
-        const browseMenuBtn = document.getElementById('browseMenuBtn');
 
         // Station Display
         const stationDisplay = document.getElementById('stationDisplay');
@@ -1190,7 +1189,6 @@
         const clearAllLikesBtn = document.getElementById('clearAllLikesBtn');
 
         // Radio Database elements
-        const radioDatabaseBtn = document.getElementById('radioDatabaseBtn');
         const radioDatabaseModal = document.getElementById('radioDatabaseModal');
         const closeRadioDatabaseModal = document.getElementById('closeRadioDatabaseModal');
         const radioDatabaseSearchInput = document.getElementById('radioDatabaseSearchInput');
@@ -4519,28 +4517,6 @@
             settingsModal.classList.add('active');
         });
 
-        // Browse menu button - opens browse stations modal
-        browseMenuBtn.addEventListener('click', () => {
-            console.log('Opening browse stations modal', {
-                stationsLength: stations.length,
-                filteredStationsLength: filteredStations.length
-            });
-            hamburgerMenuModal.classList.remove('active');
-            lastOpenedModal = 'browse';
-            browseStationsModal.classList.add('active');
-            // Ensure stations are displayed
-            if (stations.length > 0) {
-                if (filteredStations.length === 0) {
-                    console.log('Initializing filteredStations');
-                    filteredStations = [...stations];
-                }
-                console.log('Calling renderStationList');
-                renderStationList();
-            } else {
-                console.log('No stations loaded yet');
-            }
-        });
-
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
             // Show/hide curate button based on admin status
@@ -4627,20 +4603,6 @@
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
                 settingsModal.classList.remove('active');
-            }
-        });
-
-        // Radio Database button - opens radio database modal
-        radioDatabaseBtn.addEventListener('click', () => {
-            hamburgerMenuModal.classList.remove('active');
-            radioDatabaseModal.classList.add('active');
-            // Clear input values
-            radioDatabaseCountry.value = '';
-            radioDatabaseLanguage.value = '';
-            radioDatabaseTag.value = '';
-            // Load filters if not already loaded (checking if only default option exists)
-            if (radioDatabaseCountry.children.length === 1) {
-                loadRadioBrowserFilters();
             }
         });
 
