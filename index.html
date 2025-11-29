@@ -50,6 +50,8 @@
         <div class="tv-left-column">
             <div class="artwork-container" id="artworkContainer">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
+                <!-- Chromecast button on artwork -->
+                <google-cast-launcher id="castButton" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
         </div>
 
@@ -86,6 +88,8 @@
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
+                <!-- Chromecast button on artwork -->
+                <google-cast-launcher id="castButtonPortrait" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Metadata display -->
@@ -4964,6 +4968,22 @@
         
         function onCastStateChanged(event) {
             console.log('Cast state changed:', event.castState);
+
+            // Show/hide Chromecast buttons based on device availability
+            const castButton = document.getElementById('castButton');
+            const castButtonPortrait = document.getElementById('castButtonPortrait');
+
+            // Show buttons only when Chromecast devices are available
+            const isDeviceAvailable = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
+
+            if (castButton) {
+                castButton.style.display = isDeviceAvailable ? 'block' : 'none';
+            }
+            if (castButtonPortrait) {
+                castButtonPortrait.style.display = isDeviceAvailable ? 'block' : 'none';
+            }
+
+            console.log('Chromecast buttons visibility:', isDeviceAvailable ? 'visible' : 'hidden');
         }
         
         function loadMediaToCast() {
