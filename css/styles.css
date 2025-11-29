@@ -2924,3 +2924,10 @@ body[data-layout="landscape"] .layout-slider {
 .hamburger-menu-wrapper {
     display: none !important;
 }
+
+/* Bottom padding for modals to prevent content being hidden by bottom nav */
+#browseStationsModal .modal-body,
+#radioDatabaseModal .modal-body,
+#overviewModal .modal-body {
+    padding-bottom: 100px;
+}
