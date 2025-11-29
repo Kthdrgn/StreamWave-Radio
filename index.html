@@ -50,8 +50,6 @@
         <div class="tv-left-column">
             <div class="artwork-container" id="artworkContainer">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
-                <!-- Chromecast button on artwork -->
-                <google-cast-launcher id="castButton" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
         </div>
 
@@ -83,13 +81,13 @@
                     <div id="stationDisplayName" class="station-display-name">StreamWave Radio</div>
                     <div id="stationDisplayDetails" class="station-display-details" style="display: block;">Select a station to begin</div>
                 </div>
+                <!-- Chromecast button in station display -->
+                <google-cast-launcher id="castButton" class="station-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Album artwork (visible in portrait mode) -->
             <div class="artwork-container portrait-artwork" id="artworkContainerPortrait">
                 <img src="icons/icon-512x512.png" alt="StreamWave Radio" class="album-art" style="padding: 40px; opacity: 0.5;">
-                <!-- Chromecast button on artwork -->
-                <google-cast-launcher id="castButtonPortrait" class="artwork-cast-btn" title="Cast to Chromecast" style="display: none;"></google-cast-launcher>
             </div>
 
             <!-- Metadata display -->
@@ -1110,7 +1108,44 @@
         let playbackMode = 'live'; // 'live' or 'simple'
         let quality = 'standard'; // 'high' or 'standard'
         let selectedQuality = 'standard'; // Current quality selection for streams
-        
+
+        // ======================
+        // Radio Database State Persistence
+        // ======================
+
+        // Save radio database state to sessionStorage
+        function saveRadioDatabaseState() {
+            const state = {
+                searchTerm: radioDatabaseSearchInput.value,
+                country: radioDatabaseCountry.value,
+                language: radioDatabaseLanguage.value,
+                tag: radioDatabaseTag.value,
+                sortBy: radioDatabaseSort.value,
+                currentPage: radioDatabaseCurrentPage,
+                viewMode: radioDatabaseViewMode
+            };
+            sessionStorage.setItem('radioDatabaseState', JSON.stringify(state));
+        }
+
+        // Load radio database state from sessionStorage
+        function loadRadioDatabaseState() {
+            const stateJson = sessionStorage.getItem('radioDatabaseState');
+            if (stateJson) {
+                try {
+                    return JSON.parse(stateJson);
+                } catch (error) {
+                    console.error('Error parsing radio database state:', error);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Clear radio database state from sessionStorage
+        function clearRadioDatabaseState() {
+            sessionStorage.removeItem('radioDatabaseState');
+        }
+
         // ======================
         // DOM Elements
         // ======================
@@ -1150,21 +1185,9 @@
 
         // Helper function to update both artwork containers
         function updateArtwork(html) {
-            // Preserve Chromecast buttons before updating
-            const castButton = artworkContainer.querySelector('#castButton');
-            const castButtonPortrait = artworkContainerPortrait.querySelector('#castButtonPortrait');
-
             // Update artwork content
             artworkContainer.innerHTML = html;
             artworkContainerPortrait.innerHTML = html;
-
-            // Re-append Chromecast buttons if they existed
-            if (castButton) {
-                artworkContainer.appendChild(castButton);
-            }
-            if (castButtonPortrait) {
-                artworkContainerPortrait.appendChild(castButtonPortrait);
-            }
         }
         const metadataDiv = document.getElementById('metadataSection');
         const statusDot = document.getElementById('statusDot');
@@ -1700,6 +1723,10 @@
 
         const RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
 
+        // Cache original filter data for dynamic filtering
+        let originalLanguages = [];
+        let originalTags = [];
+
         // Load countries, languages, and tags for the dropdowns
         async function loadRadioBrowserFilters() {
             try {
@@ -1720,29 +1747,180 @@
                 const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`);
                 const languages = await languagesRes.json();
 
-                languages.forEach(lang => {
-                    if (lang.name && lang.stationcount > 0) {
-                        const option = document.createElement('option');
-                        option.value = lang.name;
-                        option.textContent = `${lang.name} (${lang.stationcount})`;
-                        radioDatabaseLanguage.appendChild(option);
-                    }
+                // Cache original languages
+                originalLanguages = languages.filter(lang => lang.name && lang.stationcount > 0);
+
+                originalLanguages.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.name;
+                    option.textContent = `${lang.name} (${lang.stationcount})`;
+                    radioDatabaseLanguage.appendChild(option);
                 });
 
                 // Load top tags
                 const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`);
                 const tags = await tagsRes.json();
 
-                tags.forEach(tag => {
-                    if (tag.name && tag.stationcount > 0) {
-                        const option = document.createElement('option');
-                        option.value = tag.name;
-                        option.textContent = `${tag.name} (${tag.stationcount})`;
-                        radioDatabaseTag.appendChild(option);
-                    }
+                // Cache original tags
+                originalTags = tags.filter(tag => tag.name && tag.stationcount > 0);
+
+                originalTags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.name;
+                    option.textContent = `${tag.name} (${tag.stationcount})`;
+                    radioDatabaseTag.appendChild(option);
                 });
             } catch (error) {
                 console.error('Error loading Radio Browser filters:', error);
+            }
+        }
+
+        // Update language options based on selected country
+        async function updateLanguageOptions(country) {
+            if (!country) {
+                // Reset to original languages
+                restoreLanguageOptions();
+                return;
+            }
+
+            try {
+                // Fetch stations from selected country
+                const params = new URLSearchParams();
+                params.append('country', country);
+                params.append('limit', '10000');
+                params.append('hidebroken', 'true');
+
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const stations = await response.json();
+
+                // Extract unique languages and count stations
+                const languageMap = new Map();
+                stations.forEach(station => {
+                    if (station.language) {
+                        const lang = station.language;
+                        languageMap.set(lang, (languageMap.get(lang) || 0) + 1);
+                    }
+                });
+
+                // Sort by station count
+                const languages = Array.from(languageMap.entries())
+                    .sort((a, b) => b[1] - a[1]);
+
+                // Update dropdown
+                const currentValue = radioDatabaseLanguage.value;
+                radioDatabaseLanguage.innerHTML = '<option value="">All Languages</option>';
+
+                languages.forEach(([lang, count]) => {
+                    const option = document.createElement('option');
+                    option.value = lang;
+                    option.textContent = `${lang} (${count})`;
+                    radioDatabaseLanguage.appendChild(option);
+                });
+
+                // Restore previous selection if still available
+                if (currentValue && languages.some(([lang]) => lang === currentValue)) {
+                    radioDatabaseLanguage.value = currentValue;
+                } else if (currentValue) {
+                    // Language no longer available, clear it
+                    radioDatabaseLanguage.value = '';
+                }
+            } catch (error) {
+                console.error('Error updating language options:', error);
+            }
+        }
+
+        // Update tag options based on selected country and language
+        async function updateTagOptions(country, language) {
+            if (!country && !language) {
+                // Reset to original tags
+                restoreTagOptions();
+                return;
+            }
+
+            try {
+                // Fetch stations with selected filters
+                const params = new URLSearchParams();
+                if (country) params.append('country', country);
+                if (language) params.append('language', language);
+                params.append('limit', '10000');
+                params.append('hidebroken', 'true');
+
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const stations = await response.json();
+
+                // Extract unique tags and count stations
+                const tagMap = new Map();
+                stations.forEach(station => {
+                    if (station.tags) {
+                        // Tags are comma-separated
+                        const tags = station.tags.split(',').map(t => t.trim()).filter(t => t);
+                        tags.forEach(tag => {
+                            tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+                        });
+                    }
+                });
+
+                // Sort by station count
+                const tags = Array.from(tagMap.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 100); // Limit to top 100 tags
+
+                // Update dropdown
+                const currentValue = radioDatabaseTag.value;
+                radioDatabaseTag.innerHTML = '<option value="">All Tags</option>';
+
+                tags.forEach(([tag, count]) => {
+                    const option = document.createElement('option');
+                    option.value = tag;
+                    option.textContent = `${tag} (${count})`;
+                    radioDatabaseTag.appendChild(option);
+                });
+
+                // Restore previous selection if still available
+                if (currentValue && tags.some(([tag]) => tag === currentValue)) {
+                    radioDatabaseTag.value = currentValue;
+                } else if (currentValue) {
+                    // Tag no longer available, clear it
+                    radioDatabaseTag.value = '';
+                }
+            } catch (error) {
+                console.error('Error updating tag options:', error);
+            }
+        }
+
+        // Restore original language options
+        function restoreLanguageOptions() {
+            const currentValue = radioDatabaseLanguage.value;
+            radioDatabaseLanguage.innerHTML = '<option value="">All Languages</option>';
+
+            originalLanguages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang.name;
+                option.textContent = `${lang.name} (${lang.stationcount})`;
+                radioDatabaseLanguage.appendChild(option);
+            });
+
+            // Restore previous selection if it exists in original list
+            if (currentValue && originalLanguages.some(lang => lang.name === currentValue)) {
+                radioDatabaseLanguage.value = currentValue;
+            }
+        }
+
+        // Restore original tag options
+        function restoreTagOptions() {
+            const currentValue = radioDatabaseTag.value;
+            radioDatabaseTag.innerHTML = '<option value="">All Tags</option>';
+
+            originalTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.name;
+                option.textContent = `${tag.name} (${tag.stationcount})`;
+                radioDatabaseTag.appendChild(option);
+            });
+
+            // Restore previous selection if it exists in original list
+            if (currentValue && originalTags.some(tag => tag.name === currentValue)) {
+                radioDatabaseTag.value = currentValue;
             }
         }
 
@@ -1798,6 +1976,8 @@
                         </div>
                     `;
                     radioDatabasePagination.style.display = 'none';
+                    // Save state even with no results
+                    saveRadioDatabaseState();
                     return;
                 }
 
@@ -1809,6 +1989,9 @@
 
                 // Update pagination controls
                 updateRadioDatabasePagination(results.length);
+
+                // Save state after successful search
+                saveRadioDatabaseState();
             } catch (error) {
                 console.error('Error searching Radio Browser:', error);
                 radioDatabaseLoading.style.display = 'none';
@@ -4774,22 +4957,63 @@
         });
 
         // Bottom nav - Radio Database button
-        document.getElementById('bottomNavDatabase').addEventListener('click', () => {
+        document.getElementById('bottomNavDatabase').addEventListener('click', async () => {
             closeAllModals();
             radioDatabaseModal.classList.add('active');
-            // Clear input values
-            radioDatabaseSearchInput.value = '';
-            radioDatabaseCountry.value = '';
-            radioDatabaseLanguage.value = '';
-            radioDatabaseTag.value = '';
-            // Hide clear button initially
-            document.getElementById('radioDatabaseClearBtn').style.display = 'none';
+
             // Load filters if not already loaded (checking if only default option exists)
             if (radioDatabaseCountry.children.length === 1) {
-                loadRadioBrowserFilters();
+                await loadRadioBrowserFilters();
             }
-            // Auto-populate with default search (Most Popular)
-            searchRadioBrowser();
+
+            // Try to restore saved state from sessionStorage
+            const savedState = loadRadioDatabaseState();
+
+            if (savedState) {
+                // Restore search input
+                radioDatabaseSearchInput.value = savedState.searchTerm || '';
+
+                // Restore filters
+                radioDatabaseCountry.value = savedState.country || '';
+                radioDatabaseLanguage.value = savedState.language || '';
+                radioDatabaseTag.value = savedState.tag || '';
+                radioDatabaseSort.value = savedState.sortBy || 'votes';
+
+                // Restore view mode
+                radioDatabaseViewMode = savedState.viewMode || 'list';
+                updateRadioDatabaseViewUI();
+
+                // Update dependent filters based on country selection
+                if (savedState.country) {
+                    await updateLanguageOptions(savedState.country);
+                }
+                if (savedState.country || savedState.language) {
+                    await updateTagOptions(savedState.country, savedState.language);
+                }
+
+                // Show/hide clear button based on filters
+                const hasFilters = savedState.searchTerm || savedState.country ||
+                                  savedState.language || savedState.tag;
+                document.getElementById('radioDatabaseClearBtn').style.display = hasFilters ? 'flex' : 'none';
+
+                // Trigger search with saved page
+                searchRadioBrowser(savedState.currentPage || 1);
+            } else {
+                // No saved state - clear input values and start fresh
+                radioDatabaseSearchInput.value = '';
+                radioDatabaseCountry.value = '';
+                radioDatabaseLanguage.value = '';
+                radioDatabaseTag.value = '';
+                radioDatabaseSort.value = 'votes';
+                radioDatabaseViewMode = 'list';
+                updateRadioDatabaseViewUI();
+
+                // Hide clear button initially
+                document.getElementById('radioDatabaseClearBtn').style.display = 'none';
+
+                // Auto-populate with default search (Most Popular)
+                searchRadioBrowser();
+            }
         });
 
         // Bottom nav - Menu button
@@ -4852,18 +5076,28 @@
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
 
+            // Restore original filter options
+            restoreLanguageOptions();
+            restoreTagOptions();
+
             // Hide clear button
             radioDatabaseClearBtn.style.display = 'none';
 
-            // Trigger search with defaults
+            // Clear saved state from sessionStorage
+            clearRadioDatabaseState();
+
+            // Trigger search with defaults (this will save the cleared state)
             searchRadioBrowser();
         });
 
         // Radio Database filter changes - trigger search
-        radioDatabaseCountry.addEventListener('change', () => {
+        radioDatabaseCountry.addEventListener('change', async () => {
             const clearBtn = document.getElementById('radioDatabaseClearBtn');
-            const hasFilters = radioDatabaseCountry.value !== '' ||
-                              radioDatabaseLanguage.value !== '' ||
+            const country = radioDatabaseCountry.value;
+            const language = radioDatabaseLanguage.value;
+
+            const hasFilters = country !== '' ||
+                              language !== '' ||
                               radioDatabaseTag.value !== '' ||
                               radioDatabaseSearchInput.value.trim() !== '';
 
@@ -4872,14 +5106,21 @@
             } else {
                 clearBtn.style.display = 'none';
             }
+
+            // Update dependent filters
+            await updateLanguageOptions(country);
+            await updateTagOptions(country, radioDatabaseLanguage.value);
 
             searchRadioBrowser();
         });
 
-        radioDatabaseLanguage.addEventListener('change', () => {
+        radioDatabaseLanguage.addEventListener('change', async () => {
             const clearBtn = document.getElementById('radioDatabaseClearBtn');
-            const hasFilters = radioDatabaseCountry.value !== '' ||
-                              radioDatabaseLanguage.value !== '' ||
+            const country = radioDatabaseCountry.value;
+            const language = radioDatabaseLanguage.value;
+
+            const hasFilters = country !== '' ||
+                              language !== '' ||
                               radioDatabaseTag.value !== '' ||
                               radioDatabaseSearchInput.value.trim() !== '';
 
@@ -4888,6 +5129,9 @@
             } else {
                 clearBtn.style.display = 'none';
             }
+
+            // Update tag options based on country and language
+            await updateTagOptions(country, language);
 
             searchRadioBrowser();
         });
@@ -5017,16 +5261,25 @@
                 );
                 
                 console.log('✅ Cast SDK initialized successfully');
-                
+
+                // Prevent cast button from opening station info modal
+                const castButton = document.getElementById('castButton');
+                if (castButton) {
+                    castButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        console.log('Cast button clicked, prevented station modal from opening');
+                    });
+                }
+
                 // Check cast state
                 setTimeout(() => {
                     const castState = castContext.getCastState();
                     console.log('Cast state:', castState);
-                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE, 
+                    console.log('Cast state values - NO_DEVICES:', cast.framework.CastState.NO_DEVICES_AVAILABLE,
                                 'NOT_CONNECTED:', cast.framework.CastState.NOT_CONNECTED,
                                 'CONNECTING:', cast.framework.CastState.CONNECTING,
                                 'CONNECTED:', cast.framework.CastState.CONNECTED);
-                    
+
                     // Check if button exists and is visible
                     const button = document.getElementById('castButton');
                     console.log('Cast button element:', button);
@@ -5134,21 +5387,17 @@
         function onCastStateChanged(event) {
             console.log('Cast state changed:', event.castState);
 
-            // Show/hide Chromecast buttons based on device availability
+            // Show/hide Chromecast button based on device availability
             const castButton = document.getElementById('castButton');
-            const castButtonPortrait = document.getElementById('castButtonPortrait');
 
-            // Show buttons only when Chromecast devices are available
+            // Show button only when Chromecast devices are available
             const isDeviceAvailable = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
 
             if (castButton) {
-                castButton.style.display = isDeviceAvailable ? 'block' : 'none';
-            }
-            if (castButtonPortrait) {
-                castButtonPortrait.style.display = isDeviceAvailable ? 'block' : 'none';
+                castButton.style.display = isDeviceAvailable ? 'flex' : 'none';
             }
 
-            console.log('Chromecast buttons visibility:', isDeviceAvailable ? 'visible' : 'hidden');
+            console.log('Chromecast button visibility:', isDeviceAvailable ? 'visible' : 'hidden');
         }
         
         function loadMediaToCast() {
@@ -7852,6 +8101,8 @@
                     radioDatabaseResults.classList.remove('grid-view');
                 }
             }
+            // Save state after view mode change
+            saveRadioDatabaseState();
         }
 
         // Update radio database view toggle UI
