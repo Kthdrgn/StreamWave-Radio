@@ -4608,14 +4608,45 @@
 
         // Bottom Navigation Event Listeners
 
+        // Function to close all modals
+        function closeAllModals() {
+            const allModals = [
+                hamburgerMenuModal,
+                playlistsModal,
+                browseStationsModal,
+                settingsModal,
+                overviewModal,
+                stationInfoModal,
+                playlistModal,
+                playlistFormModal,
+                likedTracksModal,
+                radioDatabaseModal,
+                playlistSelectorModal,
+                stationFormModal,
+                recentTracksModal,
+                lyricsModal,
+                nowPlayingModal,
+                qualityModal,
+                playbackModeModal
+            ];
+
+            allModals.forEach(modal => {
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        }
+
         // Bottom nav - Overview button
         document.getElementById('bottomNavOverview').addEventListener('click', () => {
+            closeAllModals();
             overviewModal.classList.add('active');
             loadOverviewModal();
         });
 
         // Bottom nav - Curated Stations button
         document.getElementById('bottomNavCurated').addEventListener('click', () => {
+            closeAllModals();
             console.log('Opening browse stations modal from bottom nav', {
                 stationsLength: stations.length,
                 filteredStationsLength: filteredStations.length
@@ -4637,6 +4668,7 @@
 
         // Bottom nav - Radio Database button
         document.getElementById('bottomNavDatabase').addEventListener('click', () => {
+            closeAllModals();
             radioDatabaseModal.classList.add('active');
             // Clear input values
             radioDatabaseCountry.value = '';
@@ -4650,6 +4682,7 @@
 
         // Bottom nav - Menu button
         document.getElementById('bottomNavMenu').addEventListener('click', () => {
+            closeAllModals();
             hamburgerMenuModal.classList.add('active');
         });
 
