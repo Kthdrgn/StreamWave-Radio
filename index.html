@@ -906,20 +906,31 @@
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
                 <h2 class="modal-title">Radio Database Search</h2>
-                <button class="modal-close" id="closeRadioDatabaseModal">&times;</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="view-toggle-btn" id="radioDatabaseViewToggle">
+                        <span id="radioDatabaseViewIcon">⊞</span>
+                        <span id="radioDatabaseViewText">Grid</span>
+                    </button>
+                    <button class="modal-close" id="closeRadioDatabaseModal">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <!-- Search Interface -->
                 <div style="margin-bottom: 20px;">
-                    <div class="form-group">
-                        <input
-                            type="text"
-                            id="radioDatabaseSearchInput"
-                            class="form-input"
-                            placeholder="Search by station name, country, language, or tag..."
-                        >
+                    <div class="search-controls">
+                        <div class="search-input-container">
+                            <input
+                                type="text"
+                                id="radioDatabaseSearchInput"
+                                class="search-input"
+                                placeholder="Search by station name, country, language, or tag..."
+                            >
+                            <button class="clear-search-btn" id="radioDatabaseClearBtn" style="display: none;" title="Clear search and filters">
+                                ✕
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <div class="filter-controls" style="margin-top: 10px;">
                         <select id="radioDatabaseCountry" class="form-input" style="flex: 1; min-width: 150px;">
                             <option value="">All Countries</option>
                         </select>
@@ -939,9 +950,6 @@
                             <option value="bitrate">Highest Bitrate</option>
                             <option value="changetimestamp">Recently Updated</option>
                         </select>
-                        <button id="radioDatabaseSearchBtn" class="form-btn form-btn-primary" style="padding: 0 20px;">
-                            Search
-                        </button>
                     </div>
                 </div>
 
@@ -955,9 +963,9 @@
                 </div>
 
                 <!-- Results Container -->
-                <div id="radioDatabaseResults" style="max-height: 500px; overflow-y: auto;">
+                <div id="radioDatabaseResults" class="station-list" style="max-height: 500px; overflow-y: auto;">
                     <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        Enter search criteria and click Search to find radio stations from around the world
+                        Loading radio stations...
                     </div>
                 </div>
 
@@ -1096,6 +1104,7 @@
         let stationViewMode = 'list';
         let playlistViewMode = 'list';
         let playlistStationViewMode = 'list';
+        let radioDatabaseViewMode = 'list';
         
         // Settings
         let playbackMode = 'live'; // 'live' or 'simple'
@@ -1823,6 +1832,13 @@
             const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
             console.log('isAdmin:', isAdmin);
 
+            // Apply grid view class if in grid mode
+            if (radioDatabaseViewMode === 'grid') {
+                radioDatabaseResults.classList.add('grid-view');
+            } else {
+                radioDatabaseResults.classList.remove('grid-view');
+            }
+
             radioDatabaseResults.innerHTML = results.map(station => {
                 const favicon = station.favicon || '';
                 const country = station.country || 'Unknown';
@@ -1832,66 +1848,123 @@
                 const bitrate = station.bitrate || 0;
 
                 return `
-                    <div class="station-card" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}' style="margin-bottom: 12px; padding: 16px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: border-color 0.2s;">
-                        <div style="display: flex; align-items: start; gap: 12px;">
-                            <div style="flex-shrink: 0; width: 50px; height: 50px; border-radius: 8px; overflow: hidden; background: var(--input-bg); display: flex; align-items: center; justify-content: center;">
-                                ${favicon ? `<img src="${favicon}" alt="${station.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<img src="icons/icon-512x512.png" alt="Radio" style="width: 100%; height: 100%; object-fit: cover;">'}
+                <div class="station-item" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                    ${favicon ?
+                        `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
+                        `<div class="station-icon">📻</div>`
+                    }
+                    <div class="station-info">
+                        <div class="station-name">${station.name}</div>
+                        <div class="station-details">${country}${language !== 'Unknown' ? ` • ${language}` : ''}${bitrate > 0 ? ` • ${bitrate}kbps` : ''}</div>
+                        ${tags ? `<div class="station-genres">${tags}</div>` : ''}
+                    </div>
+                    <button class="station-menu-btn" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>⋮</button>
+                    <div class="station-dropdown">
+                        <div class="dropdown-submenu">
+                            <div class="dropdown-item">
+                                <span>➕</span> Add to Playlist
                             </div>
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">${station.name}</div>
-                                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">
-                                    ${country} ${language !== 'Unknown' ? `• ${language}` : ''} ${bitrate > 0 ? `• ${bitrate}kbps` : ''}
-                                </div>
-                                ${tags ? `<div style="font-size: 12px; color: var(--text-secondary);">${tags}</div>` : ''}
-                            </div>
-                            <div style="display: flex; gap: 8px; align-items: center; flex-direction: column;">
-                                <button
-                                    class="radio-db-add-btn"
-                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
-                                    title="Add to My Stations"
-                                    style="padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); cursor: pointer; font-size: 14px; color: var(--text-primary);"
-                                >
-                                    ➕
-                                </button>
-                                ${isAdmin ? `
-                                <button
-                                    class="radio-db-curate-btn"
-                                    data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'
-                                    title="Add to Curated Stations"
-                                    style="padding: 6px 10px; border: 2px solid var(--border-color); border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer; font-size: 11px; color: var(--text-primary); white-space: nowrap;"
-                                >
-                                    ⭐ Curate
-                                </button>
-                                ` : ''}
+                            <div class="dropdown-submenu-content">
+                                ${playlists.length === 0 ?
+                                    `<div class="dropdown-item" data-action="create-playlist">
+                                        <span>📝</span> Create Playlist
+                                    </div>` :
+                                    playlists.map(playlist => `
+                                        <div class="dropdown-item" data-action="add-to-playlist" data-playlist-id="${playlist.id}" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                                            ${escapeHtml(playlist.name)}
+                                        </div>
+                                    `).join('')
+                                }
                             </div>
                         </div>
+                        ${isAdmin ? `
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" data-action="curate-station" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                            <span>⭐</span> Add to Curated Stations
+                        </div>
+                        ` : ''}
                     </div>
+                </div>
                 `;
             }).join('');
 
-            // Add click event listeners to station cards
-            document.querySelectorAll('.station-card').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    const station = JSON.parse(card.getAttribute('data-station'));
-                    playRadioBrowserStation(station);
+            // Add click event listeners to station items
+            document.querySelectorAll('#radioDatabaseResults .station-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('.station-menu-btn') && !e.target.closest('.station-dropdown')) {
+                        const station = JSON.parse(item.getAttribute('data-station'));
+                        playRadioBrowserStation(station);
+                    }
                 });
             });
 
-            // Add event listeners to add buttons
-            document.querySelectorAll('.radio-db-add-btn').forEach(btn => {
+            // Add event listeners for menu buttons
+            document.querySelectorAll('#radioDatabaseResults .station-menu-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const station = JSON.parse(btn.getAttribute('data-station'));
-                    showPlaylistSelectorForRadioBrowser(station);
+                    const dropdown = btn.nextElementSibling;
+
+                    // Close all other dropdowns
+                    document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('active');
+                    });
+
+                    dropdown.classList.toggle('active');
                 });
             });
 
-            // Add event listeners to curate buttons (admin only)
-            document.querySelectorAll('.radio-db-curate-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+            // Add hover/click listeners for submenus (mobile support)
+            document.querySelectorAll('#radioDatabaseResults .dropdown-submenu').forEach(submenu => {
+                // Support click for mobile
+                submenu.addEventListener('click', (e) => {
+                    if (e.target.closest('.dropdown-item') && !e.target.dataset.action) {
+                        e.stopPropagation();
+                        submenu.classList.toggle('active');
+                    }
+                });
+
+                // Close submenu when clicking on backdrop (mobile)
+                submenu.addEventListener('click', (e) => {
+                    if (e.target === submenu && submenu.classList.contains('active')) {
+                        submenu.classList.remove('active');
+                    }
+                });
+            });
+
+            // Add event listeners for dropdown actions
+            document.querySelectorAll('#radioDatabaseResults .station-dropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    const station = JSON.parse(btn.getAttribute('data-station'));
-                    showStationFormForCuration(station);
+                    const action = item.dataset.action;
+
+                    if (action === 'create-playlist') {
+                        showPlaylistForm();
+                        document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
+                    } else if (action === 'add-to-playlist') {
+                        const playlistId = item.dataset.playlistId;
+                        const station = JSON.parse(item.getAttribute('data-station'));
+
+                        try {
+                            // Add station to external_stations table first
+                            const externalStationId = await addExternalStation(station);
+
+                            // Add to the selected playlist
+                            await addStationToPlaylist(playlistId, null, externalStationId);
+
+                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                            alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+
+                            // Close dropdown
+                            document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
+                        } catch (error) {
+                            console.error('Error adding station to playlist:', error);
+                            alert('Failed to add station to playlist. Please try again.');
+                        }
+                    } else if (action === 'curate-station') {
+                        const station = JSON.parse(item.getAttribute('data-station'));
+                        showStationFormForCuration(station);
+                        document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
+                    }
                 });
             });
         }
@@ -4688,13 +4761,18 @@
             closeAllModals();
             radioDatabaseModal.classList.add('active');
             // Clear input values
+            radioDatabaseSearchInput.value = '';
             radioDatabaseCountry.value = '';
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
+            // Hide clear button initially
+            document.getElementById('radioDatabaseClearBtn').style.display = 'none';
             // Load filters if not already loaded (checking if only default option exists)
             if (radioDatabaseCountry.children.length === 1) {
                 loadRadioBrowserFilters();
             }
+            // Auto-populate with default search (Most Popular)
+            searchRadioBrowser();
         });
 
         // Bottom nav - Menu button
@@ -4727,23 +4805,95 @@
             }
         });
 
-        // Radio Database search button
-        radioDatabaseSearchBtn.addEventListener('click', () => {
+        // Radio Database real-time search
+        radioDatabaseSearchInput.addEventListener('input', (e) => {
+            const clearBtn = document.getElementById('radioDatabaseClearBtn');
+
+            // Show/hide clear button based on input or filters
+            const hasFilters = radioDatabaseCountry.value !== '' ||
+                              radioDatabaseLanguage.value !== '' ||
+                              radioDatabaseTag.value !== '';
+
+            if (e.target.value.trim() !== '' || hasFilters) {
+                clearBtn.style.display = 'flex';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+
+            // Trigger search immediately
             searchRadioBrowser();
         });
 
-        // Radio Database search on Enter key
-        radioDatabaseSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchRadioBrowser();
+        // Radio Database clear button
+        const radioDatabaseClearBtn = document.getElementById('radioDatabaseClearBtn');
+        radioDatabaseClearBtn.addEventListener('click', () => {
+            // Clear search input
+            radioDatabaseSearchInput.value = '';
+
+            // Reset filters
+            radioDatabaseCountry.value = '';
+            radioDatabaseLanguage.value = '';
+            radioDatabaseTag.value = '';
+
+            // Hide clear button
+            radioDatabaseClearBtn.style.display = 'none';
+
+            // Trigger search with defaults
+            searchRadioBrowser();
+        });
+
+        // Radio Database filter changes - trigger search
+        radioDatabaseCountry.addEventListener('change', () => {
+            const clearBtn = document.getElementById('radioDatabaseClearBtn');
+            const hasFilters = radioDatabaseCountry.value !== '' ||
+                              radioDatabaseLanguage.value !== '' ||
+                              radioDatabaseTag.value !== '' ||
+                              radioDatabaseSearchInput.value.trim() !== '';
+
+            if (hasFilters) {
+                clearBtn.style.display = 'flex';
+            } else {
+                clearBtn.style.display = 'none';
             }
+
+            searchRadioBrowser();
+        });
+
+        radioDatabaseLanguage.addEventListener('change', () => {
+            const clearBtn = document.getElementById('radioDatabaseClearBtn');
+            const hasFilters = radioDatabaseCountry.value !== '' ||
+                              radioDatabaseLanguage.value !== '' ||
+                              radioDatabaseTag.value !== '' ||
+                              radioDatabaseSearchInput.value.trim() !== '';
+
+            if (hasFilters) {
+                clearBtn.style.display = 'flex';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+
+            searchRadioBrowser();
+        });
+
+        radioDatabaseTag.addEventListener('change', () => {
+            const clearBtn = document.getElementById('radioDatabaseClearBtn');
+            const hasFilters = radioDatabaseCountry.value !== '' ||
+                              radioDatabaseLanguage.value !== '' ||
+                              radioDatabaseTag.value !== '' ||
+                              radioDatabaseSearchInput.value.trim() !== '';
+
+            if (hasFilters) {
+                clearBtn.style.display = 'flex';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+
+            searchRadioBrowser();
         });
 
         // Radio Database sort change - restart search from page 1
         radioDatabaseSort.addEventListener('change', () => {
-            if (radioDatabaseResults.children.length > 0 && !radioDatabaseResults.textContent.includes('Enter search criteria')) {
-                searchRadioBrowser(1);
-            }
+            searchRadioBrowser(1);
         });
 
         // Radio Database pagination - Previous button
@@ -7668,7 +7818,41 @@
             }
         }
         
+        // Toggle radio database view mode
+        function toggleRadioDatabaseView() {
+            radioDatabaseViewMode = radioDatabaseViewMode === 'list' ? 'grid' : 'list';
+            updateRadioDatabaseViewUI();
+            // Re-render current results if any exist
+            const stationItems = radioDatabaseResults.querySelectorAll('.station-item');
+            if (stationItems.length > 0) {
+                // Apply/remove grid view class
+                if (radioDatabaseViewMode === 'grid') {
+                    radioDatabaseResults.classList.add('grid-view');
+                } else {
+                    radioDatabaseResults.classList.remove('grid-view');
+                }
+            }
+        }
+
+        // Update radio database view toggle UI
+        function updateRadioDatabaseViewUI() {
+            const radioDatabaseViewIcon = document.getElementById('radioDatabaseViewIcon');
+            const radioDatabaseViewText = document.getElementById('radioDatabaseViewText');
+            if (radioDatabaseViewMode === 'list') {
+                radioDatabaseViewIcon.textContent = '⊞';
+                radioDatabaseViewText.textContent = 'Grid';
+            } else {
+                radioDatabaseViewIcon.textContent = '☰';
+                radioDatabaseViewText.textContent = 'List';
+            }
+        }
+
         // Add event listeners for view toggle buttons
+        const radioDatabaseViewToggle = document.getElementById('radioDatabaseViewToggle');
+        if (radioDatabaseViewToggle) {
+            radioDatabaseViewToggle.addEventListener('click', toggleRadioDatabaseView);
+        }
+
         if (stationViewToggle) {
             stationViewToggle.addEventListener('click', toggleStationView);
         }
