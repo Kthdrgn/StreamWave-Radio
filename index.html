@@ -1006,6 +1006,39 @@
         </div>
     </div>
 
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <button id="bottomNavOverview" class="bottom-nav-btn" title="Overview">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="13" y="3" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="3" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+                <rect x="13" y="13" width="8" height="8" rx="1.5" stroke-width="2" fill="none"/>
+            </svg>
+            <span>Overview</span>
+        </button>
+        <button id="bottomNavCurated" class="bottom-nav-btn" title="Curated Stations">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Curated</span>
+        </button>
+        <button id="bottomNavDatabase" class="bottom-nav-btn" title="Radio Database">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
+                <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
+                <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Database</span>
+        </button>
+        <button id="bottomNavMenu" class="bottom-nav-btn" title="Menu">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6H20M4 12H20M4 18H20" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Menu</span>
+        </button>
+    </nav>
+
     <script>
         // ======================
         // GLOBAL VARIABLES
@@ -4627,6 +4660,53 @@
             if (radioDatabaseCountry.children.length === 1) {
                 loadRadioBrowserFilters();
             }
+        });
+
+        // Bottom Navigation Event Listeners
+
+        // Bottom nav - Overview button
+        document.getElementById('bottomNavOverview').addEventListener('click', () => {
+            overviewModal.classList.add('active');
+            loadOverviewModal();
+        });
+
+        // Bottom nav - Curated Stations button
+        document.getElementById('bottomNavCurated').addEventListener('click', () => {
+            console.log('Opening browse stations modal from bottom nav', {
+                stationsLength: stations.length,
+                filteredStationsLength: filteredStations.length
+            });
+            lastOpenedModal = 'browse';
+            browseStationsModal.classList.add('active');
+            // Ensure stations are displayed
+            if (stations.length > 0) {
+                if (filteredStations.length === 0) {
+                    console.log('Initializing filteredStations');
+                    filteredStations = [...stations];
+                }
+                console.log('Calling renderStationList');
+                renderStationList();
+            } else {
+                console.log('No stations loaded yet');
+            }
+        });
+
+        // Bottom nav - Radio Database button
+        document.getElementById('bottomNavDatabase').addEventListener('click', () => {
+            radioDatabaseModal.classList.add('active');
+            // Clear input values
+            radioDatabaseCountry.value = '';
+            radioDatabaseLanguage.value = '';
+            radioDatabaseTag.value = '';
+            // Load filters if not already loaded (checking if only default option exists)
+            if (radioDatabaseCountry.children.length === 1) {
+                loadRadioBrowserFilters();
+            }
+        });
+
+        // Bottom nav - Menu button
+        document.getElementById('bottomNavMenu').addEventListener('click', () => {
+            hamburgerMenuModal.classList.add('active');
         });
 
         // Close Radio Database modal
