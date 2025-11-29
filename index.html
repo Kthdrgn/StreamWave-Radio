@@ -4626,6 +4626,11 @@
 
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
+            // Only open if a station is loaded
+            if (!currentStation) {
+                return;
+            }
+
             // Show/hide curate button based on admin status
             const curateStationBtn = document.getElementById('curateStationBtn');
             const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
@@ -6604,11 +6609,6 @@
 
         // Open now playing modal
         async function openNowPlayingModal() {
-            // Only open if there's metadata to show
-            if (!currentTrack.title) {
-                return;
-            }
-
             const modal = document.getElementById('nowPlayingModal');
 
             // Update modal content
