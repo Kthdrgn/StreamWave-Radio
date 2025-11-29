@@ -6988,23 +6988,29 @@
                     if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
                         // Pause the cast
                         console.log('Pausing Cast playback...');
-                        media.pause(new chrome.cast.media.PauseRequest()).then(() => {
-                            console.log('✅ Cast paused');
-                            updatePlayPauseButton(false);
-                            updateStatus('Paused (Casting)', 'stopped');
-                        }).catch(error => {
-                            console.error('Failed to pause Cast:', error);
-                        });
+                        media.pause(new chrome.cast.media.PauseRequest(),
+                            () => {
+                                console.log('✅ Cast paused');
+                                updatePlayPauseButton(false);
+                                updateStatus('Paused (Casting)', 'stopped');
+                            },
+                            (error) => {
+                                console.error('Failed to pause Cast:', error);
+                            }
+                        );
                     } else if (playerState === 'PAUSED') {
                         // Resume the cast
                         console.log('Resuming Cast playback...');
-                        media.play(new chrome.cast.media.PlayRequest()).then(() => {
-                            console.log('✅ Cast resumed');
-                            updatePlayPauseButton(true);
-                            updateStatus('Casting...', 'playing');
-                        }).catch(error => {
-                            console.error('Failed to resume Cast:', error);
-                        });
+                        media.play(new chrome.cast.media.PlayRequest(),
+                            () => {
+                                console.log('✅ Cast resumed');
+                                updatePlayPauseButton(true);
+                                updateStatus('Casting...', 'playing');
+                            },
+                            (error) => {
+                                console.error('Failed to resume Cast:', error);
+                            }
+                        );
                     } else {
                         console.log('Cast player in unknown state:', playerState);
                     }
