@@ -199,7 +199,7 @@
             cursor: pointer;
             background: transparent;
             border: none;
-            padding: 8px;
+            padding: 4px;
             transition: all 0.3s ease;
             z-index: 5;
             width: auto !important;
@@ -214,8 +214,8 @@
         }
 
         .station-cast-btn svg {
-            width: 28px !important;
-            height: 28px !important;
+            width: 20px !important;
+            height: 20px !important;
         }
 
         .icon-btn:hover svg {
