@@ -1141,8 +1141,21 @@
 
         // Helper function to update both artwork containers
         function updateArtwork(html) {
+            // Preserve Chromecast buttons before updating
+            const castButton = artworkContainer.querySelector('#castButton');
+            const castButtonPortrait = artworkContainerPortrait.querySelector('#castButtonPortrait');
+
+            // Update artwork content
             artworkContainer.innerHTML = html;
             artworkContainerPortrait.innerHTML = html;
+
+            // Re-append Chromecast buttons if they existed
+            if (castButton) {
+                artworkContainer.appendChild(castButton);
+            }
+            if (castButtonPortrait) {
+                artworkContainerPortrait.appendChild(castButtonPortrait);
+            }
         }
         const metadataDiv = document.getElementById('metadataSection');
         const statusDot = document.getElementById('statusDot');
