@@ -1374,9 +1374,9 @@
             }
         }
         
-        // Clear all recent tracks
-        async function clearAllRecentTracks() {
-            console.log('🔵 clearAllRecentTracks function called');
+        // Clear all recent tracks (wrapper with confirmation dialog)
+        async function handleClearRecentTracks() {
+            console.log('🔵 handleClearRecentTracks function called');
             console.log('🔵 About to show confirm dialog');
             const userConfirmed = confirm('Are you sure you want to clear all recently played tracks?');
             console.log('🔵 User clicked:', userConfirmed ? 'OK' : 'Cancel');
@@ -5685,7 +5685,7 @@
         
         clearRecentTracksBtn.addEventListener('click', () => {
             console.log('🟢 Clear Recent Tracks button clicked');
-            clearAllRecentTracks();
+            handleClearRecentTracks();
         });
 
         // Copy All Recent Tracks button
