@@ -269,8 +269,8 @@ async function addLikedTrack(trackInfo) {
             .eq('user_id', window.currentUser.id)
             .eq('title', trackInfo.title)
             .eq('artist', trackInfo.artist)
-            .single();
-        
+            .maybeSingle();
+
         if (existing) {
             return false; // Already liked
         }
@@ -418,7 +418,7 @@ async function addToRecentTracks(trackInfo) {
                 .eq('user_id', window.currentUser.id)
                 .eq('title', trackInfo.title)
                 .eq('artist', trackInfo.artist)
-                .single();
+                .maybeSingle();
 
             if (existing && existing.artwork_url) {
                 artworkUrl = existing.artwork_url;
@@ -447,6 +447,26 @@ async function addToRecentTracks(trackInfo) {
 
         if (error) {
             console.error('Error saving recent track:', error);
+            return;
+        }
+
+        // Cleanup: Keep only the 15 most recent tracks for this user
+        // Get all tracks ordered by played_at
+        const { data: allTracks } = await supabaseClient
+            .from('recent_tracks')
+            .select('id, played_at')
+            .eq('user_id', window.currentUser.id)
+            .order('played_at', { ascending: false });
+
+        if (allTracks && allTracks.length > 15) {
+            // Get IDs of tracks to delete (everything after the first 15)
+            const tracksToDelete = allTracks.slice(15).map(track => track.id);
+
+            // Delete old tracks
+            await supabaseClient
+                .from('recent_tracks')
+                .delete()
+                .in('id', tracksToDelete);
         }
     }
 }
@@ -455,15 +475,60 @@ async function addToRecentTracks(trackInfo) {
 async function clearAllRecentTracks() {
     if (window.isGuestMode) {
         saveRecentTracks([]);
+        console.log('✅ Cleared all recent tracks (guest mode)');
     } else {
         const { error } = await supabaseClient
             .from('recent_tracks')
             .delete()
             .eq('user_id', window.currentUser.id);
-        
+
         if (error) {
-            console.error('Error clearing recent tracks:', error);
+            console.error('❌ Error clearing recent tracks:', error);
+            throw error; // Re-throw so calling code can handle it
         }
+
+        console.log('✅ Cleared all recent tracks from database');
+    }
+}
+
+// Cleanup old recent tracks (keep only last 15 per user)
+// This can be called manually to clean up existing data
+async function cleanupOldRecentTracks() {
+    if (window.isGuestMode) {
+        console.log('Cleanup not needed in guest mode');
+        return;
+    }
+
+    try {
+        console.log('🧹 Cleaning up old recent tracks...');
+
+        // Get all tracks for the current user ordered by played_at
+        const { data: allTracks } = await supabaseClient
+            .from('recent_tracks')
+            .select('id, played_at')
+            .eq('user_id', window.currentUser.id)
+            .order('played_at', { ascending: false });
+
+        if (allTracks && allTracks.length > 15) {
+            // Get IDs of tracks to delete (everything after the first 15)
+            const tracksToDelete = allTracks.slice(15).map(track => track.id);
+
+            // Delete old tracks
+            const { error } = await supabaseClient
+                .from('recent_tracks')
+                .delete()
+                .in('id', tracksToDelete);
+
+            if (error) {
+                console.error('Error cleaning up old tracks:', error);
+            } else {
+                console.log(`✅ Deleted ${tracksToDelete.length} old tracks`);
+            }
+        } else {
+            console.log('✅ No cleanup needed - you have 15 or fewer tracks');
+        }
+    } catch (error) {
+        console.error('Error during cleanup:', error);
     }
 }
 
@@ -506,6 +571,7 @@ window.loadRecentTracks = loadRecentTracks;
 window.saveRecentTracks = saveRecentTracks;
 window.addToRecentTracks = addToRecentTracks;
 window.clearAllRecentTracks = clearAllRecentTracks;
+window.cleanupOldRecentTracks = cleanupOldRecentTracks;
 window.normalizeTrack = normalizeTrack;
 window.supabaseClient = supabaseClient;
 

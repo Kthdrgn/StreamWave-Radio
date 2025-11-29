@@ -1374,11 +1374,28 @@
             }
         }
         
-        // Clear all recent tracks
-        async function clearAllRecentTracks() {
-            if (confirm('Are you sure you want to clear all recently played tracks?')) {
-                await window.clearAllRecentTracks();
-                await displayRecentTracks();
+        // Clear all recent tracks (wrapper with confirmation dialog)
+        async function handleClearRecentTracks() {
+            console.log('🔵 handleClearRecentTracks function called');
+            console.log('🔵 About to show confirm dialog');
+            const userConfirmed = confirm('Are you sure you want to clear all recently played tracks?');
+            console.log('🔵 User clicked:', userConfirmed ? 'OK' : 'Cancel');
+
+            if (userConfirmed) {
+                try {
+                    console.log('🔵 Calling window.clearAllRecentTracks()...');
+                    await window.clearAllRecentTracks();
+                    console.log('🔵 window.clearAllRecentTracks() completed successfully');
+
+                    console.log('🔵 Refreshing display...');
+                    await displayRecentTracks();
+                    console.log('🔵 Display refreshed successfully');
+                } catch (error) {
+                    console.error('❌ Failed to clear recent tracks:', error);
+                    alert('Failed to clear recent tracks. Please check the console for details.');
+                }
+            } else {
+                console.log('🔵 User cancelled, no action taken');
             }
         }
         
@@ -5666,7 +5683,10 @@
             }
         });
         
-        clearRecentTracksBtn.addEventListener('click', clearAllRecentTracks);
+        clearRecentTracksBtn.addEventListener('click', () => {
+            console.log('🟢 Clear Recent Tracks button clicked');
+            handleClearRecentTracks();
+        });
 
         // Copy All Recent Tracks button
         const copyAllRecentBtn = document.getElementById('copyAllRecentBtn');
