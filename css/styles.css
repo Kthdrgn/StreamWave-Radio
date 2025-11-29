@@ -1028,8 +1028,13 @@
         /* Filter controls row */
         .filter-controls {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 20px;
+        }
+
+        .filter-controls > select {
+            flex: 0 0 calc(50% - 5px);
         }
         
         .filter-container {
