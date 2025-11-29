@@ -4928,26 +4928,6 @@
                         // Start metadata-only player to continue receiving metadata locally
                         startMetadataOnlyPlayer();
 
-                        // Add update listener to keep button in sync with Cast state
-                        castSession.addUpdateListener((isAlive) => {
-                            if (isAlive && castSession) {
-                                const media = castSession.getMediaSession();
-                                if (media) {
-                                    const playerState = media.playerState;
-                                    console.log('Cast media status changed:', playerState);
-                                    if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
-                                        updatePlayPauseButton(true);
-                                        updateStatus('Casting...', 'playing');
-                                    } else if (playerState === 'PAUSED') {
-                                        updatePlayPauseButton(false);
-                                        updateStatus('Paused (Casting)', 'stopped');
-                                    } else if (playerState === 'IDLE') {
-                                        updatePlayPauseButton(false);
-                                    }
-                                }
-                            }
-                        });
-
                         // Wait a moment for session to fully establish before loading media
                         setTimeout(() => {
                             if (currentStation && castSession) {
@@ -5051,6 +5031,29 @@
                         playPauseBtn.disabled = false;
                         updatePlayPauseButton(true);
                         isPlaying = true;
+
+                        // Add listener to media session to keep button in sync with Cast state
+                        const media = castSession.getMediaSession();
+                        if (media) {
+                            media.addUpdateListener((isAlive) => {
+                                if (isAlive && castSession) {
+                                    const updatedMedia = castSession.getMediaSession();
+                                    if (updatedMedia) {
+                                        const playerState = updatedMedia.playerState;
+                                        console.log('Cast media status changed:', playerState);
+                                        if (playerState === 'PLAYING' || playerState === 'BUFFERING') {
+                                            updatePlayPauseButton(true);
+                                            updateStatus('Casting...', 'playing');
+                                        } else if (playerState === 'PAUSED') {
+                                            updatePlayPauseButton(false);
+                                            updateStatus('Paused (Casting)', 'stopped');
+                                        } else if (playerState === 'IDLE') {
+                                            updatePlayPauseButton(false);
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     },
                     (errorCode) => {
                         console.error('❌ Failed to load media:', errorCode);
