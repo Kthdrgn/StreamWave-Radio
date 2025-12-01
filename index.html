@@ -2066,14 +2066,19 @@
                 const votes = station.votes || 0;
                 const bitrate = station.bitrate || 0;
 
+                // Check if this station is currently playing
+                const stationUrl = station.url_resolved || station.url;
+                const isPlaying = currentStation && currentStation.url === stationUrl;
+                const playingClass = isPlaying ? 'station-item-playing' : '';
+
                 return `
-                <div class="station-item" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                <div class="station-item ${playingClass}" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
                     ${favicon ?
                         `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
                         `<div class="station-icon">📻</div>`
                     }
                     <div class="station-info">
-                        <div class="station-name">${station.name}</div>
+                        <div class="station-name">${station.name}${isPlaying ? ' <span style="color: var(--primary-color);">▶</span>' : ''}</div>
                         <div class="station-details">${country}${language !== 'Unknown' ? ` • ${language}` : ''}${bitrate > 0 ? ` • ${bitrate}kbps` : ''}</div>
                         ${tags ? `<div class="station-genres">${tags}</div>` : ''}
                     </div>

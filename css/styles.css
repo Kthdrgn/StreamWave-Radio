@@ -1323,7 +1323,24 @@
             border-color: #667eea;
             background: rgba(102, 126, 234, 0.15);
         }
-        
+
+        .station-item-playing {
+            border-color: var(--primary-color) !important;
+            background: rgba(102, 126, 234, 0.1) !important;
+            position: relative;
+        }
+
+        .station-item-playing::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            border-radius: 10px 0 0 10px;
+        }
+
         .station-icon {
             width: 48px;
             height: 48px;
