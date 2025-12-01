@@ -5732,7 +5732,27 @@
 
             // Start periodic fetching
             metadataOnlyPlayerRefreshIntervalId = setInterval(() => {
+                // Try to fetch new metadata
                 fetchMetadataOnce();
+
+                // Also refresh the notification with current metadata
+                // This ensures notification stays updated even when background fetch fails
+                if (currentTrack && (currentTrack.title || currentTrack.artist)) {
+                    updateMediaSession(
+                        currentTrack.title,
+                        currentTrack.artist,
+                        currentTrack.album,
+                        currentTrack.artworkUrl
+                    );
+                } else if (currentStation) {
+                    // If no track metadata, at least update with station info
+                    updateMediaSession(
+                        currentStation.name,
+                        '',
+                        '',
+                        currentStation.icon_url
+                    );
+                }
             }, metadataOnlyPlayerRefreshInterval);
 
             console.log(`🔄 Metadata fetching started (every ${metadataOnlyPlayerRefreshInterval/1000}s)`);
@@ -6907,6 +6927,10 @@
                         { src: currentStation.icon_url, sizes: '512x512', type: 'image/png' }
                     ] : [])
                 });
+                // Set playback state to ensure notification updates work when backgrounded
+                if (isPlaying && !isPaused) {
+                    navigator.mediaSession.playbackState = 'playing';
+                }
             }
         }
         
@@ -7007,6 +7031,11 @@
 
             // Stop metadata-only player to stop background metadata fetching
             stopMetadataOnlyPlayer();
+
+            // Update media session playback state to none
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'none';
+            }
         }
 
         // Helper function to parse ID3 frames from HLS metadata
@@ -7459,6 +7488,10 @@
                     isPaused = false; // Not paused, fully stopped
                     updateStatus('Stopped', 'stopped');
                     updatePlayPauseButton(false);
+                    // Update media session playback state
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'none';
+                    }
                     return;
                 }
 
@@ -7511,12 +7544,20 @@
                         updateStatus('Playing', 'playing');
                         updatePlayPauseButton(true);
                         playPauseBtn.disabled = false;
+                        // Update media session playback state
+                        if ('mediaSession' in navigator) {
+                            navigator.mediaSession.playbackState = 'playing';
+                        }
                     });
                     simpleAudioPlayer.addEventListener('pause', () => {
                         if (isPlaying) {
                             isPlaying = false;
                             updateStatus('Paused', 'stopped');
                             updatePlayPauseButton(false);
+                            // Update media session playback state
+                            if ('mediaSession' in navigator) {
+                                navigator.mediaSession.playbackState = 'paused';
+                            }
                         }
                     });
                     simpleAudioPlayer.addEventListener('error', (e) => {
@@ -7597,6 +7638,10 @@
                 isPlaying = false;
                 updateStatus('Paused', 'stopped');
                 updatePlayPauseButton(false);
+                // Update media session playback state
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.playbackState = 'paused';
+                }
                 return;
             }
             
@@ -7608,12 +7653,20 @@
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
                     updatePlayPauseButton(true);
+                    // Update media session playback state
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'playing';
+                    }
                     return;
                 } else if (player && player.audioElement && player.audioElement.src) {
                     player.audioElement.play();
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
                     updatePlayPauseButton(true);
+                    // Update media session playback state
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'playing';
+                    }
                     return;
                 }
             }
