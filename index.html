@@ -1951,11 +1951,18 @@
             params.append('reverse', 'true');
             params.append('hidebroken', 'true');
 
-            // Show loading
-            radioDatabaseLoading.style.display = 'block';
+            // Only show loading indicator if there are no existing results
+            // This prevents the jittery "Searching..." message during typing
+            const hasExistingResults = radioDatabaseResults.children.length > 0 &&
+                                      radioDatabaseResults.innerHTML.trim() !== '';
+
+            if (!hasExistingResults) {
+                radioDatabaseLoading.style.display = 'block';
+            }
+
             radioDatabaseError.style.display = 'none';
-            radioDatabaseResults.innerHTML = '';
-            radioDatabasePagination.style.display = 'none';
+            // Don't clear results immediately - keep them visible until new results arrive
+            // radioDatabaseResults.innerHTML = '';
 
             try {
                 const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
@@ -1984,7 +1991,7 @@
                 // Update total results (estimate based on returned results)
                 radioDatabaseTotalResults = results.length;
 
-                // Render results
+                // Render results (this will clear and update the results)
                 renderRadioBrowserResults(results);
 
                 // Update pagination controls
@@ -1997,6 +2004,7 @@
                 radioDatabaseLoading.style.display = 'none';
                 radioDatabaseError.style.display = 'block';
                 radioDatabaseError.textContent = 'Error searching radio stations. Please try again.';
+                radioDatabaseResults.innerHTML = '';
                 radioDatabasePagination.style.display = 'none';
             }
         }
