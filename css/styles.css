@@ -144,19 +144,17 @@
             display: flex !important;
             align-items: center;
             justify-content: center;
-            padding: 15px;
-            min-width: 60px;
         }
-        
-        /* Force the internal SVG to render at same size as other icons */
+
+        /* Force the internal SVG to render larger */
         google-cast-launcher svg,
         #castButton svg {
-            width: 32px !important;
-            height: 32px !important;
+            width: 36px !important;
+            height: 36px !important;
         }
 
         /* Chromecast button in station display - upper right corner */
-        .station-cast-btn {
+        #castButton.station-cast-btn {
             position: absolute;
             top: 8px;
             right: 8px;
@@ -167,28 +165,29 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border-radius: 8px;
-            padding: 5px;
+            padding: 4px !important;
             transition: all 0.3s ease;
             opacity: 0.8;
             z-index: 5;
-            width: 38px !important;
-            height: 38px !important;
+            width: 44px !important;
+            height: 44px !important;
+            min-width: 44px !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
             border: 1px solid var(--border-color);
         }
 
-        .station-cast-btn:hover {
+        #castButton.station-cast-btn:hover {
             opacity: 1;
             background: var(--button-hover);
             transform: scale(1.05);
             border-color: var(--border-hover);
         }
 
-        .station-cast-btn svg {
-            width: 32px !important;
-            height: 32px !important;
+        #castButton.station-cast-btn svg {
+            width: 36px !important;
+            height: 36px !important;
         }
 
         .icon-btn:hover svg {
