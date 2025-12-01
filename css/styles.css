@@ -144,19 +144,17 @@
             display: flex !important;
             align-items: center;
             justify-content: center;
-            padding: 15px;
-            min-width: 60px;
         }
-        
-        /* Force the internal SVG to render at same size as other icons */
+
+        /* Force the internal SVG to render larger */
         google-cast-launcher svg,
         #castButton svg {
-            width: 28px !important;
-            height: 28px !important;
+            width: 36px !important;
+            height: 36px !important;
         }
 
         /* Chromecast button in station display - upper right corner */
-        .station-cast-btn {
+        #castButton.station-cast-btn {
             position: absolute;
             top: 8px;
             right: 8px;
@@ -167,28 +165,29 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border-radius: 8px;
-            padding: 8px;
+            padding: 4px !important;
             transition: all 0.3s ease;
             opacity: 0.8;
             z-index: 5;
             width: 44px !important;
             height: 44px !important;
+            min-width: 44px !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
             border: 1px solid var(--border-color);
         }
 
-        .station-cast-btn:hover {
+        #castButton.station-cast-btn:hover {
             opacity: 1;
             background: var(--button-hover);
             transform: scale(1.05);
             border-color: var(--border-hover);
         }
 
-        .station-cast-btn svg {
-            width: 28px !important;
-            height: 28px !important;
+        #castButton.station-cast-btn svg {
+            width: 36px !important;
+            height: 36px !important;
         }
 
         .icon-btn:hover svg {
@@ -979,7 +978,14 @@
             padding: 25px;
             overflow-x: hidden;
         }
-        
+
+        /* Add extra bottom padding for pages with bottom navigation */
+        #overviewModal .modal-body,
+        #browseStationsModal .modal-body,
+        #radioDatabaseModal .modal-body {
+            padding-bottom: 100px;
+        }
+
         /* Search and filter controls */
         .search-controls {
             margin-bottom: 10px;
@@ -1317,7 +1323,24 @@
             border-color: #667eea;
             background: rgba(102, 126, 234, 0.15);
         }
-        
+
+        .station-item-playing {
+            border-color: var(--primary-color) !important;
+            background: rgba(102, 126, 234, 0.1) !important;
+            position: relative;
+        }
+
+        .station-item-playing::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            border-radius: 10px 0 0 10px;
+        }
+
         .station-icon {
             width: 48px;
             height: 48px;
