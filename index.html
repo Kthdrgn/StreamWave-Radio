@@ -2016,16 +2016,27 @@
                 return;
             }
 
+            // Determine if Next button would be disabled (last page)
+            const isLastPage = resultsCount < radioDatabaseItemsPerPage;
+            const isFirstPage = radioDatabaseCurrentPage === 1;
+
+            // Only show pagination if we're not on page 1 OR if there are more pages
+            // Hide pagination if we're on page 1 and it's also the last page (only one page of results)
+            if (isFirstPage && isLastPage) {
+                radioDatabasePagination.style.display = 'none';
+                return;
+            }
+
             radioDatabasePagination.style.display = 'flex';
 
             // Update page info
             radioDatabasePageInfo.textContent = `Page ${radioDatabaseCurrentPage}`;
 
             // Update Previous button
-            radioDatabasePrevBtn.disabled = radioDatabaseCurrentPage === 1;
+            radioDatabasePrevBtn.disabled = isFirstPage;
 
-            // Update Next button - disable if we got fewer results than the limit (meaning we're on the last page)
-            radioDatabaseNextBtn.disabled = resultsCount < radioDatabaseItemsPerPage;
+            // Update Next button
+            radioDatabaseNextBtn.disabled = isLastPage;
 
             // Scroll results container to top
             radioDatabaseResults.scrollTop = 0;
