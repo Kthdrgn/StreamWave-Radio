@@ -7004,6 +7004,9 @@
                     console.error('Error stopping simple audio player:', e);
                 }
             }
+
+            // Stop metadata-only player to stop background metadata fetching
+            stopMetadataOnlyPlayer();
         }
 
         // Helper function to parse ID3 frames from HLS metadata
@@ -7932,7 +7935,7 @@
                         
                         onPlay: () => {
                             isPlaying = true;
-                            const statusMsg = attempt.metadata.length === 0 
+                            const statusMsg = attempt.metadata.length === 0
                                 ? 'Playing (no metadata available)'
                                 : 'Playing';
                             updateStatus(statusMsg, 'playing');
@@ -7947,6 +7950,8 @@
                                     currentStation.icon_url
                                 );
                             }
+                            // Start periodic metadata fetching to ensure notification updates even in background
+                            startMetadataPlayerRefreshInterval();
                         },
                         
                         onStop: () => {
