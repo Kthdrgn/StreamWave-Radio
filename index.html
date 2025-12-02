@@ -4129,7 +4129,7 @@
                         const playlistId = item.dataset.playlistId;
                         const stationId = parseInt(item.dataset.stationId);
                         const isExternal = item.dataset.isExternal === 'true';
-                        const externalId = item.dataset.externalId ? parseInt(item.dataset.externalId) : null;
+                        const externalId = item.dataset.externalId || null;  // Keep as string (UUID), don't parseInt
                         removeFromPlaylist(playlistId, stationId, isExternal, externalId);
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     }
