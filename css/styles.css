@@ -1499,6 +1499,11 @@
         .playlists-list.grid-view .playlist-item:hover {
             transform: translateY(-4px);
         }
+
+        /* Prevent hover transform when dropdown is active to avoid flickering */
+        .playlists-list.grid-view .playlist-item:has(.playlist-dropdown.active) {
+            transform: none;
+        }
         
         .playlists-list.grid-view .playlist-icon {
             font-size: 48px;
