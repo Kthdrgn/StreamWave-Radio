@@ -2173,10 +2173,13 @@
                             const externalStationId = await addExternalStation(station);
 
                             // Add to the selected playlist (don't show built-in alert, we'll show custom one)
-                            await addStationToPlaylist(playlistId, null, externalStationId, false);
+                            const added = await addStationToPlaylist(playlistId, null, externalStationId, false);
 
-                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
-                            alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            // Only show success message if actually added (not if already in playlist)
+                            if (added) {
+                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            }
 
                             // Close dropdown
                             document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
@@ -2296,10 +2299,13 @@
                             const externalStationId = await addExternalStation(stationData);
 
                             // Add to the selected playlist (don't show built-in alert, we'll show custom one)
-                            await addStationToPlaylist(playlistId, null, externalStationId, false);
+                            const added = await addStationToPlaylist(playlistId, null, externalStationId, false);
 
-                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
-                            alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
+                            // Only show success message if actually added (not if already in playlist)
+                            if (added) {
+                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                                alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
+                            }
 
                             // Close modal
                             playlistSelectorModal.classList.remove('active');
@@ -3443,6 +3449,7 @@
         }
         
         // Add station to playlist (supports both internal and external stations)
+        // Returns true if added successfully, false if already exists or error
         async function addStationToPlaylist(playlistId, stationId, externalStationId = null, showAlert = true) {
             try {
                 // Check if station is already in playlist
@@ -3461,7 +3468,7 @@
 
                 if (existing) {
                     alert('Station is already in this playlist');
-                    return;
+                    return false;
                 }
 
                 // Insert with either station_id or external_station_id
@@ -3498,9 +3505,12 @@
                     }
                 }
 
+                return true;
+
             } catch (error) {
                 console.error('Error adding station to playlist:', error);
                 alert('Failed to add station to playlist');
+                return false;
             }
         }
         
