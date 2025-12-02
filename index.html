@@ -2990,7 +2990,7 @@
                             frequency: '',
                             country: ext.country,
                             is_external: true,
-                            external_id: ext.id
+                            external_id: item.external_station_id  // Use the foreign key from playlist_items, not ext.id
                         };
                     } else {
                         // Internal station
