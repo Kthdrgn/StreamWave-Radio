@@ -2814,24 +2814,24 @@
                                     if (!text) return '';
 
                                     // First, check if the text starts with text="..." pattern and extract the value
-                                    const textMatch = text.match(/^text=["']([^"']+)["']/i);
+                                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
                                     if (textMatch) {
-                                        return textMatch[1].trim();
+                                        return (textMatch[1] || textMatch[2]).trim();
                                     }
 
                                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=["'][^"']*["'].*$/i, '');
+                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
                                     return cleaned.trim();
                                 }
 
                                 // Check for structured format
-                                const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
-                                const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
+                                const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
+                                const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
 
                                 if (titleMatch || artistMatch) {
-                                    title = titleMatch ? titleMatch[1].trim() : 'Unknown';
-                                    artist = artistMatch ? artistMatch[1].trim() : '';
+                                    title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : 'Unknown';
+                                    artist = artistMatch ? (artistMatch[1] || artistMatch[2]).trim() : '';
                                 } else if (streamTitle.includes(' - ')) {
                                     const parts = streamTitle.split(' - ');
                                     artist = cleanMetadataText(parts[0].trim());
@@ -6620,27 +6620,27 @@
             let album = '';
             
             // Check if metadata is in structured attribute format: title="...",artist="..."
-            const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
-            const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
-            
+            const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
+            const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
+
             if (titleMatch || artistMatch) {
                 // Structured format detected
-                title = titleMatch ? titleMatch[1].trim() : 'Unknown';
-                artist = artistMatch ? artistMatch[1].trim() : '';
+                title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : 'Unknown';
+                artist = artistMatch ? (artistMatch[1] || artistMatch[2]).trim() : '';
             } else {
                 // Helper function to clean metadata text (remove XML attributes from iHeart and similar stations)
                 function cleanMetadataText(text) {
                     if (!text) return '';
-                    
+
                     // First, check if the text starts with text="..." pattern and extract the value
-                    const textMatch = text.match(/^text=["']([^"']+)["']/i);
+                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
                     if (textMatch) {
-                        return textMatch[1].trim();
+                        return (textMatch[1] || textMatch[2]).trim();
                     }
-                    
+
                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=["'][^"']*["'].*$/i, '');
+                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
                     return cleaned.trim();
                 }
                 
