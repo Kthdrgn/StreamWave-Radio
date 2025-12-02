@@ -1542,7 +1542,7 @@
             border-radius: 10px;
             min-width: 180px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            z-index: 100;
+            z-index: 1000;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
