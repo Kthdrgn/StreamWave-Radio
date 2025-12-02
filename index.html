@@ -2172,8 +2172,8 @@
                             // Add station to external_stations table first
                             const externalStationId = await addExternalStation(station);
 
-                            // Add to the selected playlist
-                            await addStationToPlaylist(playlistId, null, externalStationId);
+                            // Add to the selected playlist (don't show built-in alert, we'll show custom one)
+                            await addStationToPlaylist(playlistId, null, externalStationId, false);
 
                             const selectedPlaylist = playlists.find(p => p.id === playlistId);
                             alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
@@ -2295,8 +2295,8 @@
                             // Add station to external_stations table first
                             const externalStationId = await addExternalStation(stationData);
 
-                            // Add to the selected playlist
-                            await addStationToPlaylist(playlistId, null, externalStationId);
+                            // Add to the selected playlist (don't show built-in alert, we'll show custom one)
+                            await addStationToPlaylist(playlistId, null, externalStationId, false);
 
                             const selectedPlaylist = playlists.find(p => p.id === playlistId);
                             alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
@@ -3443,7 +3443,7 @@
         }
         
         // Add station to playlist (supports both internal and external stations)
-        async function addStationToPlaylist(playlistId, stationId, externalStationId = null) {
+        async function addStationToPlaylist(playlistId, stationId, externalStationId = null, showAlert = true) {
             try {
                 // Check if station is already in playlist
                 let existingQuery = supabase
@@ -3479,6 +3479,24 @@
                 if (error) throw error;
 
                 await loadPlaylists(true); // Force refresh to bypass cache
+
+                // Show success message with station and playlist names (if requested)
+                if (showAlert) {
+                    const playlist = playlists.find(p => p.id === playlistId);
+                    let stationName = 'Station';
+
+                    if (stationId) {
+                        const station = stations.find(s => s.id === stationId);
+                        if (station) stationName = station.name;
+                    } else if (externalStationId) {
+                        // For external stations, try to find the name from recently added
+                        stationName = 'Station';
+                    }
+
+                    if (playlist) {
+                        alert(`✓ Added "${stationName}" to "${playlist.name}"`);
+                    }
+                }
 
             } catch (error) {
                 console.error('Error adding station to playlist:', error);
