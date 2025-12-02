@@ -1300,6 +1300,10 @@
             flex-direction: column;
             gap: 8px;
         }
+
+        #playlistStationList {
+            padding-bottom: 20px;
+        }
         
         .station-item {
             display: flex;
