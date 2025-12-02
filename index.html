@@ -2196,8 +2196,13 @@
         // Play a station from Radio Browser
         async function playRadioBrowserStation(station) {
             try {
-                // Add station to external_stations table (or get existing ID)
-                const externalStationId = await addExternalStation(station);
+                let externalStationId = null;
+
+                // Only save to database if authenticated (skip in guest mode)
+                if (!window.isGuestMode && window.currentUser) {
+                    // Add station to external_stations table (or get existing ID)
+                    externalStationId = await addExternalStation(station);
+                }
 
                 // Convert Radio Browser station to our station format
                 const ourStation = {
@@ -2236,7 +2241,7 @@
                     playPauseBtn.click();
                 }, 100);
 
-                // Track the station play in history
+                // Track the station play in history (uses localStorage in guest mode)
                 await trackStationClick(null, externalStationId);
             } catch (error) {
                 console.error('Error playing radio browser station:', error);
