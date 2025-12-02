@@ -2172,11 +2172,14 @@
                             // Add station to external_stations table first
                             const externalStationId = await addExternalStation(station);
 
-                            // Add to the selected playlist
-                            await addStationToPlaylist(playlistId, null, externalStationId);
+                            // Add to the selected playlist (don't show built-in alert, we'll show custom one)
+                            const added = await addStationToPlaylist(playlistId, null, externalStationId, false);
 
-                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
-                            alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            // Only show success message if actually added (not if already in playlist)
+                            if (added) {
+                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            }
 
                             // Close dropdown
                             document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
@@ -2196,8 +2199,13 @@
         // Play a station from Radio Browser
         async function playRadioBrowserStation(station) {
             try {
-                // Add station to external_stations table (or get existing ID)
-                const externalStationId = await addExternalStation(station);
+                let externalStationId = null;
+
+                // Only save to database if authenticated (skip in guest mode)
+                if (!window.isGuestMode && window.currentUser) {
+                    // Add station to external_stations table (or get existing ID)
+                    externalStationId = await addExternalStation(station);
+                }
 
                 // Convert Radio Browser station to our station format
                 const ourStation = {
@@ -2236,7 +2244,7 @@
                     playPauseBtn.click();
                 }, 100);
 
-                // Track the station play in history
+                // Track the station play in history (uses localStorage in guest mode)
                 await trackStationClick(null, externalStationId);
             } catch (error) {
                 console.error('Error playing radio browser station:', error);
@@ -2290,11 +2298,14 @@
                             // Add station to external_stations table first
                             const externalStationId = await addExternalStation(stationData);
 
-                            // Add to the selected playlist
-                            await addStationToPlaylist(playlistId, null, externalStationId);
+                            // Add to the selected playlist (don't show built-in alert, we'll show custom one)
+                            const added = await addStationToPlaylist(playlistId, null, externalStationId, false);
 
-                            const selectedPlaylist = playlists.find(p => p.id === playlistId);
-                            alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
+                            // Only show success message if actually added (not if already in playlist)
+                            if (added) {
+                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                                alert(`Successfully added "${stationData.name}" to playlist "${selectedPlaylist.name}"!`);
+                            }
 
                             // Close modal
                             playlistSelectorModal.classList.remove('active');
@@ -2814,24 +2825,24 @@
                                     if (!text) return '';
 
                                     // First, check if the text starts with text="..." pattern and extract the value
-                                    const textMatch = text.match(/^text=["']([^"']+)["']/i);
+                                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
                                     if (textMatch) {
-                                        return textMatch[1].trim();
+                                        return (textMatch[1] || textMatch[2]).trim();
                                     }
 
                                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=["'][^"']*["'].*$/i, '');
+                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
                                     return cleaned.trim();
                                 }
 
                                 // Check for structured format
-                                const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
-                                const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
+                                const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
+                                const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
 
                                 if (titleMatch || artistMatch) {
-                                    title = titleMatch ? titleMatch[1].trim() : 'Unknown';
-                                    artist = artistMatch ? artistMatch[1].trim() : '';
+                                    title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : 'Unknown';
+                                    artist = artistMatch ? (artistMatch[1] || artistMatch[2]).trim() : '';
                                 } else if (streamTitle.includes(' - ')) {
                                     const parts = streamTitle.split(' - ');
                                     artist = cleanMetadataText(parts[0].trim());
@@ -2979,7 +2990,7 @@
                             frequency: '',
                             country: ext.country,
                             is_external: true,
-                            external_id: ext.id
+                            external_id: item.external_station_id  // Use the foreign key from playlist_items, not ext.id
                         };
                     } else {
                         // Internal station
@@ -3438,7 +3449,8 @@
         }
         
         // Add station to playlist (supports both internal and external stations)
-        async function addStationToPlaylist(playlistId, stationId, externalStationId = null) {
+        // Returns true if added successfully, false if already exists or error
+        async function addStationToPlaylist(playlistId, stationId, externalStationId = null, showAlert = true) {
             try {
                 // Check if station is already in playlist
                 let existingQuery = supabase
@@ -3456,7 +3468,7 @@
 
                 if (existing) {
                     alert('Station is already in this playlist');
-                    return;
+                    return false;
                 }
 
                 // Insert with either station_id or external_station_id
@@ -3475,26 +3487,55 @@
 
                 await loadPlaylists(true); // Force refresh to bypass cache
 
+                // Show success message with station and playlist names (if requested)
+                if (showAlert) {
+                    const playlist = playlists.find(p => p.id === playlistId);
+                    let stationName = 'Station';
+
+                    if (stationId) {
+                        const station = stations.find(s => s.id === stationId);
+                        if (station) stationName = station.name;
+                    } else if (externalStationId) {
+                        // For external stations, try to find the name from recently added
+                        stationName = 'Station';
+                    }
+
+                    if (playlist) {
+                        alert(`✓ Added "${stationName}" to "${playlist.name}"`);
+                    }
+                }
+
+                return true;
+
             } catch (error) {
                 console.error('Error adding station to playlist:', error);
                 alert('Failed to add station to playlist');
+                return false;
             }
         }
         
-        // Remove station from playlist
-        async function removeStationFromPlaylist(playlistId, stationId) {
+        // Remove station from playlist (supports both internal and external stations)
+        async function removeStationFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             try {
-                const { error } = await supabase
+                let deleteQuery = supabase
                     .from('playlist_items')
                     .delete()
-                    .eq('playlist_id', playlistId)
-                    .eq('station_id', stationId);
-                
+                    .eq('playlist_id', playlistId);
+
+                // Use external_station_id for external stations, station_id for internal stations
+                if (isExternal && externalId) {
+                    deleteQuery = deleteQuery.eq('external_station_id', externalId);
+                } else {
+                    deleteQuery = deleteQuery.eq('station_id', stationId);
+                }
+
+                const { error } = await deleteQuery;
+
                 if (error) throw error;
-                
+
                 await loadPlaylistStations(playlistId);
                 await loadPlaylists(true); // Force refresh to bypass cache
-                
+
             } catch (error) {
                 console.error('Error removing station from playlist:', error);
                 alert('Failed to remove station from playlist');
@@ -3614,16 +3655,33 @@
                     try {
                         const { data, error } = await supabase
                             .from('playlist_items')
-                            .select('*, radio_stations(*)')
+                            .select('*, radio_stations(*), external_stations(*)')
                             .eq('playlist_id', playlist.id)
                             .order('created_at')
                             .limit(4); // Only need first 4 for collage
 
                         if (error) throw error;
 
+                        // Map to station objects, handling both internal and external stations
+                        const stationsData = data ? data.map(item => {
+                            if (item.external_stations) {
+                                // External station from radio-browser
+                                const ext = item.external_stations;
+                                return {
+                                    id: ext.id,
+                                    name: ext.name,
+                                    icon_url: ext.icon_url || ext.favicon || '',
+                                    is_external: true
+                                };
+                            } else {
+                                // Internal station
+                                return item.radio_stations;
+                            }
+                        }) : [];
+
                         return {
                             ...playlist,
-                            stations: data ? data.map(item => item.radio_stations) : []
+                            stations: stationsData
                         };
                     } catch (error) {
                         console.error('Error loading playlist stations:', error);
@@ -4037,7 +4095,11 @@
                     </div>
                     <button class="station-menu-btn" data-id="${station.id}">⋮</button>
                     <div class="station-dropdown">
-                        <div class="dropdown-item danger" data-action="remove-from-playlist" data-playlist-id="${currentPlaylist.id}" data-station-id="${station.id}">
+                        <div class="dropdown-item danger" data-action="remove-from-playlist"
+                             data-playlist-id="${currentPlaylist.id}"
+                             data-station-id="${station.id}"
+                             data-is-external="${station.is_external || false}"
+                             data-external-id="${station.external_id || ''}">
                             <span>➖</span> Remove from Playlist
                         </div>
                     </div>
@@ -4083,7 +4145,9 @@
                     if (action === 'remove-from-playlist') {
                         const playlistId = item.dataset.playlistId;
                         const stationId = parseInt(item.dataset.stationId);
-                        removeFromPlaylist(playlistId, stationId);
+                        const isExternal = item.dataset.isExternal === 'true';
+                        const externalId = item.dataset.externalId || null;  // Keep as string (UUID), don't parseInt
+                        removeFromPlaylist(playlistId, stationId, isExternal, externalId);
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     }
                 });
@@ -4453,11 +4517,11 @@
         }
         
         // Remove station from playlist
-        function removeFromPlaylist(playlistId, stationId) {
+        async function removeFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             if (confirm('Remove this station from the playlist?')) {
-                removeStationFromPlaylist(playlistId, stationId);
+                await removeStationFromPlaylist(playlistId, stationId, isExternal, externalId);
             }
-            
+
             // Close dropdown
             document.querySelectorAll('.station-dropdown').forEach(d => {
                 d.classList.remove('active');
@@ -6620,27 +6684,27 @@
             let album = '';
             
             // Check if metadata is in structured attribute format: title="...",artist="..."
-            const titleMatch = streamTitle.match(/title=["']([^"']+)["']/i);
-            const artistMatch = streamTitle.match(/artist=["']([^"']+)["']/i);
-            
+            const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
+            const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
+
             if (titleMatch || artistMatch) {
                 // Structured format detected
-                title = titleMatch ? titleMatch[1].trim() : 'Unknown';
-                artist = artistMatch ? artistMatch[1].trim() : '';
+                title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : 'Unknown';
+                artist = artistMatch ? (artistMatch[1] || artistMatch[2]).trim() : '';
             } else {
                 // Helper function to clean metadata text (remove XML attributes from iHeart and similar stations)
                 function cleanMetadataText(text) {
                     if (!text) return '';
-                    
+
                     // First, check if the text starts with text="..." pattern and extract the value
-                    const textMatch = text.match(/^text=["']([^"']+)["']/i);
+                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
                     if (textMatch) {
-                        return textMatch[1].trim();
+                        return (textMatch[1] || textMatch[2]).trim();
                     }
-                    
+
                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=["'][^"']*["'].*$/i, '');
+                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
                     return cleaned.trim();
                 }
                 

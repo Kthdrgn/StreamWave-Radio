@@ -1236,6 +1236,7 @@
             height: 48px !important;
             border-radius: 8px;
             overflow: hidden;
+            gap: 1px;
         }
         
         .playlist-drag-handle {
@@ -1299,6 +1300,10 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        #playlistStationList {
+            padding-bottom: 20px;
         }
         
         .station-item {
@@ -1494,6 +1499,11 @@
         .playlists-list.grid-view .playlist-item:hover {
             transform: translateY(-4px);
         }
+
+        /* Prevent hover transform when dropdown is active to avoid flickering */
+        .playlists-list.grid-view .playlist-item:has(.playlist-dropdown.active) {
+            transform: none;
+        }
         
         .playlists-list.grid-view .playlist-icon {
             font-size: 48px;
@@ -1505,6 +1515,7 @@
         .playlists-list.grid-view .playlist-icon .playlist-collage {
             width: 96px !important;
             height: 96px !important;
+            gap: 1px;
         }
         
         .playlists-list.grid-view .playlist-drag-handle {
@@ -1536,7 +1547,7 @@
             border-radius: 10px;
             min-width: 180px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            z-index: 100;
+            z-index: 1000;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
