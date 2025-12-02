@@ -4453,11 +4453,11 @@
         }
         
         // Remove station from playlist
-        function removeFromPlaylist(playlistId, stationId) {
+        async function removeFromPlaylist(playlistId, stationId) {
             if (confirm('Remove this station from the playlist?')) {
-                removeStationFromPlaylist(playlistId, stationId);
+                await removeStationFromPlaylist(playlistId, stationId);
             }
-            
+
             // Close dropdown
             document.querySelectorAll('.station-dropdown').forEach(d => {
                 d.classList.remove('active');
