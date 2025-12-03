@@ -3297,9 +3297,15 @@
         }
 
         // Show curated playlist selector
-        function showCuratedPlaylistSelector(station, isExternal) {
+        async function showCuratedPlaylistSelector(station, isExternal) {
             pendingCuratedPlaylistStation = station;
             pendingCuratedPlaylistIsExternal = isExternal;
+
+            // Load curated playlists if not already loaded
+            if (curatedPlaylists.length === 0) {
+                await loadCuratedPlaylists();
+            }
+
             renderCuratedPlaylistSelectorList();
             curatedPlaylistSelectorModal.classList.add('active');
         }
