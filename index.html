@@ -1077,6 +1077,7 @@
         let playlists = [];
         let currentPlaylist = null;
         let lastOpenedModal = null;
+        let pendingPlaylistSelectorContext = null; // Track context when creating playlist from selector
 
         // Radio Database pagination
         let radioDatabaseCurrentPage = 1;
@@ -2084,22 +2085,8 @@
                     </div>
                     <button class="station-menu-btn" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>⋮</button>
                     <div class="station-dropdown">
-                        <div class="dropdown-submenu">
-                            <div class="dropdown-item">
-                                <span>➕</span> Add to Playlist
-                            </div>
-                            <div class="dropdown-submenu-content">
-                                ${playlists.length === 0 ?
-                                    `<div class="dropdown-item" data-action="create-playlist">
-                                        <span>📝</span> Create Playlist
-                                    </div>` :
-                                    playlists.map(playlist => `
-                                        <div class="dropdown-item" data-action="add-to-playlist" data-playlist-id="${playlist.id}" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
-                                            ${escapeHtml(playlist.name)}
-                                        </div>
-                                    `).join('')
-                                }
-                            </div>
+                        <div class="dropdown-item" data-action="add-to-playlist-modal" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                            <span>➕</span> Add to Playlist
                         </div>
                         ${isAdmin ? `
                         <div class="dropdown-divider"></div>
@@ -2161,32 +2148,10 @@
                     e.stopPropagation();
                     const action = item.dataset.action;
 
-                    if (action === 'create-playlist') {
-                        showPlaylistForm();
-                        document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
-                    } else if (action === 'add-to-playlist') {
-                        const playlistId = item.dataset.playlistId;
+                    if (action === 'add-to-playlist-modal') {
                         const station = JSON.parse(item.getAttribute('data-station'));
-
-                        try {
-                            // Add station to external_stations table first
-                            const externalStationId = await addExternalStation(station);
-
-                            // Add to the selected playlist (don't show built-in alert, we'll show custom one)
-                            const added = await addStationToPlaylist(playlistId, null, externalStationId, false);
-
-                            // Only show success message if actually added (not if already in playlist)
-                            if (added) {
-                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
-                                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
-                            }
-
-                            // Close dropdown
-                            document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
-                        } catch (error) {
-                            console.error('Error adding station to playlist:', error);
-                            alert('Failed to add station to playlist. Please try again.');
-                        }
+                        showPlaylistSelectorForRadioBrowser(station);
+                        document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
                     } else if (action === 'curate-station') {
                         const station = JSON.parse(item.getAttribute('data-station'));
                         showStationFormForCuration(station);
@@ -2265,16 +2230,11 @@
                     await loadPlaylists();
                 }
 
-                if (playlists.length === 0) {
-                    alert('You have no playlists. Create a playlist first!');
-                    return;
-                }
-
                 // Update modal title
                 playlistSelectorTitle.textContent = `Add "${station.name}" to Playlist`;
 
-                // Render playlist options
-                playlistSelectorList.innerHTML = playlists.map(playlist => `
+                // Render playlist options with create button
+                const playlistItems = playlists.map(playlist => `
                     <div
                         class="playlist-selector-item"
                         data-playlist-id="${playlist.id}"
@@ -2287,6 +2247,32 @@
                         ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
                     </div>
                 `).join('');
+
+                const createButton = `
+                    <div
+                        class="playlist-selector-create-btn"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px dashed var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s; text-align: center;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--accent-color);">
+                            <span style="font-size: 20px;">+</span> Create New Playlist
+                        </div>
+                    </div>
+                `;
+
+                playlistSelectorList.innerHTML = createButton + (playlists.length > 0 ? playlistItems : '');
+
+                // Add click listener to create button
+                document.querySelector('.playlist-selector-create-btn').addEventListener('click', () => {
+                    // Store the context so we can return after creating playlist
+                    pendingPlaylistSelectorContext = {
+                        type: 'radio-browser',
+                        station: station
+                    };
+                    playlistSelectorModal.classList.remove('active');
+                    showPlaylistForm();
+                });
 
                 // Add click listeners to playlist items
                 document.querySelectorAll('.playlist-selector-item').forEach(item => {
@@ -2342,11 +2328,6 @@
                     await loadPlaylists();
                 }
 
-                if (playlists.length === 0) {
-                    alert('You have no playlists. Create a playlist first!');
-                    return;
-                }
-
                 // Update modal title
                 playlistSelectorTitle.textContent = `Add "${currentStation.name}" to Playlist`;
 
@@ -2355,8 +2336,8 @@
                 const stationId = isExternal ? null : currentStation.id;
                 const externalId = isExternal ? currentStation.external_id : null;
 
-                // Render playlist options
-                playlistSelectorList.innerHTML = playlists.map(playlist => `
+                // Render playlist options with create button
+                const playlistItems = playlists.map(playlist => `
                     <div
                         class="playlist-selector-item"
                         data-playlist-id="${playlist.id}"
@@ -2371,6 +2352,32 @@
                         ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
                     </div>
                 `).join('');
+
+                const createButton = `
+                    <div
+                        class="playlist-selector-create-btn"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px dashed var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s; text-align: center;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--accent-color);">
+                            <span style="font-size: 20px;">+</span> Create New Playlist
+                        </div>
+                    </div>
+                `;
+
+                playlistSelectorList.innerHTML = createButton + (playlists.length > 0 ? playlistItems : '');
+
+                // Add click listener to create button
+                document.querySelector('.playlist-selector-create-btn').addEventListener('click', () => {
+                    // Store the context so we can return after creating playlist
+                    pendingPlaylistSelectorContext = {
+                        type: 'current-station',
+                        station: currentStation
+                    };
+                    playlistSelectorModal.classList.remove('active');
+                    showPlaylistForm();
+                });
 
                 // Add click listeners to playlist items
                 document.querySelectorAll('.playlist-selector-item').forEach(item => {
@@ -2392,6 +2399,96 @@
 
                             const selectedPlaylist = playlists.find(p => p.id === playlistId);
                             alert(`Successfully added "${currentStation.name}" to playlist "${selectedPlaylist.name}"!`);
+
+                            // Close modal
+                            playlistSelectorModal.classList.remove('active');
+                        } catch (error) {
+                            console.error('Error adding station to playlist:', error);
+                            alert('Failed to add station to playlist. Please try again.');
+                        }
+                    });
+                });
+
+                // Show modal
+                playlistSelectorModal.classList.add('active');
+            } catch (error) {
+                console.error('Error showing playlist selector:', error);
+                alert('Failed to load playlists. Please try again.');
+            }
+        }
+
+        // Show playlist selector for a curated station
+        async function showPlaylistSelectorForCuratedStation(station) {
+            if (!window.currentUser || !window.currentUser.id) {
+                alert('Please sign in to add stations to playlists');
+                return;
+            }
+
+            try {
+                // Ensure playlists are loaded
+                if (playlists.length === 0) {
+                    await loadPlaylists();
+                }
+
+                // Update modal title
+                playlistSelectorTitle.textContent = `Add "${station.name}" to Playlist`;
+
+                // Render playlist options with create button
+                const playlistItems = playlists.map(playlist => `
+                    <div
+                        class="playlist-selector-item"
+                        data-playlist-id="${playlist.id}"
+                        data-station-id="${station.id}"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--text-primary);">${playlist.name}</div>
+                        ${playlist.description ? `<div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${playlist.description}</div>` : ''}
+                    </div>
+                `).join('');
+
+                const createButton = `
+                    <div
+                        class="playlist-selector-create-btn"
+                        style="padding: 16px; margin-bottom: 8px; border: 2px dashed var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s; text-align: center;"
+                        onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                        onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                    >
+                        <div style="font-weight: 600; font-size: 16px; color: var(--accent-color);">
+                            <span style="font-size: 20px;">+</span> Create New Playlist
+                        </div>
+                    </div>
+                `;
+
+                playlistSelectorList.innerHTML = createButton + (playlists.length > 0 ? playlistItems : '');
+
+                // Add click listener to create button
+                document.querySelector('.playlist-selector-create-btn').addEventListener('click', () => {
+                    // Store the context so we can return after creating playlist
+                    pendingPlaylistSelectorContext = {
+                        type: 'curated-station',
+                        station: station
+                    };
+                    playlistSelectorModal.classList.remove('active');
+                    showPlaylistForm();
+                });
+
+                // Add click listeners to playlist items
+                document.querySelectorAll('.playlist-selector-item').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const playlistId = item.getAttribute('data-playlist-id');
+                        const stationId = parseInt(item.getAttribute('data-station-id'));
+
+                        try {
+                            // Add to the selected playlist
+                            const added = await addStationToPlaylist(playlistId, stationId, null, false);
+
+                            // Only show success message if actually added (not if already in playlist)
+                            if (added) {
+                                const selectedPlaylist = playlists.find(p => p.id === playlistId);
+                                alert(`Successfully added "${station.name}" to playlist "${selectedPlaylist.name}"!`);
+                            }
 
                             // Close modal
                             playlistSelectorModal.classList.remove('active');
@@ -3945,22 +4042,8 @@
                     </div>
                     <button class="station-menu-btn" data-id="${station.id}">⋮</button>
                     <div class="station-dropdown">
-                        <div class="dropdown-submenu">
-                            <div class="dropdown-item">
-                                <span>➕</span> Add to Playlist
-                            </div>
-                            <div class="dropdown-submenu-content">
-                                ${playlists.length === 0 ? 
-                                    `<div class="dropdown-item" data-action="create-playlist">
-                                        <span>📝</span> Create Playlist
-                                    </div>` :
-                                    playlists.map(playlist => `
-                                        <div class="dropdown-item" data-action="add-to-playlist" data-playlist-id="${playlist.id}" data-station-id="${station.id}">
-                                            ${escapeHtml(playlist.name)}
-                                        </div>
-                                    `).join('')
-                                }
-                            </div>
+                        <div class="dropdown-item" data-action="add-to-playlist-modal" data-station-id="${station.id}">
+                            <span>➕</span> Add to Playlist
                         </div>
                         ${isAdmin ? `
                         <div class="dropdown-divider"></div>
@@ -4025,14 +4108,13 @@
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const action = item.dataset.action;
-                    
-                    if (action === 'create-playlist') {
-                        showPlaylistForm();
-                        document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
-                    } else if (action === 'add-to-playlist') {
-                        const playlistId = item.dataset.playlistId;
+
+                    if (action === 'add-to-playlist-modal') {
                         const stationId = parseInt(item.dataset.stationId);
-                        addToPlaylist(playlistId, stationId);
+                        const station = stations.find(s => s.id === stationId);
+                        if (station) {
+                            showPlaylistSelectorForCuratedStation(station);
+                        }
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     } else if (action === 'edit-station') {
                         const stationId = parseInt(item.dataset.stationId);
@@ -6237,31 +6319,49 @@
         // Playlist form
         playlistForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const name = playlistName.value.trim();
             const description = playlistDescription.value.trim();
-            
+
             if (!name) return;
-            
+
+            let newPlaylist = null;
             if (editingPlaylistId) {
                 await updatePlaylist(editingPlaylistId, name, description);
             } else {
-                await createPlaylist(name, description);
+                newPlaylist = await createPlaylist(name, description);
             }
-            
+
             playlistFormModal.classList.remove('active');
             editingPlaylistId = null;
+
+            // If we have a pending context, return to the playlist selector
+            if (pendingPlaylistSelectorContext && newPlaylist) {
+                const context = pendingPlaylistSelectorContext;
+                pendingPlaylistSelectorContext = null; // Clear the context
+
+                // Reopen the appropriate playlist selector
+                if (context.type === 'radio-browser') {
+                    showPlaylistSelectorForRadioBrowser(context.station);
+                } else if (context.type === 'current-station') {
+                    showPlaylistSelectorForCurrentStation();
+                } else if (context.type === 'curated-station') {
+                    showPlaylistSelectorForCuratedStation(context.station);
+                }
+            }
         });
         
         // Close playlist form
         closePlaylistFormModal.addEventListener('click', () => {
             playlistFormModal.classList.remove('active');
             editingPlaylistId = null;
+            pendingPlaylistSelectorContext = null; // Clear pending context
         });
-        
+
         cancelPlaylistForm.addEventListener('click', () => {
             playlistFormModal.classList.remove('active');
             editingPlaylistId = null;
+            pendingPlaylistSelectorContext = null; // Clear pending context
         });
         
         // Station form
