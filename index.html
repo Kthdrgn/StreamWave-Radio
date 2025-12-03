@@ -3318,8 +3318,8 @@
                 </div>
             `).join('');
 
-            // Add click handlers
-            document.querySelectorAll('.playlist-selector-item').forEach(item => {
+            // Add click handlers (scope to curated playlist selector list only)
+            curatedPlaylistSelectorList.querySelectorAll('.playlist-selector-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const curatedPlaylistId = item.dataset.curatedPlaylistId;
                     addStationToCuratedPlaylist(pendingCuratedPlaylistStation, curatedPlaylistId, pendingCuratedPlaylistIsExternal);
