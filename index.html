@@ -633,6 +633,26 @@
                 <button class="modal-close" id="closeBrowseStationsModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Curated Playlists Carousel -->
+                <div class="carousel-section" id="curatedPlaylistsSection" style="display: none;">
+                    <h3 class="carousel-title">Curated Playlists</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="curatedPlaylistsPrev">‹</button>
+                        <div class="carousel-track" id="curatedPlaylistsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="curatedPlaylistsNext">›</button>
+                    </div>
+                </div>
+
+                <!-- Multi-Channel Radio Stations Carousel -->
+                <div class="carousel-section" id="multiChannelRadioSection" style="display: none;">
+                    <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="multiChannelRadioPrev">‹</button>
+                        <div class="carousel-track" id="multiChannelRadioTrack"></div>
+                        <button class="carousel-btn carousel-next" id="multiChannelRadioNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Search -->
                 <div class="search-controls">
                     <div class="search-input-container">
@@ -1088,6 +1108,7 @@
         let stations = [];
         let filteredStations = [];
         let playlists = [];
+        let curatedPlaylists = []; // Admin-curated playlists
         let currentPlaylist = null;
         let lastOpenedModal = null;
         let pendingPlaylistSelectorContext = null; // Track context when creating playlist from selector
@@ -3080,7 +3101,116 @@
                 console.error('Error loading playlists:', error);
             }
         }
-        
+
+        // Load curated playlists (admin-curated collections)
+        async function loadCuratedPlaylists() {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                curatedPlaylists = data || [];
+                console.log('Loaded curated playlists:', curatedPlaylists.length);
+
+                // Load stations for curated playlists to show in carousels
+                await renderCuratedPlaylistsInBrowseModal();
+
+            } catch (error) {
+                console.error('Error loading curated playlists:', error);
+            }
+        }
+
+        // Render curated playlists in Browse Stations modal
+        async function renderCuratedPlaylistsInBrowseModal() {
+            const curatedPlaylistsSection = document.getElementById('curatedPlaylistsSection');
+            const multiChannelRadioSection = document.getElementById('multiChannelRadioSection');
+
+            // Separate playlists by type
+            const curatedPlaylistItems = curatedPlaylists.filter(p => p.type === 'curated_playlist');
+            const multiChannelRadioItems = curatedPlaylists.filter(p => p.type === 'multi_channel_radio');
+
+            // Load stations for each curated playlist
+            const curatedPlaylistsWithStations = await Promise.all(curatedPlaylistItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Load stations for each multi-channel radio
+            const multiChannelRadioWithStations = await Promise.all(multiChannelRadioItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Render Curated Playlists carousel
+            if (curatedPlaylistsWithStations.length > 0) {
+                renderCarousel('curatedPlaylistsTrack', curatedPlaylistsWithStations, 'curated-playlist');
+                setupCarouselNavigation('curatedPlaylists', 'curatedPlaylistsTrack', 'curatedPlaylistsPrev', 'curatedPlaylistsNext');
+                curatedPlaylistsSection.style.display = 'block';
+            } else {
+                curatedPlaylistsSection.style.display = 'none';
+            }
+
+            // Render Multi-Channel Radio carousel
+            if (multiChannelRadioWithStations.length > 0) {
+                renderCarousel('multiChannelRadioTrack', multiChannelRadioWithStations, 'curated-playlist');
+                setupCarouselNavigation('multiChannelRadio', 'multiChannelRadioTrack', 'multiChannelRadioPrev', 'multiChannelRadioNext');
+                multiChannelRadioSection.style.display = 'block';
+            } else {
+                multiChannelRadioSection.style.display = 'none';
+            }
+        }
+
+        // Load stations for a curated playlist
+        async function loadCuratedPlaylistStations(playlist) {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlist_items')
+                    .select('*, radio_stations(*), external_stations(*)')
+                    .eq('curated_playlist_id', playlist.id)
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at')
+                    .limit(4); // Only need first 4 for collage
+
+                if (error) throw error;
+
+                const stationsData = data ? data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else if (item.radio_stations) {
+                        // Internal curated station
+                        return item.radio_stations;
+                    }
+                    return null;
+                }).filter(s => s !== null) : [];
+
+                return {
+                    ...playlist,
+                    stations: stationsData
+                };
+            } catch (error) {
+                console.error('Error loading curated playlist stations:', error);
+                return {
+                    ...playlist,
+                    stations: []
+                };
+            }
+        }
+
         // Load playlist stations (includes both internal and external stations)
         async function loadPlaylistStations(playlistId) {
             try {
@@ -3299,7 +3429,7 @@
                             </div>
                         </div>
                     `;
-                } else if (type === 'playlist') {
+                } else if (type === 'playlist' || type === 'curated-playlist') {
                     // Create a collage of station artworks
                     const stations = item.stations || [];
                     const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
@@ -3325,7 +3455,7 @@
                     }
 
                     return `
-                        <div class="carousel-item" data-playlist-id="${item.id}">
+                        <div class="carousel-item" data-playlist-id="${item.id}" data-playlist-type="${type}">
                             <div class="carousel-item-image">
                                 ${imageContent}
                             </div>
@@ -3351,6 +3481,10 @@
                         const playlistId = item.dataset.playlistId; // Don't parseInt - IDs are UUIDs (strings)
                         openPlaylist(playlistId);
                         overviewModal.classList.remove('active');
+                    } else if (type === 'curated-playlist') {
+                        const playlistId = item.dataset.playlistId;
+                        openCuratedPlaylist(playlistId);
+                        browseStationsModal.classList.remove('active');
                     }
                 });
             });
@@ -4616,7 +4750,67 @@
             playlistsModal.classList.remove('active');
             playlistModal.classList.add('active');
         }
-        
+
+        // Open curated playlist (reuses playlist modal UI)
+        function openCuratedPlaylist(id) {
+            const curatedPlaylist = curatedPlaylists.find(p => p.id === id);
+            if (!curatedPlaylist) return;
+
+            // Temporarily set currentPlaylist to the curated playlist for display
+            currentPlaylist = { ...curatedPlaylist, is_curated: true };
+            lastOpenedModal = { type: 'curated_playlist', id: id };
+            playlistModalTitle.textContent = curatedPlaylist.name;
+
+            // Load curated playlist stations into the playlist modal
+            loadCuratedPlaylistStationsForModal(id);
+
+            playlistModal.classList.add('active');
+        }
+
+        // Load curated playlist stations for display in modal
+        async function loadCuratedPlaylistStationsForModal(curatedPlaylistId) {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlist_items')
+                    .select('*, radio_stations(*), external_stations(*)')
+                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at');
+
+                if (error) throw error;
+
+                playlistStations = data ? data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else if (item.radio_stations) {
+                        // Internal curated station
+                        return item.radio_stations;
+                    }
+                    return null;
+                }).filter(s => s !== null) : [];
+
+                renderPlaylistStations();
+
+            } catch (error) {
+                console.error('Error loading curated playlist stations:', error);
+                playlistStations = [];
+                renderPlaylistStations();
+            }
+        }
+
         // Show playlist form
         function showPlaylistForm(id = null) {
             editingPlaylistId = id;
@@ -5194,6 +5388,10 @@
             });
             lastOpenedModal = 'browse';
             browseStationsModal.classList.add('active');
+
+            // Load curated playlists for carousels
+            loadCuratedPlaylists();
+
             // Ensure stations are displayed
             if (stations.length > 0) {
                 if (filteredStations.length === 0) {
