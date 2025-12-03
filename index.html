@@ -759,9 +759,6 @@
             </div>
             <div id="playlistModalDescription" style="padding: 0 24px 16px 24px; color: var(--text-secondary); font-size: 14px; display: none;"></div>
             <div class="modal-body">
-                <button class="back-btn" id="backToStations">
-                    ← Back to Stations
-                </button>
                 <div class="station-list" id="playlistStationList"></div>
             </div>
         </div>
@@ -1304,7 +1301,6 @@
         const closePlaylistModal = document.getElementById('closePlaylistModal');
         const playlistModalTitle = document.getElementById('playlistModalTitle');
         const playlistModalDescription = document.getElementById('playlistModalDescription');
-        const backToStations = document.getElementById('backToStations');
         const playlistStationList = document.getElementById('playlistStationList');
         
         // Sort and genre filter elements
@@ -7023,14 +7019,7 @@
             playlistModal.classList.remove('active');
             currentPlaylist = null;
         });
-        
-        // Back to stations (from playlist detail view)
-        backToStations.addEventListener('click', () => {
-            playlistModal.classList.remove('active');
-            playlistsModal.classList.add('active');
-            currentPlaylist = null;
-        });
-        
+
         // Create playlist button
         createPlaylistBtn.addEventListener('click', () => {
             showPlaylistForm();
