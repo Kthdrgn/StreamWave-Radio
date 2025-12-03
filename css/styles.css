@@ -916,6 +916,16 @@
             z-index: 1001;
         }
 
+        /* Playlist selector modal should appear above database/browse modals */
+        #playlistSelectorModal {
+            z-index: 1001;
+        }
+
+        /* Playlist form modal should appear above playlist selector when creating from selector */
+        #playlistFormModal {
+            z-index: 1002;
+        }
+
         /* Modal content */
         .modal-content {
             background: var(--modal-bg);
