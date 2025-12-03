@@ -757,6 +757,7 @@
                     <button class="modal-close" id="closePlaylistModal">&times;</button>
                 </div>
             </div>
+            <div id="playlistModalDescription" style="padding: 0 24px 16px 24px; color: var(--text-secondary); font-size: 14px; display: none;"></div>
             <div class="modal-body">
                 <button class="back-btn" id="backToStations">
                     ← Back to Stations
@@ -1302,6 +1303,7 @@
         const playlistModal = document.getElementById('playlistModal');
         const closePlaylistModal = document.getElementById('closePlaylistModal');
         const playlistModalTitle = document.getElementById('playlistModalTitle');
+        const playlistModalDescription = document.getElementById('playlistModalDescription');
         const backToStations = document.getElementById('backToStations');
         const playlistStationList = document.getElementById('playlistStationList');
         
@@ -3763,6 +3765,7 @@
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                ${item.description ? `<div class="carousel-item-subtitle">${escapeHtml(item.description)}</div>` : ''}
                             </div>
                         </div>
                     `;
@@ -5110,6 +5113,15 @@
 
             lastOpenedModal = { type: 'playlist', id: id };
             playlistModalTitle.textContent = currentPlaylist.name;
+
+            // Show/hide description
+            if (currentPlaylist.description) {
+                playlistModalDescription.textContent = currentPlaylist.description;
+                playlistModalDescription.style.display = 'block';
+            } else {
+                playlistModalDescription.style.display = 'none';
+            }
+
             loadPlaylistStations(id);
 
             playlistsModal.classList.remove('active');
@@ -5125,6 +5137,14 @@
             currentPlaylist = { ...curatedPlaylist, is_curated: true };
             lastOpenedModal = { type: 'curated_playlist', id: id };
             playlistModalTitle.textContent = curatedPlaylist.name;
+
+            // Show/hide description
+            if (curatedPlaylist.description) {
+                playlistModalDescription.textContent = curatedPlaylist.description;
+                playlistModalDescription.style.display = 'block';
+            } else {
+                playlistModalDescription.style.display = 'none';
+            }
 
             // Load curated playlist stations into the playlist modal
             loadCuratedPlaylistStationsForModal(id);
