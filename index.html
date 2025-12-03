@@ -4094,10 +4094,15 @@
         // Remove station from playlist (supports both internal and external stations)
         async function removeStationFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             try {
+                // Check if this is a curated playlist
+                const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
+                const tableName = isCuratedPlaylist ? 'curated_playlist_items' : 'playlist_items';
+                const playlistIdColumn = isCuratedPlaylist ? 'curated_playlist_id' : 'playlist_id';
+
                 let deleteQuery = supabase
-                    .from('playlist_items')
+                    .from(tableName)
                     .delete()
-                    .eq('playlist_id', playlistId);
+                    .eq(playlistIdColumn, playlistId);
 
                 // Use external_station_id for external stations, station_id for internal stations
                 if (isExternal && externalId) {
@@ -4110,8 +4115,14 @@
 
                 if (error) throw error;
 
-                await loadPlaylistStations(playlistId);
-                await loadPlaylists(true); // Force refresh to bypass cache
+                // Reload the appropriate playlist type
+                if (isCuratedPlaylist) {
+                    await loadCuratedPlaylistStationsForModal(playlistId);
+                    await loadCuratedPlaylists(); // Refresh carousels
+                } else {
+                    await loadPlaylistStations(playlistId);
+                    await loadPlaylists(true); // Force refresh to bypass cache
+                }
 
             } catch (error) {
                 console.error('Error removing station from playlist:', error);
