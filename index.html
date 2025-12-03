@@ -6609,7 +6609,9 @@
 
                             // Parse metadata
                             const metaString = new TextDecoder().decode(metaBytes);
-                            const streamTitle = metaString.match(/StreamTitle='([^']*)'/);
+                            // Match everything between StreamTitle=' and '; (or final ')
+                            // This handles apostrophes in song titles like "Don't Stop"
+                            const streamTitle = metaString.match(/StreamTitle='(.*?)';?/);
 
                             if (streamTitle && streamTitle[1]) {
                                 console.log('📻 Metadata received:', streamTitle[1]);
