@@ -20,7 +20,7 @@ CREATE TABLE curated_playlist_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     curated_playlist_id UUID NOT NULL REFERENCES curated_playlists(id) ON DELETE CASCADE,
     station_id INTEGER REFERENCES radio_stations(id) ON DELETE CASCADE,
-    external_station_id INTEGER REFERENCES external_stations(id) ON DELETE CASCADE,
+    external_station_id UUID REFERENCES external_stations(id) ON DELETE CASCADE,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
