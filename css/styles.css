@@ -2002,6 +2002,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border: 1px solid var(--border-color);
+    position: relative;
 }
 
 .carousel-item:hover {
@@ -2051,6 +2052,54 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.carousel-item-menu-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.carousel-item-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.carousel-item-dropdown {
+    position: absolute;
+    top: 45px;
+    right: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+}
+
+.carousel-item-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
 .carousel-btn {

@@ -3725,8 +3725,22 @@
                         `;
                     }
 
+                    // Check if user is admin (for curated playlists menu)
+                    const isAdmin = type === 'curated-playlist' && window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
+
                     return `
                         <div class="carousel-item" data-playlist-id="${item.id}" data-playlist-type="${type}">
+                            ${isAdmin ? `
+                            <button class="carousel-item-menu-btn" data-curated-playlist-id="${item.id}" onclick="event.stopPropagation()">⋮</button>
+                            <div class="carousel-item-dropdown">
+                                <div class="dropdown-item" data-action="edit-curated-playlist" data-curated-playlist-id="${item.id}">
+                                    <span>✏️</span> Edit
+                                </div>
+                                <div class="dropdown-item danger" data-action="delete-curated-playlist" data-curated-playlist-id="${item.id}">
+                                    <span>🗑️</span> Delete
+                                </div>
+                            </div>
+                            ` : ''}
                             <div class="carousel-item-image">
                                 ${imageContent}
                             </div>
@@ -3740,7 +3754,12 @@
 
             // Add click handlers
             track.querySelectorAll('.carousel-item').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', (e) => {
+                    // Don't open playlist if clicking menu button or dropdown
+                    if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
+                        return;
+                    }
+
                     if (type === 'station') {
                         const stationIndex = parseInt(item.dataset.stationIndex);
                         const station = items[stationIndex];
@@ -3759,6 +3778,43 @@
                     }
                 });
             });
+
+            // Add event listeners for curated playlist menu buttons
+            if (type === 'curated-playlist') {
+                track.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dropdown = btn.nextElementSibling;
+
+                        // Close all other dropdowns in this track
+                        track.querySelectorAll('.carousel-item-dropdown').forEach(d => {
+                            if (d !== dropdown) d.classList.remove('active');
+                        });
+
+                        dropdown.classList.toggle('active');
+                    });
+                });
+
+                // Add event listeners for dropdown actions
+                track.querySelectorAll('.carousel-item-dropdown .dropdown-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const action = item.dataset.action;
+                        const curatedPlaylistId = item.dataset.curatedPlaylistId;
+
+                        if (action === 'edit-curated-playlist') {
+                            showCuratedPlaylistForm(curatedPlaylistId);
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        } else if (action === 'delete-curated-playlist') {
+                            const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                            if (playlist && confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
+                                deleteCuratedPlaylist(curatedPlaylistId);
+                            }
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        }
+                    });
+                });
+            }
         }
 
         // Render Most Played Stations as a list with currently playing song
