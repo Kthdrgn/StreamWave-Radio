@@ -3309,11 +3309,17 @@
             }
 
             curatedPlaylistSelectorList.innerHTML = curatedPlaylists.map(playlist => `
-                <div class="playlist-selector-item" data-curated-playlist-id="${playlist.id}">
-                    <div class="playlist-selector-icon">📋</div>
-                    <div class="playlist-selector-content">
-                        <div class="playlist-selector-name">${escapeHtml(playlist.name)}</div>
-                        <div class="playlist-selector-meta">${playlist.type === 'curated_playlist' ? 'Curated Playlist' : 'Multi-Channel Radio'}</div>
+                <div
+                    class="playlist-selector-item"
+                    data-curated-playlist-id="${playlist.id}"
+                    style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px;"
+                    onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                    onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                >
+                    <div class="playlist-selector-icon" style="font-size: 24px;">📋</div>
+                    <div class="playlist-selector-content" style="flex: 1;">
+                        <div class="playlist-selector-name" style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(playlist.name)}</div>
+                        <div class="playlist-selector-meta" style="font-size: 12px; color: var(--text-secondary);">${playlist.type === 'curated_playlist' ? 'Curated Playlist' : 'Multi-Channel Radio'}</div>
                     </div>
                 </div>
             `).join('');
