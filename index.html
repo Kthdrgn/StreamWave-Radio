@@ -3715,19 +3715,22 @@
                         </div>
                     `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {
-                    // Create a collage of station artworks
+                    // Create a collage of station artworks (or single icon for multi-channel radio)
                     const stations = item.stations || [];
                     const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                    // Multi-Channel Radio stations always show just the first station icon (no collage)
+                    const isMultiChannelRadio = item.type === 'multi_channel_radio';
 
                     let imageContent;
                     if (stationIcons.length === 0) {
                         // No stations with icons - show emoji
                         imageContent = '<span class="carousel-item-icon">📋</span>';
-                    } else if (stationIcons.length === 1) {
-                        // Single station - show its icon
+                    } else if (stationIcons.length === 1 || isMultiChannelRadio) {
+                        // Single station OR multi-channel radio - show first icon only
                         imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
-                        // Multiple stations - create collage
+                        // Multiple stations (curated playlist) - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
