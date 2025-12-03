@@ -2652,6 +2652,7 @@
                     name: station.name,
                     url: station.url,
                     url_resolved: station.url_resolved,
+                    icon_url: station.favicon || null,  // Store favicon as icon_url for consistency
                     favicon: station.favicon,
                     genres: station.tags ? station.tags.split(',').map(t => t.trim()).filter(t => t) : [],
                     country: station.country || null,
