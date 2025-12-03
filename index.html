@@ -579,6 +579,14 @@
                     <span>Curate Station</span>
                 </button>
 
+                <!-- Add to Curated Playlist Button (Admin Only) -->
+                <button id="addToCuratedPlaylistBtn" class="menu-option-btn" style="margin-bottom: 12px; display: none;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12V17M9.5 14.5L12 12L14.5 14.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Add to Curated Playlist</span>
+                </button>
+
                 <!-- Station Overview Section -->
                 <div id="stationOverviewSection" style="margin-top: 20px;">
                     <h3 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; font-weight: 600;">Station Overview</h3>
@@ -633,6 +641,26 @@
                 <button class="modal-close" id="closeBrowseStationsModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Curated Playlists Carousel -->
+                <div class="carousel-section" id="curatedPlaylistsSection" style="display: none;">
+                    <h3 class="carousel-title">Curated Playlists</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="curatedPlaylistsPrev">‹</button>
+                        <div class="carousel-track" id="curatedPlaylistsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="curatedPlaylistsNext">›</button>
+                    </div>
+                </div>
+
+                <!-- Multi-Channel Radio Stations Carousel -->
+                <div class="carousel-section" id="multiChannelRadioSection" style="display: none;">
+                    <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="multiChannelRadioPrev">‹</button>
+                        <div class="carousel-track" id="multiChannelRadioTrack"></div>
+                        <button class="carousel-btn carousel-next" id="multiChannelRadioNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Search -->
                 <div class="search-controls">
                     <div class="search-input-container">
@@ -699,10 +727,23 @@
                     </div>
                 </div>
                 <div class="station-list" id="stationList"></div>
+
+                <!-- Pagination Controls -->
+                <div id="curatedStationsPagination" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); justify-content: space-between; align-items: center;">
+                    <button id="curatedStationsPrevBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;" disabled>
+                        ← Previous
+                    </button>
+                    <div id="curatedStationsPageInfo" style="color: var(--text-secondary); font-size: 14px;">
+                        Page 1
+                    </div>
+                    <button id="curatedStationsNextBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;">
+                        Next →
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Playlist Detail Modal -->
     <div id="playlistModal" class="modal-overlay">
         <div class="modal-content">
@@ -716,10 +757,8 @@
                     <button class="modal-close" id="closePlaylistModal">&times;</button>
                 </div>
             </div>
+            <div id="playlistModalDescription" style="padding: 0 24px 16px 24px; color: var(--text-secondary); font-size: 14px; display: none;"></div>
             <div class="modal-body">
-                <button class="back-btn" id="backToStations">
-                    ← Back to Stations
-                </button>
                 <div class="station-list" id="playlistStationList"></div>
             </div>
         </div>
@@ -998,6 +1037,57 @@
         </div>
     </div>
 
+    <!-- Curated Playlist Selector Modal -->
+    <div id="curatedPlaylistSelectorModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Add to Curated Playlist</h2>
+                <button class="modal-close" id="closeCuratedPlaylistSelectorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="curatedPlaylistSelectorList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Curated playlists will be populated here -->
+                </div>
+                <button id="createNewCuratedPlaylistBtn" class="form-btn form-btn-primary" style="width: 100%; margin-top: 16px;">
+                    ➕ Create New Curated Playlist
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Curated Playlist Form Modal -->
+    <div id="curatedPlaylistFormModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="curatedPlaylistFormTitle">Create Curated Playlist</h2>
+                <button class="modal-close" id="closeCuratedPlaylistFormModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="curatedPlaylistForm">
+                    <div class="form-group">
+                        <label for="curatedPlaylistName">Playlist Name *</label>
+                        <input type="text" id="curatedPlaylistName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="curatedPlaylistType">Type *</label>
+                        <select id="curatedPlaylistType" class="form-input" required>
+                            <option value="curated_playlist">Curated Playlist (shows collage)</option>
+                            <option value="multi_channel_radio">Multi-Channel Radio (shows single icon)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="curatedPlaylistDescription">Description</label>
+                        <textarea id="curatedPlaylistDescription" class="form-input" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="form-btn form-btn-secondary" id="cancelCuratedPlaylistFormBtn">Cancel</button>
+                        <button type="submit" class="form-btn form-btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav">
         <button id="bottomNavOverview" class="bottom-nav-btn" title="Overview">
@@ -1075,14 +1165,23 @@
         let stations = [];
         let filteredStations = [];
         let playlists = [];
+        let curatedPlaylists = []; // Admin-curated playlists
         let currentPlaylist = null;
         let lastOpenedModal = null;
         let pendingPlaylistSelectorContext = null; // Track context when creating playlist from selector
+        let pendingCuratedPlaylistStation = null; // Track station to be added to curated playlist
+        let pendingCuratedPlaylistIsExternal = false; // Track if pending station is external
+        let editingCuratedPlaylistId = null; // Track ID of curated playlist being edited
 
         // Radio Database pagination
         let radioDatabaseCurrentPage = 1;
         let radioDatabaseItemsPerPage = 50;
         let radioDatabaseTotalResults = 0;
+
+        // Curated Stations pagination
+        let curatedStationsCurrentPage = 1;
+        let curatedStationsItemsPerPage = 20;
+        let curatedStationsTotalResults = 0;
         let currentTrack = {
             title: null,
             artist: null,
@@ -1201,7 +1300,7 @@
         const playlistModal = document.getElementById('playlistModal');
         const closePlaylistModal = document.getElementById('closePlaylistModal');
         const playlistModalTitle = document.getElementById('playlistModalTitle');
-        const backToStations = document.getElementById('backToStations');
+        const playlistModalDescription = document.getElementById('playlistModalDescription');
         const playlistStationList = document.getElementById('playlistStationList');
         
         // Sort and genre filter elements
@@ -1260,6 +1359,22 @@
         const closePlaylistSelectorModal = document.getElementById('closePlaylistSelectorModal');
         const playlistSelectorTitle = document.getElementById('playlistSelectorTitle');
         const playlistSelectorList = document.getElementById('playlistSelectorList');
+
+        // Curated Playlist Selector Modal elements
+        const curatedPlaylistSelectorModal = document.getElementById('curatedPlaylistSelectorModal');
+        const closeCuratedPlaylistSelectorModal = document.getElementById('closeCuratedPlaylistSelectorModal');
+        const curatedPlaylistSelectorList = document.getElementById('curatedPlaylistSelectorList');
+        const createNewCuratedPlaylistBtn = document.getElementById('createNewCuratedPlaylistBtn');
+
+        // Curated Playlist Form Modal elements
+        const curatedPlaylistFormModal = document.getElementById('curatedPlaylistFormModal');
+        const closeCuratedPlaylistFormModal = document.getElementById('closeCuratedPlaylistFormModal');
+        const curatedPlaylistFormTitle = document.getElementById('curatedPlaylistFormTitle');
+        const curatedPlaylistForm = document.getElementById('curatedPlaylistForm');
+        const curatedPlaylistName = document.getElementById('curatedPlaylistName');
+        const curatedPlaylistType = document.getElementById('curatedPlaylistType');
+        const curatedPlaylistDescription = document.getElementById('curatedPlaylistDescription');
+        const cancelCuratedPlaylistFormBtn = document.getElementById('cancelCuratedPlaylistFormBtn');
 
         // ======================
         // LIKED TRACKS FUNCTIONS
@@ -2089,6 +2204,9 @@
                             <span>➕</span> Add to Playlist
                         </div>
                         ${isAdmin ? `
+                        <div class="dropdown-item" data-action="add-to-curated-playlist-external" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
+                            <span>📋</span> Add to Curated Playlist
+                        </div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item" data-action="curate-station" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
                             <span>⭐</span> Add to Curated Stations
@@ -2151,6 +2269,10 @@
                     if (action === 'add-to-playlist-modal') {
                         const station = JSON.parse(item.getAttribute('data-station'));
                         showPlaylistSelectorForRadioBrowser(station);
+                        document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
+                    } else if (action === 'add-to-curated-playlist-external') {
+                        const station = JSON.parse(item.getAttribute('data-station'));
+                        showCuratedPlaylistSelector(station, true);
                         document.querySelectorAll('#radioDatabaseResults .station-dropdown').forEach(d => d.classList.remove('active'));
                     } else if (action === 'curate-station') {
                         const station = JSON.parse(item.getAttribute('data-station'));
@@ -3019,6 +3141,7 @@
                     filterStations(searchTerm);
                 } else {
                     console.log('No search term, setting filteredStations');
+                    curatedStationsCurrentPage = 1; // Reset pagination when loading stations
                     filteredStations = [...stations];
                     renderStationList();
                 }
@@ -3061,7 +3184,316 @@
                 console.error('Error loading playlists:', error);
             }
         }
-        
+
+        // Load curated playlists (admin-curated collections)
+        async function loadCuratedPlaylists() {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                curatedPlaylists = data || [];
+                console.log('Loaded curated playlists:', curatedPlaylists.length);
+
+                // Load stations for curated playlists to show in carousels
+                await renderCuratedPlaylistsInBrowseModal();
+
+            } catch (error) {
+                console.error('Error loading curated playlists:', error);
+            }
+        }
+
+        // Render curated playlists in Browse Stations modal
+        async function renderCuratedPlaylistsInBrowseModal() {
+            const curatedPlaylistsSection = document.getElementById('curatedPlaylistsSection');
+            const multiChannelRadioSection = document.getElementById('multiChannelRadioSection');
+
+            // Separate playlists by type
+            const curatedPlaylistItems = curatedPlaylists.filter(p => p.type === 'curated_playlist');
+            const multiChannelRadioItems = curatedPlaylists.filter(p => p.type === 'multi_channel_radio');
+
+            // Load stations for each curated playlist
+            const curatedPlaylistsWithStations = await Promise.all(curatedPlaylistItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Load stations for each multi-channel radio
+            const multiChannelRadioWithStations = await Promise.all(multiChannelRadioItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Render Curated Playlists carousel
+            if (curatedPlaylistsWithStations.length > 0) {
+                renderCarousel('curatedPlaylistsTrack', curatedPlaylistsWithStations, 'curated-playlist');
+                setupCarouselNavigation('curatedPlaylists', 'curatedPlaylistsTrack', 'curatedPlaylistsPrev', 'curatedPlaylistsNext');
+                curatedPlaylistsSection.style.display = 'block';
+            } else {
+                curatedPlaylistsSection.style.display = 'none';
+            }
+
+            // Render Multi-Channel Radio carousel
+            if (multiChannelRadioWithStations.length > 0) {
+                renderCarousel('multiChannelRadioTrack', multiChannelRadioWithStations, 'curated-playlist');
+                setupCarouselNavigation('multiChannelRadio', 'multiChannelRadioTrack', 'multiChannelRadioPrev', 'multiChannelRadioNext');
+                multiChannelRadioSection.style.display = 'block';
+            } else {
+                multiChannelRadioSection.style.display = 'none';
+            }
+        }
+
+        // Load stations for a curated playlist
+        async function loadCuratedPlaylistStations(playlist) {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlist_items')
+                    .select('*, radio_stations(*), external_stations(*)')
+                    .eq('curated_playlist_id', playlist.id)
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at')
+                    .limit(4); // Only need first 4 for collage
+
+                if (error) throw error;
+
+                const stationsData = data ? data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else if (item.radio_stations) {
+                        // Internal curated station
+                        return item.radio_stations;
+                    }
+                    return null;
+                }).filter(s => s !== null) : [];
+
+                return {
+                    ...playlist,
+                    stations: stationsData
+                };
+            } catch (error) {
+                console.error('Error loading curated playlist stations:', error);
+                return {
+                    ...playlist,
+                    stations: []
+                };
+            }
+        }
+
+        // Show curated playlist selector
+        async function showCuratedPlaylistSelector(station, isExternal) {
+            pendingCuratedPlaylistStation = station;
+            pendingCuratedPlaylistIsExternal = isExternal;
+
+            // Load curated playlists if not already loaded
+            if (curatedPlaylists.length === 0) {
+                await loadCuratedPlaylists();
+            }
+
+            renderCuratedPlaylistSelectorList();
+            curatedPlaylistSelectorModal.classList.add('active');
+        }
+
+        // Render curated playlist selector list
+        function renderCuratedPlaylistSelectorList() {
+            if (curatedPlaylists.length === 0) {
+                curatedPlaylistSelectorList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-text">No curated playlists yet. Create one to get started!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            curatedPlaylistSelectorList.innerHTML = curatedPlaylists.map(playlist => `
+                <div
+                    class="playlist-selector-item"
+                    data-curated-playlist-id="${playlist.id}"
+                    style="padding: 16px; margin-bottom: 8px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px;"
+                    onmouseover="this.style.borderColor='var(--accent-color)'; this.style.background='var(--hover-bg, var(--card-bg))';"
+                    onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--card-bg)';"
+                >
+                    <div class="playlist-selector-icon" style="font-size: 24px;">📋</div>
+                    <div class="playlist-selector-content" style="flex: 1;">
+                        <div class="playlist-selector-name" style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(playlist.name)}</div>
+                        <div class="playlist-selector-meta" style="font-size: 12px; color: var(--text-secondary);">${playlist.type === 'curated_playlist' ? 'Curated Playlist' : 'Multi-Channel Radio'}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers (scope to curated playlist selector list only)
+            curatedPlaylistSelectorList.querySelectorAll('.playlist-selector-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const curatedPlaylistId = item.dataset.curatedPlaylistId;
+                    addStationToCuratedPlaylist(pendingCuratedPlaylistStation, curatedPlaylistId, pendingCuratedPlaylistIsExternal);
+                });
+            });
+        }
+
+        // Add station to curated playlist
+        async function addStationToCuratedPlaylist(station, curatedPlaylistId, isExternal) {
+            try {
+                let stationId = null;
+                let externalStationId = null;
+
+                if (isExternal) {
+                    // External station from Radio Browser - ensure it's in external_stations table
+                    externalStationId = await addExternalStation(station);
+                } else {
+                    // Internal curated station
+                    stationId = station.id;
+                }
+
+                // Check if station is already in the playlist
+                const { data: existing, error: checkError } = await supabase
+                    .from('curated_playlist_items')
+                    .select('id')
+                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .eq(isExternal ? 'external_station_id' : 'station_id', isExternal ? externalStationId : stationId)
+                    .single();
+
+                if (existing) {
+                    updateStatus('Station already in this curated playlist', 'info');
+                    curatedPlaylistSelectorModal.classList.remove('active');
+                    return;
+                }
+
+                // Add station to curated playlist
+                const { error } = await supabase
+                    .from('curated_playlist_items')
+                    .insert({
+                        curated_playlist_id: curatedPlaylistId,
+                        station_id: stationId,
+                        external_station_id: externalStationId
+                    });
+
+                if (error) throw error;
+
+                updateStatus('Station added to curated playlist', 'success');
+                curatedPlaylistSelectorModal.classList.remove('active');
+
+                // Reload curated playlists to update carousels
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error adding station to curated playlist:', error);
+                updateStatus('Error adding station to curated playlist', 'error');
+            }
+        }
+
+        // Show curated playlist form for create/edit
+        function showCuratedPlaylistForm(id = null) {
+            editingCuratedPlaylistId = id;
+
+            if (id) {
+                const playlist = curatedPlaylists.find(p => p.id === id);
+                if (!playlist) return;
+
+                curatedPlaylistFormTitle.textContent = 'Edit Curated Playlist';
+                curatedPlaylistName.value = playlist.name;
+                curatedPlaylistType.value = playlist.type;
+                curatedPlaylistDescription.value = playlist.description || '';
+            } else {
+                curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
+                curatedPlaylistName.value = '';
+                curatedPlaylistType.value = 'curated_playlist';
+                curatedPlaylistDescription.value = '';
+            }
+
+            curatedPlaylistFormModal.classList.add('active');
+        }
+
+        // Save curated playlist (create or update)
+        async function saveCuratedPlaylist() {
+            try {
+                const name = curatedPlaylistName.value.trim();
+                const type = curatedPlaylistType.value;
+                const description = curatedPlaylistDescription.value.trim();
+
+                if (!name) {
+                    updateStatus('Please enter a playlist name', 'error');
+                    return;
+                }
+
+                if (editingCuratedPlaylistId) {
+                    // Update existing playlist
+                    const { error } = await supabase
+                        .from('curated_playlists')
+                        .update({
+                            name,
+                            type,
+                            description,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', editingCuratedPlaylistId);
+
+                    if (error) throw error;
+                    updateStatus('Curated playlist updated', 'success');
+                } else {
+                    // Create new playlist
+                    const { error } = await supabase
+                        .from('curated_playlists')
+                        .insert({
+                            name,
+                            type,
+                            description
+                        });
+
+                    if (error) throw error;
+                    updateStatus('Curated playlist created', 'success');
+                }
+
+                curatedPlaylistFormModal.classList.remove('active');
+                await loadCuratedPlaylists();
+
+                // If there's a pending station, open the selector again
+                if (pendingCuratedPlaylistStation) {
+                    setTimeout(() => {
+                        renderCuratedPlaylistSelectorList();
+                        curatedPlaylistSelectorModal.classList.add('active');
+                    }, 300);
+                }
+
+            } catch (error) {
+                console.error('Error saving curated playlist:', error);
+                updateStatus('Error saving curated playlist', 'error');
+            }
+        }
+
+        // Delete curated playlist
+        async function deleteCuratedPlaylist(id) {
+            try {
+                const { error } = await supabase
+                    .from('curated_playlists')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                updateStatus('Curated playlist deleted', 'success');
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error deleting curated playlist:', error);
+                updateStatus('Error deleting curated playlist', 'error');
+            }
+        }
+
         // Load playlist stations (includes both internal and external stations)
         async function loadPlaylistStations(playlistId) {
             try {
@@ -3280,20 +3712,23 @@
                             </div>
                         </div>
                     `;
-                } else if (type === 'playlist') {
-                    // Create a collage of station artworks
+                } else if (type === 'playlist' || type === 'curated-playlist') {
+                    // Create a collage of station artworks (or single icon for multi-channel radio)
                     const stations = item.stations || [];
                     const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                    // Multi-Channel Radio stations always show just the first station icon (no collage)
+                    const isMultiChannelRadio = item.type === 'multi_channel_radio';
 
                     let imageContent;
                     if (stationIcons.length === 0) {
                         // No stations with icons - show emoji
                         imageContent = '<span class="carousel-item-icon">📋</span>';
-                    } else if (stationIcons.length === 1) {
-                        // Single station - show its icon
+                    } else if (stationIcons.length === 1 || isMultiChannelRadio) {
+                        // Single station OR multi-channel radio - show first icon only
                         imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
                     } else {
-                        // Multiple stations - create collage
+                        // Multiple stations (curated playlist) - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
@@ -3305,13 +3740,28 @@
                         `;
                     }
 
+                    // Check if user is admin (for curated playlists menu)
+                    const isAdmin = type === 'curated-playlist' && window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
+
                     return `
-                        <div class="carousel-item" data-playlist-id="${item.id}">
+                        <div class="carousel-item" data-playlist-id="${item.id}" data-playlist-type="${type}">
+                            ${isAdmin ? `
+                            <button class="carousel-item-menu-btn" data-curated-playlist-id="${item.id}" onclick="event.stopPropagation()">⋮</button>
+                            <div class="carousel-item-dropdown">
+                                <div class="dropdown-item" data-action="edit-curated-playlist" data-curated-playlist-id="${item.id}">
+                                    <span>✏️</span> Edit
+                                </div>
+                                <div class="dropdown-item danger" data-action="delete-curated-playlist" data-curated-playlist-id="${item.id}">
+                                    <span>🗑️</span> Delete
+                                </div>
+                            </div>
+                            ` : ''}
                             <div class="carousel-item-image">
                                 ${imageContent}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                ${item.description ? `<div class="carousel-item-subtitle">${escapeHtml(item.description)}</div>` : ''}
                             </div>
                         </div>
                     `;
@@ -3320,7 +3770,12 @@
 
             // Add click handlers
             track.querySelectorAll('.carousel-item').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', (e) => {
+                    // Don't open playlist if clicking menu button or dropdown
+                    if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
+                        return;
+                    }
+
                     if (type === 'station') {
                         const stationIndex = parseInt(item.dataset.stationIndex);
                         const station = items[stationIndex];
@@ -3332,9 +3787,50 @@
                         const playlistId = item.dataset.playlistId; // Don't parseInt - IDs are UUIDs (strings)
                         openPlaylist(playlistId);
                         overviewModal.classList.remove('active');
+                    } else if (type === 'curated-playlist') {
+                        const playlistId = item.dataset.playlistId;
+                        openCuratedPlaylist(playlistId);
+                        browseStationsModal.classList.remove('active');
                     }
                 });
             });
+
+            // Add event listeners for curated playlist menu buttons
+            if (type === 'curated-playlist') {
+                track.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dropdown = btn.nextElementSibling;
+
+                        // Close all other dropdowns in this track
+                        track.querySelectorAll('.carousel-item-dropdown').forEach(d => {
+                            if (d !== dropdown) d.classList.remove('active');
+                        });
+
+                        dropdown.classList.toggle('active');
+                    });
+                });
+
+                // Add event listeners for dropdown actions
+                track.querySelectorAll('.carousel-item-dropdown .dropdown-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const action = item.dataset.action;
+                        const curatedPlaylistId = item.dataset.curatedPlaylistId;
+
+                        if (action === 'edit-curated-playlist') {
+                            showCuratedPlaylistForm(curatedPlaylistId);
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        } else if (action === 'delete-curated-playlist') {
+                            const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                            if (playlist && confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
+                                deleteCuratedPlaylist(curatedPlaylistId);
+                            }
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        }
+                    });
+                });
+            }
         }
 
         // Render Most Played Stations as a list with currently playing song
@@ -3614,10 +4110,15 @@
         // Remove station from playlist (supports both internal and external stations)
         async function removeStationFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             try {
+                // Check if this is a curated playlist
+                const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
+                const tableName = isCuratedPlaylist ? 'curated_playlist_items' : 'playlist_items';
+                const playlistIdColumn = isCuratedPlaylist ? 'curated_playlist_id' : 'playlist_id';
+
                 let deleteQuery = supabase
-                    .from('playlist_items')
+                    .from(tableName)
                     .delete()
-                    .eq('playlist_id', playlistId);
+                    .eq(playlistIdColumn, playlistId);
 
                 // Use external_station_id for external stations, station_id for internal stations
                 if (isExternal && externalId) {
@@ -3630,8 +4131,14 @@
 
                 if (error) throw error;
 
-                await loadPlaylistStations(playlistId);
-                await loadPlaylists(true); // Force refresh to bypass cache
+                // Reload the appropriate playlist type
+                if (isCuratedPlaylist) {
+                    await loadCuratedPlaylistStationsForModal(playlistId);
+                    await loadCuratedPlaylists(); // Refresh carousels
+                } else {
+                    await loadPlaylistStations(playlistId);
+                    await loadPlaylists(true); // Force refresh to bypass cache
+                }
 
             } catch (error) {
                 console.error('Error removing station from playlist:', error);
@@ -3985,19 +4492,19 @@
                 filteredStationsLength: filteredStations.length,
                 stationsLength: stations.length
             });
-            
+
             if (!stationList) {
                 console.error('stationList element not found!');
                 return;
             }
-            
+
             // Apply grid view class if in grid mode
             if (stationViewMode === 'grid') {
                 stationList.classList.add('grid-view');
             } else {
                 stationList.classList.remove('grid-view');
             }
-            
+
             if (filteredStations.length === 0) {
                 stationList.innerHTML = `
                     <div class="empty-state">
@@ -4007,10 +4514,16 @@
                         </div>
                     </div>
                 `;
+                updateCuratedStationsPagination(0);
                 return;
             }
-            
-            stationList.innerHTML = filteredStations.map(station => {
+
+            // Calculate pagination
+            const startIndex = (curatedStationsCurrentPage - 1) * curatedStationsItemsPerPage;
+            const endIndex = startIndex + curatedStationsItemsPerPage;
+            const paginatedStations = filteredStations.slice(startIndex, endIndex);
+
+            stationList.innerHTML = paginatedStations.map(station => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
@@ -4046,6 +4559,9 @@
                             <span>➕</span> Add to Playlist
                         </div>
                         ${isAdmin ? `
+                        <div class="dropdown-item" data-action="add-to-curated-playlist" data-station-id="${station.id}">
+                            <span>⭐</span> Add to Curated Playlist
+                        </div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item" data-action="edit-station" data-station-id="${station.id}">
                             <span>✏️</span> Edit Station
@@ -4116,6 +4632,13 @@
                             showPlaylistSelectorForCuratedStation(station);
                         }
                         document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
+                    } else if (action === 'add-to-curated-playlist') {
+                        const stationId = parseInt(item.dataset.stationId);
+                        const station = stations.find(s => s.id === stationId);
+                        if (station) {
+                            showCuratedPlaylistSelector(station, false);
+                        }
+                        document.querySelectorAll('.station-dropdown').forEach(d => d.classList.remove('active'));
                     } else if (action === 'edit-station') {
                         const stationId = parseInt(item.dataset.stationId);
                         editStation(stationId);
@@ -4127,8 +4650,52 @@
                     }
                 });
             });
+
+            // Update pagination controls
+            updateCuratedStationsPagination(paginatedStations.length);
         }
-        
+
+        // Update curated stations pagination controls
+        function updateCuratedStationsPagination(resultsCount) {
+            const curatedStationsPagination = document.getElementById('curatedStationsPagination');
+            const curatedStationsPrevBtn = document.getElementById('curatedStationsPrevBtn');
+            const curatedStationsNextBtn = document.getElementById('curatedStationsNextBtn');
+            const curatedStationsPageInfo = document.getElementById('curatedStationsPageInfo');
+
+            if (!curatedStationsPagination) return;
+
+            if (resultsCount === 0) {
+                curatedStationsPagination.style.display = 'none';
+                return;
+            }
+
+            // Determine if Next button would be disabled (last page)
+            const isLastPage = resultsCount < curatedStationsItemsPerPage;
+            const isFirstPage = curatedStationsCurrentPage === 1;
+
+            // Only show pagination if we're not on page 1 OR if there are more pages
+            if (isFirstPage && isLastPage) {
+                curatedStationsPagination.style.display = 'none';
+                return;
+            }
+
+            curatedStationsPagination.style.display = 'flex';
+
+            // Update page info
+            curatedStationsPageInfo.textContent = `Page ${curatedStationsCurrentPage}`;
+
+            // Update Previous button
+            curatedStationsPrevBtn.disabled = isFirstPage;
+
+            // Update Next button
+            curatedStationsNextBtn.disabled = isLastPage;
+
+            // Scroll station list container to top
+            if (stationList) {
+                stationList.scrollTop = 0;
+            }
+        }
+
         // Render playlist stations
         async function renderPlaylistStations() {
             // Apply grid view class if in grid mode
@@ -4542,12 +5109,89 @@
 
             lastOpenedModal = { type: 'playlist', id: id };
             playlistModalTitle.textContent = currentPlaylist.name;
+
+            // Show/hide description
+            if (currentPlaylist.description) {
+                playlistModalDescription.textContent = currentPlaylist.description;
+                playlistModalDescription.style.display = 'block';
+            } else {
+                playlistModalDescription.style.display = 'none';
+            }
+
             loadPlaylistStations(id);
 
             playlistsModal.classList.remove('active');
             playlistModal.classList.add('active');
         }
-        
+
+        // Open curated playlist (reuses playlist modal UI)
+        function openCuratedPlaylist(id) {
+            const curatedPlaylist = curatedPlaylists.find(p => p.id === id);
+            if (!curatedPlaylist) return;
+
+            // Temporarily set currentPlaylist to the curated playlist for display
+            currentPlaylist = { ...curatedPlaylist, is_curated: true };
+            lastOpenedModal = { type: 'curated_playlist', id: id };
+            playlistModalTitle.textContent = curatedPlaylist.name;
+
+            // Show/hide description
+            if (curatedPlaylist.description) {
+                playlistModalDescription.textContent = curatedPlaylist.description;
+                playlistModalDescription.style.display = 'block';
+            } else {
+                playlistModalDescription.style.display = 'none';
+            }
+
+            // Load curated playlist stations into the playlist modal
+            loadCuratedPlaylistStationsForModal(id);
+
+            playlistModal.classList.add('active');
+        }
+
+        // Load curated playlist stations for display in modal
+        async function loadCuratedPlaylistStationsForModal(curatedPlaylistId) {
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlist_items')
+                    .select('*, radio_stations(*), external_stations(*)')
+                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at');
+
+                if (error) throw error;
+
+                playlistStations = data ? data.map(item => {
+                    if (item.external_stations) {
+                        // External station from radio-browser
+                        const ext = item.external_stations;
+                        return {
+                            id: ext.id,
+                            name: ext.name,
+                            url: ext.url_resolved || ext.url,
+                            icon_url: ext.icon_url || ext.favicon || '',
+                            genres: ext.genres || [],
+                            call_letters: '',
+                            frequency: '',
+                            country: ext.country,
+                            is_external: true,
+                            external_id: ext.id
+                        };
+                    } else if (item.radio_stations) {
+                        // Internal curated station
+                        return item.radio_stations;
+                    }
+                    return null;
+                }).filter(s => s !== null) : [];
+
+                renderPlaylistStations();
+
+            } catch (error) {
+                console.error('Error loading curated playlist stations:', error);
+                playlistStations = [];
+                renderPlaylistStations();
+            }
+        }
+
         // Show playlist form
         function showPlaylistForm(id = null) {
             editingPlaylistId = id;
@@ -4760,6 +5404,9 @@
             console.log('filterStations called with query:', query);
             console.log('Total stations:', stations.length);
             const lowerQuery = query.toLowerCase();
+
+            // Reset to first page when filtering
+            curatedStationsCurrentPage = 1;
             filteredStations = stations.filter(station => {
                 // First apply genre filter
                 if (currentGenreFilter) {
@@ -4887,7 +5534,10 @@
         // Sort stations based on current sort method
         async function sortStations() {
             console.log('Sorting stations by:', currentSortMethod);
-            
+
+            // Reset to first page when sorting
+            curatedStationsCurrentPage = 1;
+
             switch(currentSortMethod) {
                 case 'name-asc':
                     filteredStations.sort((a, b) => 
@@ -4985,11 +5635,15 @@
                 return;
             }
 
-            // Show/hide curate button based on admin status
+            // Show/hide admin buttons based on admin status
             const curateStationBtn = document.getElementById('curateStationBtn');
+            const addToCuratedPlaylistBtn = document.getElementById('addToCuratedPlaylistBtn');
             const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
             if (curateStationBtn) {
                 curateStationBtn.style.display = isAdmin ? 'flex' : 'none';
+            }
+            if (addToCuratedPlaylistBtn) {
+                addToCuratedPlaylistBtn.style.display = isAdmin ? 'flex' : 'none';
             }
 
             // Populate station overview with current station data
@@ -5036,6 +5690,16 @@
         document.getElementById('curateStationBtn').addEventListener('click', () => {
             if (currentStation) {
                 showStationFormForCurrentStation();
+            }
+        });
+
+        // Add to curated playlist button in station info modal (admin only)
+        document.getElementById('addToCuratedPlaylistBtn').addEventListener('click', () => {
+            if (currentStation) {
+                // Determine if current station is external or internal
+                const isExternal = currentStation.is_external || false;
+                showCuratedPlaylistSelector(currentStation, isExternal);
+                stationInfoModal.classList.remove('active');
             }
         });
 
@@ -5119,6 +5783,10 @@
             });
             lastOpenedModal = 'browse';
             browseStationsModal.classList.add('active');
+
+            // Load curated playlists for carousels
+            loadCuratedPlaylists();
+
             // Ensure stations are displayed
             if (stations.length > 0) {
                 if (filteredStations.length === 0) {
@@ -5215,10 +5883,58 @@
             playlistSelectorModal.classList.remove('active');
         });
 
+        // Close Curated Playlist Selector modal
+        closeCuratedPlaylistSelectorModal.addEventListener('click', () => {
+            curatedPlaylistSelectorModal.classList.remove('active');
+            pendingCuratedPlaylistStation = null;
+            pendingCuratedPlaylistIsExternal = false;
+        });
+
+        // Create New Curated Playlist button
+        createNewCuratedPlaylistBtn.addEventListener('click', () => {
+            curatedPlaylistSelectorModal.classList.remove('active');
+            showCuratedPlaylistForm();
+        });
+
+        // Close Curated Playlist Form modal
+        closeCuratedPlaylistFormModal.addEventListener('click', () => {
+            curatedPlaylistFormModal.classList.remove('active');
+            editingCuratedPlaylistId = null;
+        });
+
+        // Cancel Curated Playlist Form button
+        cancelCuratedPlaylistFormBtn.addEventListener('click', () => {
+            curatedPlaylistFormModal.classList.remove('active');
+            editingCuratedPlaylistId = null;
+        });
+
+        // Submit Curated Playlist Form
+        curatedPlaylistForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveCuratedPlaylist();
+        });
+
         // Close Playlist Selector modal when clicking outside
         playlistSelectorModal.addEventListener('click', (e) => {
             if (e.target === playlistSelectorModal) {
                 playlistSelectorModal.classList.remove('active');
+            }
+        });
+
+        // Close Curated Playlist Selector modal when clicking outside
+        curatedPlaylistSelectorModal.addEventListener('click', (e) => {
+            if (e.target === curatedPlaylistSelectorModal) {
+                curatedPlaylistSelectorModal.classList.remove('active');
+                pendingCuratedPlaylistStation = null;
+                pendingCuratedPlaylistIsExternal = false;
+            }
+        });
+
+        // Close Curated Playlist Form modal when clicking outside
+        curatedPlaylistFormModal.addEventListener('click', (e) => {
+            if (e.target === curatedPlaylistFormModal) {
+                curatedPlaylistFormModal.classList.remove('active');
+                editingCuratedPlaylistId = null;
             }
         });
 
@@ -5343,6 +6059,23 @@
         // Radio Database pagination - Next button
         radioDatabaseNextBtn.addEventListener('click', () => {
             searchRadioBrowser(radioDatabaseCurrentPage + 1);
+        });
+
+        // Curated Stations pagination - Previous button
+        const curatedStationsPrevBtn = document.getElementById('curatedStationsPrevBtn');
+        const curatedStationsNextBtn = document.getElementById('curatedStationsNextBtn');
+
+        curatedStationsPrevBtn.addEventListener('click', () => {
+            if (curatedStationsCurrentPage > 1) {
+                curatedStationsCurrentPage--;
+                renderStationList();
+            }
+        });
+
+        // Curated Stations pagination - Next button
+        curatedStationsNextBtn.addEventListener('click', () => {
+            curatedStationsCurrentPage++;
+            renderStationList();
         });
 
         // Close hamburger menu modal when clicking outside
@@ -6286,14 +7019,7 @@
             playlistModal.classList.remove('active');
             currentPlaylist = null;
         });
-        
-        // Back to stations (from playlist detail view)
-        backToStations.addEventListener('click', () => {
-            playlistModal.classList.remove('active');
-            playlistsModal.classList.add('active');
-            currentPlaylist = null;
-        });
-        
+
         // Create playlist button
         createPlaylistBtn.addEventListener('click', () => {
             showPlaylistForm();
