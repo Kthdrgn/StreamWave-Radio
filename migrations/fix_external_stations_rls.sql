@@ -6,8 +6,11 @@
 -- 1. Add RLS policy for anonymous users to read external stations
 -- ============================================================================
 
+-- Drop existing policy if it exists (to avoid conflicts)
+DROP POLICY IF EXISTS "Allow anonymous users to read external stations" ON public.external_stations;
+
 -- Allow anonymous users to read external stations
-CREATE POLICY IF NOT EXISTS "Allow anonymous users to read external stations"
+CREATE POLICY "Allow anonymous users to read external stations"
     ON public.external_stations
     FOR SELECT
     TO anon
@@ -17,9 +20,12 @@ CREATE POLICY IF NOT EXISTS "Allow anonymous users to read external stations"
 -- 2. Add RLS policy for anonymous users to insert external stations
 -- ============================================================================
 
+-- Drop existing policy if it exists (to avoid conflicts)
+DROP POLICY IF EXISTS "Allow anonymous users to insert external stations" ON public.external_stations;
+
 -- Allow anonymous users to insert external stations
 -- This is needed for guest mode users who add Radio Browser stations to playlists
-CREATE POLICY IF NOT EXISTS "Allow anonymous users to insert external stations"
+CREATE POLICY "Allow anonymous users to insert external stations"
     ON public.external_stations
     FOR INSERT
     TO anon
