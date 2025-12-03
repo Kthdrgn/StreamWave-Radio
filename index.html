@@ -699,10 +699,23 @@
                     </div>
                 </div>
                 <div class="station-list" id="stationList"></div>
+
+                <!-- Pagination Controls -->
+                <div id="curatedStationsPagination" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); justify-content: space-between; align-items: center;">
+                    <button id="curatedStationsPrevBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;" disabled>
+                        ← Previous
+                    </button>
+                    <div id="curatedStationsPageInfo" style="color: var(--text-secondary); font-size: 14px;">
+                        Page 1
+                    </div>
+                    <button id="curatedStationsNextBtn" class="form-btn form-btn-secondary" style="padding: 8px 16px;">
+                        Next →
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Playlist Detail Modal -->
     <div id="playlistModal" class="modal-overlay">
         <div class="modal-content">
@@ -1083,6 +1096,11 @@
         let radioDatabaseCurrentPage = 1;
         let radioDatabaseItemsPerPage = 50;
         let radioDatabaseTotalResults = 0;
+
+        // Curated Stations pagination
+        let curatedStationsCurrentPage = 1;
+        let curatedStationsItemsPerPage = 20;
+        let curatedStationsTotalResults = 0;
         let currentTrack = {
             title: null,
             artist: null,
@@ -3019,6 +3037,7 @@
                     filterStations(searchTerm);
                 } else {
                     console.log('No search term, setting filteredStations');
+                    curatedStationsCurrentPage = 1; // Reset pagination when loading stations
                     filteredStations = [...stations];
                     renderStationList();
                 }
@@ -3985,19 +4004,19 @@
                 filteredStationsLength: filteredStations.length,
                 stationsLength: stations.length
             });
-            
+
             if (!stationList) {
                 console.error('stationList element not found!');
                 return;
             }
-            
+
             // Apply grid view class if in grid mode
             if (stationViewMode === 'grid') {
                 stationList.classList.add('grid-view');
             } else {
                 stationList.classList.remove('grid-view');
             }
-            
+
             if (filteredStations.length === 0) {
                 stationList.innerHTML = `
                     <div class="empty-state">
@@ -4007,10 +4026,16 @@
                         </div>
                     </div>
                 `;
+                updateCuratedStationsPagination(0);
                 return;
             }
-            
-            stationList.innerHTML = filteredStations.map(station => {
+
+            // Calculate pagination
+            const startIndex = (curatedStationsCurrentPage - 1) * curatedStationsItemsPerPage;
+            const endIndex = startIndex + curatedStationsItemsPerPage;
+            const paginatedStations = filteredStations.slice(startIndex, endIndex);
+
+            stationList.innerHTML = paginatedStations.map(station => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
                     ? station.genres.join(', ')
@@ -4127,8 +4152,52 @@
                     }
                 });
             });
+
+            // Update pagination controls
+            updateCuratedStationsPagination(paginatedStations.length);
         }
-        
+
+        // Update curated stations pagination controls
+        function updateCuratedStationsPagination(resultsCount) {
+            const curatedStationsPagination = document.getElementById('curatedStationsPagination');
+            const curatedStationsPrevBtn = document.getElementById('curatedStationsPrevBtn');
+            const curatedStationsNextBtn = document.getElementById('curatedStationsNextBtn');
+            const curatedStationsPageInfo = document.getElementById('curatedStationsPageInfo');
+
+            if (!curatedStationsPagination) return;
+
+            if (resultsCount === 0) {
+                curatedStationsPagination.style.display = 'none';
+                return;
+            }
+
+            // Determine if Next button would be disabled (last page)
+            const isLastPage = resultsCount < curatedStationsItemsPerPage;
+            const isFirstPage = curatedStationsCurrentPage === 1;
+
+            // Only show pagination if we're not on page 1 OR if there are more pages
+            if (isFirstPage && isLastPage) {
+                curatedStationsPagination.style.display = 'none';
+                return;
+            }
+
+            curatedStationsPagination.style.display = 'flex';
+
+            // Update page info
+            curatedStationsPageInfo.textContent = `Page ${curatedStationsCurrentPage}`;
+
+            // Update Previous button
+            curatedStationsPrevBtn.disabled = isFirstPage;
+
+            // Update Next button
+            curatedStationsNextBtn.disabled = isLastPage;
+
+            // Scroll station list container to top
+            if (stationList) {
+                stationList.scrollTop = 0;
+            }
+        }
+
         // Render playlist stations
         async function renderPlaylistStations() {
             // Apply grid view class if in grid mode
@@ -4760,6 +4829,9 @@
             console.log('filterStations called with query:', query);
             console.log('Total stations:', stations.length);
             const lowerQuery = query.toLowerCase();
+
+            // Reset to first page when filtering
+            curatedStationsCurrentPage = 1;
             filteredStations = stations.filter(station => {
                 // First apply genre filter
                 if (currentGenreFilter) {
@@ -4887,7 +4959,10 @@
         // Sort stations based on current sort method
         async function sortStations() {
             console.log('Sorting stations by:', currentSortMethod);
-            
+
+            // Reset to first page when sorting
+            curatedStationsCurrentPage = 1;
+
             switch(currentSortMethod) {
                 case 'name-asc':
                     filteredStations.sort((a, b) => 
@@ -5343,6 +5418,23 @@
         // Radio Database pagination - Next button
         radioDatabaseNextBtn.addEventListener('click', () => {
             searchRadioBrowser(radioDatabaseCurrentPage + 1);
+        });
+
+        // Curated Stations pagination - Previous button
+        const curatedStationsPrevBtn = document.getElementById('curatedStationsPrevBtn');
+        const curatedStationsNextBtn = document.getElementById('curatedStationsNextBtn');
+
+        curatedStationsPrevBtn.addEventListener('click', () => {
+            if (curatedStationsCurrentPage > 1) {
+                curatedStationsCurrentPage--;
+                renderStationList();
+            }
+        });
+
+        // Curated Stations pagination - Next button
+        curatedStationsNextBtn.addEventListener('click', () => {
+            curatedStationsCurrentPage++;
+            renderStationList();
         });
 
         // Close hamburger menu modal when clicking outside
