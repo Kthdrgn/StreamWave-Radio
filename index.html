@@ -3258,7 +3258,7 @@
                     .eq('curated_playlist_id', playlist.id)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at')
-                    .limit(4); // Only need first 4 for collage
+                    .limit(12); // Load extra stations to ensure we find 4 with icons
 
                 if (error) throw error;
 
@@ -3558,7 +3558,7 @@
                         .select('*, radio_stations(*), external_stations(*)')
                         .eq('playlist_id', playlist.id)
                         .order('created_at')
-                        .limit(4); // Only need first 4 for collage
+                        .limit(12); // Load extra stations to ensure we find 4 with icons
 
                     if (error) throw error;
 
@@ -4266,7 +4266,7 @@
                             .select('*, radio_stations(*), external_stations(*)')
                             .eq('playlist_id', playlist.id)
                             .order('created_at')
-                            .limit(4); // Only need first 4 for collage
+                            .limit(12); // Load extra stations to ensure we find 4 with icons
 
                         if (error) throw error;
 
