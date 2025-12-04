@@ -1214,8 +1214,10 @@
         let radioDatabaseItemsPerPage = 50;
         let radioDatabaseTotalResults = 0;
         let radioDatabaseRawResults = []; // Store unfiltered results
-        let radioDatabaseSelectedBitrates = new Set(); // Bitrates to show
-        let radioDatabaseSelectedCodecs = new Set(); // Codecs to show
+        let radioDatabaseSelectedBitrates = new Set(); // Bitrates to show (user's current selection)
+        let radioDatabaseSelectedCodecs = new Set(); // Codecs to show (user's current selection)
+        let radioDatabaseAllSeenBitrates = new Set(); // All bitrates ever seen (to detect truly new values)
+        let radioDatabaseAllSeenCodecs = new Set(); // All codecs ever seen (to detect truly new values)
 
         // Curated Stations pagination
         let curatedStationsCurrentPage = 1;
@@ -2197,13 +2199,29 @@
             const sortedBitrates = Array.from(bitrates).sort((a, b) => b - a);
             const sortedCodecs = Array.from(codecs).sort();
 
-            // If sets are empty, initialize with all values checked
-            if (radioDatabaseSelectedBitrates.size === 0) {
-                sortedBitrates.forEach(br => radioDatabaseSelectedBitrates.add(br));
-            }
-            if (radioDatabaseSelectedCodecs.size === 0) {
-                sortedCodecs.forEach(codec => radioDatabaseSelectedCodecs.add(codec));
-            }
+            // Auto-check TRULY NEW bitrates/codecs (never seen before)
+            // Preserve user's explicit unchecks for previously seen values
+            sortedBitrates.forEach(br => {
+                if (!radioDatabaseAllSeenBitrates.has(br)) {
+                    // This is a brand new value - auto-check it
+                    radioDatabaseSelectedBitrates.add(br);
+                    radioDatabaseAllSeenBitrates.add(br);
+                } else {
+                    // Already seen before - user's selection is preserved in radioDatabaseSelectedBitrates
+                    radioDatabaseAllSeenBitrates.add(br);
+                }
+            });
+
+            sortedCodecs.forEach(codec => {
+                if (!radioDatabaseAllSeenCodecs.has(codec)) {
+                    // This is a brand new value - auto-check it
+                    radioDatabaseSelectedCodecs.add(codec);
+                    radioDatabaseAllSeenCodecs.add(codec);
+                } else {
+                    // Already seen before - user's selection is preserved in radioDatabaseSelectedCodecs
+                    radioDatabaseAllSeenCodecs.add(codec);
+                }
+            });
 
             // Populate bitrate checkboxes
             bitrateFilters.innerHTML = sortedBitrates.map(bitrate => {
@@ -6121,6 +6139,8 @@
             // Reset advanced filters (bitrate/codec)
             radioDatabaseSelectedBitrates.clear();
             radioDatabaseSelectedCodecs.clear();
+            radioDatabaseAllSeenBitrates.clear();
+            radioDatabaseAllSeenCodecs.clear();
 
             // Restore original filter options
             restoreLanguageOptions();
