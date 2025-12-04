@@ -1126,6 +1126,14 @@
         // GLOBAL VARIABLES
         // ======================
 
+        // Musical note icon SVG for stations without icons
+        const MUSIC_NOTE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>`;
+
+        // Musical note icon as data URI for use in img src attributes (onerror fallback)
+        const MUSIC_NOTE_DATA_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM2NjdlZWEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDN2MTAuNTVjLS41OS0uMzQtMS4yNy0uNTUtMi0uNTUtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNCA0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==';
+
         // LrcLib API - No access token needed
 
         let supabase;
@@ -2190,8 +2198,8 @@
                 return `
                 <div class="station-item ${playingClass}" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
                     ${favicon ?
-                        `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${station.name}${isPlaying ? ' <span style="color: var(--primary-color);">▶</span>' : ''}</div>
@@ -3709,7 +3717,7 @@
                     return `
                         <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
                             <div class="carousel-item-image">
-                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="carousel-item-icon">📻</span>'}
+                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
@@ -3726,18 +3734,18 @@
 
                     let imageContent;
                     if (stationIcons.length === 0) {
-                        // No stations with icons - show emoji
-                        imageContent = '<span class="carousel-item-icon">📋</span>';
+                        // No stations with icons - show music note
+                        imageContent = `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`;
                     } else if (stationIcons.length === 1 || isMultiChannelRadio) {
                         // Single station OR multi-channel radio - show first icon only
-                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
+                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`;
                     } else {
                         // Multiple stations (curated playlist) - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -3851,7 +3859,7 @@
                 return `
                     <div class="station-list-item" data-station-id="${station.id}" data-station-index="${index}">
                         <div class="station-list-icon">
-                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="station-list-icon-emoji">📻</span>'}
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="station-list-icon-emoji">${MUSIC_NOTE_ICON}</span>`}
                         </div>
                         <div class="station-list-content">
                             <div class="station-list-name">${escapeHtml(station.name)}</div>
@@ -4309,18 +4317,18 @@
 
                     let iconContent;
                     if (stationIcons.length === 0) {
-                        // No stations with icons - show emoji
-                        iconContent = '🎵';
+                        // No stations with icons - show music note
+                        iconContent = MUSIC_NOTE_ICON;
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon as image
-                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`;
                     } else {
                         // Multiple stations - create collage
                         iconContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -4512,7 +4520,7 @@
             if (filteredStations.length === 0) {
                 stationList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">📻</div>
+                        <div class="empty-state-icon">${MUSIC_NOTE_ICON}</div>
                         <div class="empty-state-text">
                             ${stations.length === 0 ? 'No stations yet. Add one to get started!' : 'No stations found.'}
                         </div>
@@ -4549,8 +4557,8 @@
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
@@ -4712,7 +4720,7 @@
             if (playlistStations.length === 0) {
                 playlistStationList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">📻</div>
+                        <div class="empty-state-icon">${MUSIC_NOTE_ICON}</div>
                         <div class="empty-state-text">No stations in this playlist yet.</div>
                     </div>
                 `;
@@ -4738,8 +4746,8 @@
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
@@ -4978,10 +4986,10 @@
             // stationSelectorButtons.style.display = 'none';
             stationDisplayIcon.src = station.icon_url || '';
             stationDisplayIcon.style.display = station.icon_url ? 'block' : 'none';
-            // Add error handler to fallback to StreamWave logo
+            // Add error handler to fallback to music note icon
             stationDisplayIcon.onerror = function() {
                 this.onerror = null;
-                this.src = 'icons/icon-512x512.png';
+                this.src = MUSIC_NOTE_DATA_URI;
             };
             stationDisplayName.textContent = station.name;
             
@@ -7379,9 +7387,9 @@
         // Helper function to display station icon
         function displayStationIcon() {
             if (currentStation && currentStation.icon_url) {
-                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
+                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
             } else {
-                updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
             }
             // Reset last fetched track and lyrics to allow fresh fetches when metadata returns
             lastFetchedTrack = { title: null, artist: null };
@@ -8086,9 +8094,9 @@
                                 
                                 // Display station icon as artwork for HLS streams
                                 if (currentStation && currentStation.icon_url) {
-                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
+                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
                                 } else {
-                                    updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                                    updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
                                 }
                                 
                                 metadataDiv.innerHTML = `
@@ -8302,9 +8310,9 @@
 
                             // Display station icon as artwork for HLS streams
                             if (currentStation && currentStation.icon_url) {
-                                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
                             } else {
-                                updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                                updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
                             }
 
                             metadataDiv.innerHTML = `
