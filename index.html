@@ -2163,8 +2163,9 @@
                 // Render filtered results
                 renderRadioBrowserResults(filteredResults);
 
-                // Update pagination controls
-                updateRadioDatabasePagination(filteredResults.length);
+                // Update pagination controls - use raw results count for pagination logic
+                // This ensures "Next" button works even if filters reduce visible results
+                updateRadioDatabasePagination(results.length);
 
                 // Save state after successful search
                 saveRadioDatabaseState();
@@ -2266,7 +2267,8 @@
             const filteredResults = applyAdvancedFilters(radioDatabaseRawResults);
             radioDatabaseTotalResults = filteredResults.length;
             renderRadioBrowserResults(filteredResults);
-            updateRadioDatabasePagination(filteredResults.length);
+            // Use raw results count for pagination to maintain proper Next/Previous behavior
+            updateRadioDatabasePagination(radioDatabaseRawResults.length);
         }
 
         // Update pagination controls
