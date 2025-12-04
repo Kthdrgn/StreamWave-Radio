@@ -988,6 +988,34 @@
                             <option value="changetimestamp">Recently Updated</option>
                         </select>
                     </div>
+
+                    <!-- Advanced Filters (Collapsible) -->
+                    <div style="margin-top: 15px;">
+                        <button id="toggleAdvancedFilters" class="form-btn form-btn-secondary" style="width: 100%; padding: 8px; font-size: 13px;">
+                            ▼ Advanced Filters (Bitrate & Codec)
+                        </button>
+                        <div id="advancedFiltersPanel" style="display: none; margin-top: 10px; padding: 15px; background: var(--modal-bg); border-radius: 8px; border: 1px solid var(--border-color);">
+                            <!-- Bitrate Filters -->
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 14px;">
+                                    Bitrate (kbps)
+                                </div>
+                                <div id="bitrateFilters" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;">
+                                    <!-- Checkboxes will be populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Codec Filters -->
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 14px;">
+                                    Audio Codec
+                                </div>
+                                <div id="codecFilters" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;">
+                                    <!-- Checkboxes will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Loading Indicator -->
@@ -1126,6 +1154,14 @@
         // GLOBAL VARIABLES
         // ======================
 
+        // Musical note icon SVG for stations without icons
+        const MUSIC_NOTE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>`;
+
+        // Musical note icon as data URI for use in img src attributes (onerror fallback)
+        const MUSIC_NOTE_DATA_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM2NjdlZWEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDN2MTAuNTVjLS41OS0uMzQtMS4yNy0uNTUtMi0uNTUtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNCA0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==';
+
         // LrcLib API - No access token needed
 
         let supabase;
@@ -1177,6 +1213,11 @@
         let radioDatabaseCurrentPage = 1;
         let radioDatabaseItemsPerPage = 50;
         let radioDatabaseTotalResults = 0;
+        let radioDatabaseRawResults = []; // Store unfiltered results
+        let radioDatabaseSelectedBitrates = new Set(); // Bitrates to show (user's current selection)
+        let radioDatabaseSelectedCodecs = new Set(); // Codecs to show (user's current selection)
+        let radioDatabaseAllSeenBitrates = new Set(); // All bitrates ever seen (to detect truly new values)
+        let radioDatabaseAllSeenCodecs = new Set(); // All codecs ever seen (to detect truly new values)
 
         // Curated Stations pagination
         let curatedStationsCurrentPage = 1;
@@ -1353,6 +1394,10 @@
         const radioDatabasePrevBtn = document.getElementById('radioDatabasePrevBtn');
         const radioDatabaseNextBtn = document.getElementById('radioDatabaseNextBtn');
         const radioDatabasePageInfo = document.getElementById('radioDatabasePageInfo');
+        const toggleAdvancedFilters = document.getElementById('toggleAdvancedFilters');
+        const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
+        const bitrateFilters = document.getElementById('bitrateFilters');
+        const codecFilters = document.getElementById('codecFilters');
 
         // Playlist Selector Modal elements
         const playlistSelectorModal = document.getElementById('playlistSelectorModal');
@@ -2099,18 +2144,29 @@
                         </div>
                     `;
                     radioDatabasePagination.style.display = 'none';
+                    radioDatabaseRawResults = [];
                     // Save state even with no results
                     saveRadioDatabaseState();
                     return;
                 }
 
+                // Store raw results for filtering
+                radioDatabaseRawResults = results;
+
+                // Populate bitrate and codec filters from results
+                populateBitrateCodecFilters(results);
+
+                // Apply client-side filters (bitrate/codec)
+                const filteredResults = applyAdvancedFilters(results);
+
                 // Update total results (estimate based on returned results)
-                radioDatabaseTotalResults = results.length;
+                radioDatabaseTotalResults = filteredResults.length;
 
-                // Render results (this will clear and update the results)
-                renderRadioBrowserResults(results);
+                // Render filtered results
+                renderRadioBrowserResults(filteredResults);
 
-                // Update pagination controls
+                // Update pagination controls - use raw results count for pagination logic
+                // This ensures "Next" button works even if filters reduce visible results
                 updateRadioDatabasePagination(results.length);
 
                 // Save state after successful search
@@ -2123,6 +2179,114 @@
                 radioDatabaseResults.innerHTML = '';
                 radioDatabasePagination.style.display = 'none';
             }
+        }
+
+        // Populate bitrate and codec filter checkboxes from search results
+        function populateBitrateCodecFilters(results) {
+            // Extract unique bitrates and codecs
+            const bitrates = new Set();
+            const codecs = new Set();
+
+            results.forEach(station => {
+                const bitrate = station.bitrate || 0;
+                bitrates.add(bitrate);
+
+                const codec = station.codec || 'Unknown';
+                codecs.add(codec.toUpperCase());
+            });
+
+            // Sort bitrates numerically (descending) and codecs alphabetically
+            const sortedBitrates = Array.from(bitrates).sort((a, b) => b - a);
+            const sortedCodecs = Array.from(codecs).sort();
+
+            // Auto-check TRULY NEW bitrates/codecs (never seen before)
+            // Preserve user's explicit unchecks for previously seen values
+            sortedBitrates.forEach(br => {
+                if (!radioDatabaseAllSeenBitrates.has(br)) {
+                    // This is a brand new value - auto-check it
+                    radioDatabaseSelectedBitrates.add(br);
+                    radioDatabaseAllSeenBitrates.add(br);
+                } else {
+                    // Already seen before - user's selection is preserved in radioDatabaseSelectedBitrates
+                    radioDatabaseAllSeenBitrates.add(br);
+                }
+            });
+
+            sortedCodecs.forEach(codec => {
+                if (!radioDatabaseAllSeenCodecs.has(codec)) {
+                    // This is a brand new value - auto-check it
+                    radioDatabaseSelectedCodecs.add(codec);
+                    radioDatabaseAllSeenCodecs.add(codec);
+                } else {
+                    // Already seen before - user's selection is preserved in radioDatabaseSelectedCodecs
+                    radioDatabaseAllSeenCodecs.add(codec);
+                }
+            });
+
+            // Populate bitrate checkboxes
+            bitrateFilters.innerHTML = sortedBitrates.map(bitrate => {
+                const label = bitrate === 0 ? 'Unknown' : `${bitrate} kbps`;
+                const checked = radioDatabaseSelectedBitrates.has(bitrate) ? 'checked' : '';
+                return `
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" value="${bitrate}" ${checked} onchange="toggleBitrateFilter(${bitrate}, this.checked)" style="cursor: pointer;">
+                        <span>${label}</span>
+                    </label>
+                `;
+            }).join('');
+
+            // Populate codec checkboxes
+            codecFilters.innerHTML = sortedCodecs.map(codec => {
+                const checked = radioDatabaseSelectedCodecs.has(codec) ? 'checked' : '';
+                return `
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" value="${codec}" ${checked} onchange="toggleCodecFilter('${codec}', this.checked)" style="cursor: pointer;">
+                        <span>${codec}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        // Toggle bitrate filter selection
+        window.toggleBitrateFilter = function(bitrate, checked) {
+            if (checked) {
+                radioDatabaseSelectedBitrates.add(bitrate);
+            } else {
+                radioDatabaseSelectedBitrates.delete(bitrate);
+            }
+            applyFiltersAndRender();
+        };
+
+        // Toggle codec filter selection
+        window.toggleCodecFilter = function(codec, checked) {
+            if (checked) {
+                radioDatabaseSelectedCodecs.add(codec);
+            } else {
+                radioDatabaseSelectedCodecs.delete(codec);
+            }
+            applyFiltersAndRender();
+        };
+
+        // Apply advanced filters (bitrate/codec) to raw results
+        function applyAdvancedFilters(results) {
+            return results.filter(station => {
+                const bitrate = station.bitrate || 0;
+                const codec = (station.codec || 'Unknown').toUpperCase();
+
+                const bitrateMatch = radioDatabaseSelectedBitrates.has(bitrate);
+                const codecMatch = radioDatabaseSelectedCodecs.has(codec);
+
+                return bitrateMatch && codecMatch;
+            });
+        }
+
+        // Re-apply filters and re-render results (when checkboxes change)
+        function applyFiltersAndRender() {
+            const filteredResults = applyAdvancedFilters(radioDatabaseRawResults);
+            radioDatabaseTotalResults = filteredResults.length;
+            renderRadioBrowserResults(filteredResults);
+            // Use raw results count for pagination to maintain proper Next/Previous behavior
+            updateRadioDatabasePagination(radioDatabaseRawResults.length);
         }
 
         // Update pagination controls
@@ -2190,8 +2354,8 @@
                 return `
                 <div class="station-item ${playingClass}" data-station='${JSON.stringify(station).replace(/'/g, '&apos;')}'>
                     ${favicon ?
-                        `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${favicon}" class="station-icon" alt="${station.name}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${station.name}${isPlaying ? ' <span style="color: var(--primary-color);">▶</span>' : ''}</div>
@@ -3045,20 +3209,23 @@
                                     if (!text) return '';
 
                                     // First, check if the text starts with text="..." pattern and extract the value
-                                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
+                                    // Use non-greedy .*? to handle apostrophes in values like "Don't Stop"
+                                    const textMatch = text.match(/^text=(?:"(.*?)"|'(.*?)')/i);
                                     if (textMatch) {
                                         return (textMatch[1] || textMatch[2]).trim();
                                     }
 
                                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
+                                    // Use non-greedy .*? to handle apostrophes in attribute values
+                                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"(.*?)"|'(.*?)').*$/i, '');
                                     return cleaned.trim();
                                 }
 
                                 // Check for structured format
-                                const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
-                                const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
+                                // Use non-greedy .*? to handle apostrophes in values like "Don't Stop"
+                                const titleMatch = streamTitle.match(/title=(?:"(.*?)"|'(.*?)')/i);
+                                const artistMatch = streamTitle.match(/artist=(?:"(.*?)"|'(.*?)')/i);
 
                                 if (titleMatch || artistMatch) {
                                     title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : 'Unknown';
@@ -3255,7 +3422,7 @@
                     .eq('curated_playlist_id', playlist.id)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at')
-                    .limit(4); // Only need first 4 for collage
+                    .limit(12); // Load extra stations to ensure we find 4 with icons
 
                 if (error) throw error;
 
@@ -3555,7 +3722,7 @@
                         .select('*, radio_stations(*), external_stations(*)')
                         .eq('playlist_id', playlist.id)
                         .order('created_at')
-                        .limit(4); // Only need first 4 for collage
+                        .limit(12); // Load extra stations to ensure we find 4 with icons
 
                     if (error) throw error;
 
@@ -3706,7 +3873,7 @@
                     return `
                         <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
                             <div class="carousel-item-image">
-                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="carousel-item-icon">📻</span>'}
+                                ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
                             <div class="carousel-item-content">
                                 <div class="carousel-item-title">${escapeHtml(item.name)}</div>
@@ -3723,18 +3890,18 @@
 
                     let imageContent;
                     if (stationIcons.length === 0) {
-                        // No stations with icons - show emoji
-                        imageContent = '<span class="carousel-item-icon">📋</span>';
+                        // No stations with icons - show music note
+                        imageContent = `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`;
                     } else if (stationIcons.length === 1 || isMultiChannelRadio) {
                         // Single station OR multi-channel radio - show first icon only
-                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
+                        imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`;
                     } else {
                         // Multiple stations (curated playlist) - create collage
                         imageContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -3848,7 +4015,7 @@
                 return `
                     <div class="station-list-item" data-station-id="${station.id}" data-station-index="${index}">
                         <div class="station-list-icon">
-                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` : '<span class="station-list-icon-emoji">📻</span>'}
+                            ${station.icon_url ? `<img src="${escapeHtml(station.icon_url)}" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="station-list-icon-emoji">${MUSIC_NOTE_ICON}</span>`}
                         </div>
                         <div class="station-list-content">
                             <div class="station-list-name">${escapeHtml(station.name)}</div>
@@ -4263,7 +4430,7 @@
                             .select('*, radio_stations(*), external_stations(*)')
                             .eq('playlist_id', playlist.id)
                             .order('created_at')
-                            .limit(4); // Only need first 4 for collage
+                            .limit(12); // Load extra stations to ensure we find 4 with icons
 
                         if (error) throw error;
 
@@ -4306,18 +4473,18 @@
 
                     let iconContent;
                     if (stationIcons.length === 0) {
-                        // No stations with icons - show emoji
-                        iconContent = '🎵';
+                        // No stations with icons - show music note
+                        iconContent = MUSIC_NOTE_ICON;
                     } else if (stationIcons.length === 1) {
                         // Single station - show its icon as image
-                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`;
+                        iconContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`;
                     } else {
                         // Multiple stations - create collage
                         iconContent = `
                             <div class="playlist-collage">
                                 ${stationIcons.map(s => `
                                     <div class="playlist-collage-item">
-                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">
+                                        <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">
                                     </div>
                                 `).join('')}
                             </div>
@@ -4509,7 +4676,7 @@
             if (filteredStations.length === 0) {
                 stationList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">📻</div>
+                        <div class="empty-state-icon">${MUSIC_NOTE_ICON}</div>
                         <div class="empty-state-text">
                             ${stations.length === 0 ? 'No stations yet. Add one to get started!' : 'No stations found.'}
                         </div>
@@ -4546,8 +4713,8 @@
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
@@ -4709,7 +4876,7 @@
             if (playlistStations.length === 0) {
                 playlistStationList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">📻</div>
+                        <div class="empty-state-icon">${MUSIC_NOTE_ICON}</div>
                         <div class="empty-state-text">No stations in this playlist yet.</div>
                     </div>
                 `;
@@ -4735,8 +4902,8 @@
                 return `
                 <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
                     ${station.icon_url ?
-                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">` :
-                        `<div class="station-icon">📻</div>`
+                        `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
+                        `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
                         <div class="station-name">${escapeHtml(station.name)}</div>
@@ -4975,10 +5142,10 @@
             // stationSelectorButtons.style.display = 'none';
             stationDisplayIcon.src = station.icon_url || '';
             stationDisplayIcon.style.display = station.icon_url ? 'block' : 'none';
-            // Add error handler to fallback to StreamWave logo
+            // Add error handler to fallback to music note icon
             stationDisplayIcon.onerror = function() {
                 this.onerror = null;
-                this.src = 'icons/icon-512x512.png';
+                this.src = MUSIC_NOTE_DATA_URI;
             };
             stationDisplayName.textContent = station.name;
             
@@ -5969,6 +6136,12 @@
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
 
+            // Reset advanced filters (bitrate/codec)
+            radioDatabaseSelectedBitrates.clear();
+            radioDatabaseSelectedCodecs.clear();
+            radioDatabaseAllSeenBitrates.clear();
+            radioDatabaseAllSeenCodecs.clear();
+
             // Restore original filter options
             restoreLanguageOptions();
             restoreTagOptions();
@@ -6048,6 +6221,15 @@
         // Radio Database sort change - restart search from page 1
         radioDatabaseSort.addEventListener('change', () => {
             searchRadioBrowser(1);
+        });
+
+        // Toggle Advanced Filters panel
+        toggleAdvancedFilters.addEventListener('click', () => {
+            const isHidden = advancedFiltersPanel.style.display === 'none';
+            advancedFiltersPanel.style.display = isHidden ? 'block' : 'none';
+            toggleAdvancedFilters.innerHTML = isHidden ?
+                '▲ Advanced Filters (Bitrate & Codec)' :
+                '▼ Advanced Filters (Bitrate & Codec)';
         });
 
         // Radio Database pagination - Previous button
@@ -6523,6 +6705,7 @@
         }
 
         // Fetch metadata once without continuous playback
+        // Uses IcecastMetadataPlayer library which properly handles all metadata formats including apostrophes
         function fetchMetadataOnce() {
             if (!currentStation) {
                 return;
@@ -6549,107 +6732,11 @@
             // Use CORS proxy for metadata fetching
             const streamUrl = corsProxies[0].url(rawUrl);
 
-            // Use fetch API to get metadata without playing audio
-            // This works even when the page is hidden/backgrounded
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-            fetch(streamUrl, {
-                headers: {
-                    'Icy-MetaData': '1'
-                },
-                signal: controller.signal
-            })
-            .then(response => {
-                const metaInt = parseInt(response.headers.get('icy-metaint'));
-
-                if (!metaInt || isNaN(metaInt)) {
-                    console.log('No icy-metaint header, trying with audio player');
-                    // Fallback to audio-based method
-                    fetchMetadataWithAudio(streamUrl);
-                    return;
-                }
-
-                console.log('📻 Metadata interval:', metaInt);
-
-                const reader = response.body.getReader();
-                let bytesRead = 0;
-                let buffer = new Uint8Array(0);
-
-                const readStream = () => {
-                    reader.read().then(({ done, value }) => {
-                        if (done) {
-                            clearTimeout(timeoutId);
-                            return;
-                        }
-
-                        // Append new data to buffer
-                        const newBuffer = new Uint8Array(buffer.length + value.length);
-                        newBuffer.set(buffer);
-                        newBuffer.set(value, buffer.length);
-                        buffer = newBuffer;
-
-                        // Check if we have enough data to read metadata
-                        while (buffer.length >= metaInt) {
-                            // Skip audio data
-                            buffer = buffer.slice(metaInt);
-
-                            // Read metadata length (1 byte, multiply by 16 to get actual length)
-                            if (buffer.length < 1) break;
-                            const metaLength = buffer[0] * 16;
-
-                            if (metaLength === 0) {
-                                buffer = buffer.slice(1);
-                                continue;
-                            }
-
-                            // Read metadata
-                            if (buffer.length < 1 + metaLength) break;
-                            const metaBytes = buffer.slice(1, 1 + metaLength);
-                            buffer = buffer.slice(1 + metaLength);
-
-                            // Parse metadata
-                            const metaString = new TextDecoder().decode(metaBytes);
-                            // Match everything between StreamTitle=' and '; (or final ')
-                            // This handles apostrophes in song titles like "Don't Stop"
-                            const streamTitle = metaString.match(/StreamTitle='(.*?)';?/);
-
-                            if (streamTitle && streamTitle[1]) {
-                                console.log('📻 Metadata received:', streamTitle[1]);
-                                displayMetadata({ StreamTitle: streamTitle[1] });
-
-                                // Stop reading after getting metadata
-                                clearTimeout(timeoutId);
-                                reader.cancel();
-                                return;
-                            }
-                        }
-
-                        // Continue reading
-                        readStream();
-                    }).catch(error => {
-                        clearTimeout(timeoutId);
-                        if (error.name !== 'AbortError') {
-                            console.log('⚠️ Stream read error:', error);
-                        }
-                    });
-                };
-
-                readStream();
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    console.log('⏱️ Metadata fetch timeout');
-                } else {
-                    console.log('⚠️ Fetch error, trying with audio player:', error);
-                    // Fallback to audio-based method
-                    fetchMetadataWithAudio(streamUrl);
-                }
-            });
+            // Use IcecastMetadataPlayer to fetch metadata
+            fetchMetadataWithAudio(streamUrl);
         }
 
-        // Fallback method using audio player (only works when page is visible)
+        // Fetch metadata using IcecastMetadataPlayer library
         function fetchMetadataWithAudio(streamUrl) {
             let tempPlayer = null;
             let metadataReceived = false;
@@ -7471,9 +7558,9 @@
         // Helper function to display station icon
         function displayStationIcon() {
             if (currentStation && currentStation.icon_url) {
-                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
+                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
             } else {
-                updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
             }
             // Reset last fetched track and lyrics to allow fresh fetches when metadata returns
             lastFetchedTrack = { title: null, artist: null };
@@ -7513,8 +7600,9 @@
             let album = '';
             
             // Check if metadata is in structured attribute format: title="...",artist="..."
-            const titleMatch = streamTitle.match(/title=(?:"([^"]*)"|'([^']*)')/i);
-            const artistMatch = streamTitle.match(/artist=(?:"([^"]*)"|'([^']*)')/i);
+            // Use non-greedy .*? to handle apostrophes in values like "Don't Stop"
+            const titleMatch = streamTitle.match(/title=(?:"(.*?)"|'(.*?)')/i);
+            const artistMatch = streamTitle.match(/artist=(?:"(.*?)"|'(.*?)')/i);
 
             if (titleMatch || artistMatch) {
                 // Structured format detected
@@ -7526,14 +7614,16 @@
                     if (!text) return '';
 
                     // First, check if the text starts with text="..." pattern and extract the value
-                    const textMatch = text.match(/^text=(?:"([^"]*)"|'([^']*)')/i);
+                    // Use non-greedy .*? to handle apostrophes in values like "Don't Stop"
+                    const textMatch = text.match(/^text=(?:"(.*?)"|'(.*?)')/i);
                     if (textMatch) {
                         return (textMatch[1] || textMatch[2]).trim();
                     }
 
                     // Otherwise, remove everything after common attribute patterns like text=", song_spot=", etc.
                     // This matches patterns like: text="..." or attribute="value" or attribute='value'
-                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"[^"]*"|'[^']*').*$/i, '');
+                    // Use non-greedy .*? to handle apostrophes in attribute values
+                    const cleaned = text.replace(/\s+(text|song_spot|spotInstanceId|length|MediaBaseId|TAID|TPID|cartcutId|amgArtworkURL|spEventID|[a-zA-Z_]+)=(?:"(.*?)"|'(.*?)').*$/i, '');
                     return cleaned.trim();
                 }
                 
@@ -8175,9 +8265,9 @@
                                 
                                 // Display station icon as artwork for HLS streams
                                 if (currentStation && currentStation.icon_url) {
-                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='icons/icon-512x512.png'">`);
+                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
                                 } else {
-                                    updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                                    updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
                                 }
                                 
                                 metadataDiv.innerHTML = `
@@ -8391,9 +8481,9 @@
 
                             // Display station icon as artwork for HLS streams
                             if (currentStation && currentStation.icon_url) {
-                                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art">`);
+                                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
                             } else {
-                                updateArtwork(`<img src="icons/icon-512x512.png" alt="Radio Icon" class="album-art" style="padding: 40px;">`);
+                                updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
                             }
 
                             metadataDiv.innerHTML = `
