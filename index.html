@@ -992,27 +992,39 @@
                     <!-- Advanced Filters (Collapsible) -->
                     <div style="margin-top: 15px;">
                         <button id="toggleAdvancedFilters" class="form-btn form-btn-secondary" style="width: 100%; padding: 8px; font-size: 13px;">
-                            ▼ Advanced Filters (Bitrate & Codec)
+                            ▼ Advanced Filters
                         </button>
                         <div id="advancedFiltersPanel" style="display: none; margin-top: 10px; padding: 15px; background: var(--modal-bg); border-radius: 8px; border: 1px solid var(--border-color);">
-                            <!-- Bitrate Filters -->
+                            <!-- Bitrate Dropdown -->
                             <div style="margin-bottom: 15px;">
-                                <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 14px;">
-                                    Bitrate (kbps)
-                                </div>
-                                <div id="bitrateFilters" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;">
-                                    <!-- Checkboxes will be populated dynamically -->
-                                </div>
+                                <label for="bitrateDropdown" style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; display: block;">
+                                    Minimum Bitrate
+                                </label>
+                                <select id="bitrateDropdown" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;" onchange="handleBitrateChange()">
+                                    <option value="0">All bitrates</option>
+                                    <option value="96">96 kbps+</option>
+                                    <option value="128">128 kbps+</option>
+                                    <option value="192">192 kbps+</option>
+                                    <option value="256">256 kbps+</option>
+                                    <option value="320">320 kbps+</option>
+                                    <option value="1411">1411 kbps+</option>
+                                </select>
                             </div>
 
-                            <!-- Codec Filters -->
+                            <!-- Include Unknown Bitrates Checkbox -->
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                                    <input type="checkbox" id="includeUnknownBitrates" checked onchange="handleIncludeUnknownChange()" style="cursor: pointer;">
+                                    <span>Include Unknown bitrates</span>
+                                </label>
+                            </div>
+
+                            <!-- Filter out HLS Streams Checkbox -->
                             <div>
-                                <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 14px;">
-                                    Audio Codec
-                                </div>
-                                <div id="codecFilters" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;">
-                                    <!-- Checkboxes will be populated dynamically -->
-                                </div>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                                    <input type="checkbox" id="filterOutHLS" onchange="handleFilterHLSChange()" style="cursor: pointer;">
+                                    <span>Filter out HLS streams</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -1214,10 +1226,9 @@
         let radioDatabaseItemsPerPage = 50;
         let radioDatabaseTotalResults = 0;
         let radioDatabaseRawResults = []; // Store unfiltered results
-        let radioDatabaseSelectedBitrates = new Set(); // Bitrates to show (user's current selection)
-        let radioDatabaseSelectedCodecs = new Set(); // Codecs to show (user's current selection)
-        let radioDatabaseAllSeenBitrates = new Set(); // All bitrates ever seen (to detect truly new values)
-        let radioDatabaseAllSeenCodecs = new Set(); // All codecs ever seen (to detect truly new values)
+        let radioDatabaseMinBitrate = 0; // Minimum bitrate filter (0 = all)
+        let radioDatabaseIncludeUnknown = true; // Include stations with unknown/0 bitrate
+        let radioDatabaseFilterOutHLS = false; // Filter out HLS streams
 
         // Curated Stations pagination
         let curatedStationsCurrentPage = 1;
@@ -1396,8 +1407,9 @@
         const radioDatabasePageInfo = document.getElementById('radioDatabasePageInfo');
         const toggleAdvancedFilters = document.getElementById('toggleAdvancedFilters');
         const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
-        const bitrateFilters = document.getElementById('bitrateFilters');
-        const codecFilters = document.getElementById('codecFilters');
+        const bitrateDropdown = document.getElementById('bitrateDropdown');
+        const includeUnknownBitrates = document.getElementById('includeUnknownBitrates');
+        const filterOutHLS = document.getElementById('filterOutHLS');
 
         // Playlist Selector Modal elements
         const playlistSelectorModal = document.getElementById('playlistSelectorModal');
@@ -2096,6 +2108,13 @@
             // Update current page
             radioDatabaseCurrentPage = page;
 
+            // Determine if we can use server-side filtering or need client-side
+            // We can use server-side bitrate filtering only when:
+            // 1. Bitrate > 0 AND includeUnknown is false (simple min filter)
+            // 2. HLS filter is off
+            const canUseServerSideBitrate = radioDatabaseMinBitrate > 0 && !radioDatabaseIncludeUnknown;
+            const useClientSideFiltering = radioDatabaseFilterOutHLS || (radioDatabaseMinBitrate > 0 && radioDatabaseIncludeUnknown);
+
             // Build query parameters
             const params = new URLSearchParams();
             if (searchTerm) params.append('name', searchTerm);
@@ -2103,9 +2122,20 @@
             if (language) params.append('language', language);
             if (tag) params.append('tag', tag);
 
-            // Pagination
-            params.append('limit', radioDatabaseItemsPerPage.toString());
-            params.append('offset', ((page - 1) * radioDatabaseItemsPerPage).toString());
+            // Add server-side bitrate filter if applicable
+            if (canUseServerSideBitrate) {
+                params.append('bitrate_min', radioDatabaseMinBitrate.toString());
+            }
+
+            // Pagination - fetch more if we need client-side filtering
+            if (useClientSideFiltering) {
+                // Fetch more results to ensure we have enough after filtering
+                params.append('limit', '500');
+                params.append('offset', '0');
+            } else {
+                params.append('limit', radioDatabaseItemsPerPage.toString());
+                params.append('offset', ((page - 1) * radioDatabaseItemsPerPage).toString());
+            }
 
             // Sorting
             params.append('order', sortBy);
@@ -2153,21 +2183,24 @@
                 // Store raw results for filtering
                 radioDatabaseRawResults = results;
 
-                // Populate bitrate and codec filters from results
-                populateBitrateCodecFilters(results);
-
-                // Apply client-side filters (bitrate/codec)
+                // Apply client-side filters if needed (bitrate/HLS)
                 const filteredResults = applyAdvancedFilters(results);
 
-                // Update total results (estimate based on returned results)
+                // Update total results
                 radioDatabaseTotalResults = filteredResults.length;
 
                 // Render filtered results
                 renderRadioBrowserResults(filteredResults);
 
-                // Update pagination controls - use raw results count for pagination logic
-                // This ensures "Next" button works even if filters reduce visible results
-                updateRadioDatabasePagination(results.length);
+                // Update pagination controls
+                if (useClientSideFiltering) {
+                    // Hide pagination when using client-side filtering
+                    // (we fetch all results at once)
+                    radioDatabasePagination.style.display = 'none';
+                } else {
+                    // Use normal pagination for server-side filtered results
+                    updateRadioDatabasePagination(results.length);
+                }
 
                 // Save state after successful search
                 saveRadioDatabaseState();
@@ -2181,112 +2214,59 @@
             }
         }
 
-        // Populate bitrate and codec filter checkboxes from search results
-        function populateBitrateCodecFilters(results) {
-            // Extract unique bitrates and codecs
-            const bitrates = new Set();
-            const codecs = new Set();
-
-            results.forEach(station => {
-                const bitrate = station.bitrate || 0;
-                bitrates.add(bitrate);
-
-                const codec = station.codec || 'Unknown';
-                codecs.add(codec.toUpperCase());
-            });
-
-            // Sort bitrates numerically (descending) and codecs alphabetically
-            const sortedBitrates = Array.from(bitrates).sort((a, b) => b - a);
-            const sortedCodecs = Array.from(codecs).sort();
-
-            // Auto-check TRULY NEW bitrates/codecs (never seen before)
-            // Preserve user's explicit unchecks for previously seen values
-            sortedBitrates.forEach(br => {
-                if (!radioDatabaseAllSeenBitrates.has(br)) {
-                    // This is a brand new value - auto-check it
-                    radioDatabaseSelectedBitrates.add(br);
-                    radioDatabaseAllSeenBitrates.add(br);
-                } else {
-                    // Already seen before - user's selection is preserved in radioDatabaseSelectedBitrates
-                    radioDatabaseAllSeenBitrates.add(br);
-                }
-            });
-
-            sortedCodecs.forEach(codec => {
-                if (!radioDatabaseAllSeenCodecs.has(codec)) {
-                    // This is a brand new value - auto-check it
-                    radioDatabaseSelectedCodecs.add(codec);
-                    radioDatabaseAllSeenCodecs.add(codec);
-                } else {
-                    // Already seen before - user's selection is preserved in radioDatabaseSelectedCodecs
-                    radioDatabaseAllSeenCodecs.add(codec);
-                }
-            });
-
-            // Populate bitrate checkboxes
-            bitrateFilters.innerHTML = sortedBitrates.map(bitrate => {
-                const label = bitrate === 0 ? 'Unknown' : `${bitrate} kbps`;
-                const checked = radioDatabaseSelectedBitrates.has(bitrate) ? 'checked' : '';
-                return `
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                        <input type="checkbox" value="${bitrate}" ${checked} onchange="toggleBitrateFilter(${bitrate}, this.checked)" style="cursor: pointer;">
-                        <span>${label}</span>
-                    </label>
-                `;
-            }).join('');
-
-            // Populate codec checkboxes
-            codecFilters.innerHTML = sortedCodecs.map(codec => {
-                const checked = radioDatabaseSelectedCodecs.has(codec) ? 'checked' : '';
-                return `
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                        <input type="checkbox" value="${codec}" ${checked} onchange="toggleCodecFilter('${codec}', this.checked)" style="cursor: pointer;">
-                        <span>${codec}</span>
-                    </label>
-                `;
-            }).join('');
-        }
-
-        // Toggle bitrate filter selection
-        window.toggleBitrateFilter = function(bitrate, checked) {
-            if (checked) {
-                radioDatabaseSelectedBitrates.add(bitrate);
-            } else {
-                radioDatabaseSelectedBitrates.delete(bitrate);
-            }
-            applyFiltersAndRender();
+        // Handle bitrate dropdown change
+        window.handleBitrateChange = function() {
+            radioDatabaseMinBitrate = parseInt(bitrateDropdown.value);
+            // Trigger new search to apply server-side filtering if possible
+            searchRadioBrowser(1);
         };
 
-        // Toggle codec filter selection
-        window.toggleCodecFilter = function(codec, checked) {
-            if (checked) {
-                radioDatabaseSelectedCodecs.add(codec);
-            } else {
-                radioDatabaseSelectedCodecs.delete(codec);
-            }
-            applyFiltersAndRender();
+        // Handle include unknown bitrates checkbox change
+        window.handleIncludeUnknownChange = function() {
+            radioDatabaseIncludeUnknown = includeUnknownBitrates.checked;
+            // Trigger new search to switch between server/client-side filtering
+            searchRadioBrowser(1);
         };
 
-        // Apply advanced filters (bitrate/codec) to raw results
+        // Handle filter out HLS checkbox change
+        window.handleFilterHLSChange = function() {
+            radioDatabaseFilterOutHLS = filterOutHLS.checked;
+            // Trigger new search to switch between server/client-side filtering
+            searchRadioBrowser(1);
+        };
+
+        // Apply advanced filters (bitrate/HLS) to raw results
+        // Only applies client-side filters (server-side filters already applied)
         function applyAdvancedFilters(results) {
             return results.filter(station => {
                 const bitrate = station.bitrate || 0;
-                const codec = (station.codec || 'Unknown').toUpperCase();
+                const isHLS = station.hls === 1 || station.hls === true;
 
-                const bitrateMatch = radioDatabaseSelectedBitrates.has(bitrate);
-                const codecMatch = radioDatabaseSelectedCodecs.has(codec);
+                // Check bitrate filter
+                let bitrateMatch = true;
 
-                return bitrateMatch && codecMatch;
+                if (radioDatabaseMinBitrate > 0) {
+                    // We have a minimum bitrate requirement
+                    if (bitrate === 0) {
+                        // Unknown bitrate - only include if "Include Unknown" is checked
+                        bitrateMatch = radioDatabaseIncludeUnknown;
+                    } else {
+                        // Known bitrate - check if it meets minimum threshold
+                        bitrateMatch = bitrate >= radioDatabaseMinBitrate;
+                    }
+                } else {
+                    // No minimum bitrate filter (All bitrates)
+                    // Still check if we should include unknown bitrates
+                    if (bitrate === 0 && !radioDatabaseIncludeUnknown) {
+                        bitrateMatch = false;
+                    }
+                }
+
+                // Check HLS filter
+                const hlsMatch = !radioDatabaseFilterOutHLS || !isHLS;
+
+                return bitrateMatch && hlsMatch;
             });
-        }
-
-        // Re-apply filters and re-render results (when checkboxes change)
-        function applyFiltersAndRender() {
-            const filteredResults = applyAdvancedFilters(radioDatabaseRawResults);
-            radioDatabaseTotalResults = filteredResults.length;
-            renderRadioBrowserResults(filteredResults);
-            // Use raw results count for pagination to maintain proper Next/Previous behavior
-            updateRadioDatabasePagination(radioDatabaseRawResults.length);
         }
 
         // Update pagination controls
@@ -6136,11 +6116,13 @@
             radioDatabaseLanguage.value = '';
             radioDatabaseTag.value = '';
 
-            // Reset advanced filters (bitrate/codec)
-            radioDatabaseSelectedBitrates.clear();
-            radioDatabaseSelectedCodecs.clear();
-            radioDatabaseAllSeenBitrates.clear();
-            radioDatabaseAllSeenCodecs.clear();
+            // Reset advanced filters (bitrate/HLS)
+            radioDatabaseMinBitrate = 0;
+            radioDatabaseIncludeUnknown = true;
+            radioDatabaseFilterOutHLS = false;
+            bitrateDropdown.value = '0';
+            includeUnknownBitrates.checked = true;
+            filterOutHLS.checked = false;
 
             // Restore original filter options
             restoreLanguageOptions();
@@ -6228,8 +6210,8 @@
             const isHidden = advancedFiltersPanel.style.display === 'none';
             advancedFiltersPanel.style.display = isHidden ? 'block' : 'none';
             toggleAdvancedFilters.innerHTML = isHidden ?
-                '▲ Advanced Filters (Bitrate & Codec)' :
-                '▼ Advanced Filters (Bitrate & Codec)';
+                '▲ Advanced Filters' :
+                '▼ Advanced Filters';
         });
 
         // Radio Database pagination - Previous button
