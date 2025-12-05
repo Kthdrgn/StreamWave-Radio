@@ -2238,23 +2238,27 @@
         // Apply advanced filters (bitrate/HLS) to raw results
         // Only applies client-side filters (server-side filters already applied)
         function applyAdvancedFilters(results) {
-            // Determine which filters need to be applied client-side
-            const canUseServerSideBitrate = radioDatabaseMinBitrate > 0 && !radioDatabaseIncludeUnknown;
-            const needClientSideBitrate = !canUseServerSideBitrate && radioDatabaseMinBitrate > 0;
-
             return results.filter(station => {
                 const bitrate = station.bitrate || 0;
                 const isHLS = station.hls === 1 || station.hls === true;
 
-                // Check bitrate filter (only if not already filtered server-side)
+                // Check bitrate filter
                 let bitrateMatch = true;
-                if (needClientSideBitrate || radioDatabaseIncludeUnknown) {
+
+                if (radioDatabaseMinBitrate > 0) {
+                    // We have a minimum bitrate requirement
                     if (bitrate === 0) {
-                        // Unknown bitrate
+                        // Unknown bitrate - only include if "Include Unknown" is checked
                         bitrateMatch = radioDatabaseIncludeUnknown;
                     } else {
                         // Known bitrate - check if it meets minimum threshold
                         bitrateMatch = bitrate >= radioDatabaseMinBitrate;
+                    }
+                } else {
+                    // No minimum bitrate filter (All bitrates)
+                    // Still check if we should include unknown bitrates
+                    if (bitrate === 0 && !radioDatabaseIncludeUnknown) {
+                        bitrateMatch = false;
                     }
                 }
 
