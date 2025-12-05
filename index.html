@@ -8373,7 +8373,13 @@
                                     fetchLyricsForCurrentTrack();
 
                                     // Track the song play
-                                    trackSongPlay(title, artist);
+                                    addToRecentTracks({
+                                        title: title,
+                                        artist: artist,
+                                        album: '',
+                                        artworkUrl: artworkUrl,
+                                        station: currentStation ? currentStation.name : 'Unknown Station'
+                                    });
                                 }
                             } catch (error) {
                                 console.error('Error parsing HLS frag.title metadata:', error);
@@ -8426,7 +8432,13 @@
                                         updateMediaSession(title, artist, album, null);
 
                                         // Track the song play
-                                        trackSongPlay(title, artist);
+                                        addToRecentTracks({
+                                            title: title,
+                                            artist: artist,
+                                            album: album,
+                                            artworkUrl: null,
+                                            station: currentStation ? currentStation.name : 'Unknown Station'
+                                        });
                                     }
                                 } catch (error) {
                                     console.error('Error parsing HLS ID3 metadata:', error);
@@ -8509,7 +8521,13 @@
                                                 updateMediaSession(title || 'Unknown Track', artist || '', album || '', null);
 
                                                 // Track the song play
-                                                trackSongPlay(title || 'Unknown Track', artist || '');
+                                                addToRecentTracks({
+                                                    title: title || 'Unknown Track',
+                                                    artist: artist || '',
+                                                    album: album || '',
+                                                    artworkUrl: null,
+                                                    station: currentStation ? currentStation.name : 'Unknown Station'
+                                                });
                                             }
                                         } catch (error) {
                                             console.error('Error parsing native HLS metadata:', error);
