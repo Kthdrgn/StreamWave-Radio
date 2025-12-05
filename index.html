@@ -8790,10 +8790,25 @@
                 });
                 return;
             }
-            
-            // LIVE MODE - Original IcecastMetadataPlayer behavior
-            // If playing, pause (not stop)
+
+            // LIVE MODE - Stop and restart for HLS, pause/resume for regular streams
+            // If playing, stop HLS completely (or pause for regular streams)
             if (isPlaying && !isPaused) {
+                // For HLS streams, always stop completely to prevent metadata drift
+                if (hlsPlayer) {
+                    console.log('⏹️ Stopping HLS stream (HLS continues metadata in background when paused)');
+                    stopAllPlayers();
+                    isPlaying = false;
+                    updateStatus('Stopped', 'stopped');
+                    updatePlayPauseButton(false);
+                    // Update media session playback state
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.playbackState = 'none';
+                    }
+                    return;
+                }
+
+                // For regular Icecast/Shoutcast streams, pause is fine
                 isPaused = true;
                 if (audioElement) {
                     audioElement.pause();
@@ -8809,8 +8824,8 @@
                 }
                 return;
             }
-            
-            // If paused, resume
+
+            // If paused (non-HLS only), resume
             if (isPaused) {
                 isPaused = false;
                 if (audioElement && audioElement.src) {
