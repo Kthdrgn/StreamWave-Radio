@@ -8244,12 +8244,14 @@
                                 console.log('✅ HLS playback started successfully');
                                 isPlaying = true;
                                 updateStatus('Playing (HLS Stream)', 'playing');
-                                
-                                // Display station icon as artwork for HLS streams
-                                if (currentStation && currentStation.icon_url) {
-                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
-                                } else {
-                                    updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
+
+                                // Display station icon as artwork for HLS streams, but preserve existing artwork
+                                if (!currentTrack.artworkUrl) {
+                                    if (currentStation && currentStation.icon_url) {
+                                        updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
+                                    } else {
+                                        updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
+                                    }
                                 }
                                 
                                 metadataDiv.innerHTML = `
@@ -8544,11 +8546,13 @@
                             isPlaying = true;
                             updateStatus('Playing (HLS Stream)', 'playing');
 
-                            // Display station icon as artwork for HLS streams
-                            if (currentStation && currentStation.icon_url) {
-                                updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
-                            } else {
-                                updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
+                            // Display station icon as artwork for HLS streams, but preserve existing artwork
+                            if (!currentTrack.artworkUrl) {
+                                if (currentStation && currentStation.icon_url) {
+                                    updateArtwork(`<img src="${escapeHtml(currentStation.icon_url)}" alt="${escapeHtml(currentStation.name)}" class="album-art" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">`);
+                                } else {
+                                    updateArtwork(`<div class="album-art" style="padding: 40px;">${MUSIC_NOTE_ICON}</div>`);
+                                }
                             }
 
                             metadataDiv.innerHTML = `
@@ -8875,7 +8879,12 @@
 
             playPauseBtn.disabled = true;
             updateStatus('Connecting...', 'loading');
-            updateArtwork(`<div class="album-art-placeholder">🔄</div>`);
+
+            // Only show loading placeholder if we don't already have artwork for the current track
+            if (!currentTrack.artworkUrl) {
+                updateArtwork(`<div class="album-art-placeholder">🔄</div>`);
+            }
+
             metadataDiv.innerHTML = `
                 <div class="now-playing-label">NOW PLAYING</div>
                 <div class="no-metadata">Loading stream...</div>
