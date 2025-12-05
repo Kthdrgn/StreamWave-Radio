@@ -2108,6 +2108,13 @@
             // Update current page
             radioDatabaseCurrentPage = page;
 
+            // Determine if we can use server-side filtering or need client-side
+            // We can use server-side bitrate filtering only when:
+            // 1. Bitrate > 0 AND includeUnknown is false (simple min filter)
+            // 2. HLS filter is off
+            const canUseServerSideBitrate = radioDatabaseMinBitrate > 0 && !radioDatabaseIncludeUnknown;
+            const useClientSideFiltering = radioDatabaseFilterOutHLS || (radioDatabaseMinBitrate > 0 && radioDatabaseIncludeUnknown);
+
             // Build query parameters
             const params = new URLSearchParams();
             if (searchTerm) params.append('name', searchTerm);
@@ -2115,9 +2122,20 @@
             if (language) params.append('language', language);
             if (tag) params.append('tag', tag);
 
-            // Pagination
-            params.append('limit', radioDatabaseItemsPerPage.toString());
-            params.append('offset', ((page - 1) * radioDatabaseItemsPerPage).toString());
+            // Add server-side bitrate filter if applicable
+            if (canUseServerSideBitrate) {
+                params.append('bitrate_min', radioDatabaseMinBitrate.toString());
+            }
+
+            // Pagination - fetch more if we need client-side filtering
+            if (useClientSideFiltering) {
+                // Fetch more results to ensure we have enough after filtering
+                params.append('limit', '500');
+                params.append('offset', '0');
+            } else {
+                params.append('limit', radioDatabaseItemsPerPage.toString());
+                params.append('offset', ((page - 1) * radioDatabaseItemsPerPage).toString());
+            }
 
             // Sorting
             params.append('order', sortBy);
@@ -2165,18 +2183,24 @@
                 // Store raw results for filtering
                 radioDatabaseRawResults = results;
 
-                // Apply client-side filters (bitrate/HLS)
+                // Apply client-side filters if needed (bitrate/HLS)
                 const filteredResults = applyAdvancedFilters(results);
 
-                // Update total results (estimate based on returned results)
+                // Update total results
                 radioDatabaseTotalResults = filteredResults.length;
 
                 // Render filtered results
                 renderRadioBrowserResults(filteredResults);
 
-                // Update pagination controls - use raw results count for pagination logic
-                // This ensures "Next" button works even if filters reduce visible results
-                updateRadioDatabasePagination(results.length);
+                // Update pagination controls
+                if (useClientSideFiltering) {
+                    // Hide pagination when using client-side filtering
+                    // (we fetch all results at once)
+                    radioDatabasePagination.style.display = 'none';
+                } else {
+                    // Use normal pagination for server-side filtered results
+                    updateRadioDatabasePagination(results.length);
+                }
 
                 // Save state after successful search
                 saveRadioDatabaseState();
@@ -2193,35 +2217,45 @@
         // Handle bitrate dropdown change
         window.handleBitrateChange = function() {
             radioDatabaseMinBitrate = parseInt(bitrateDropdown.value);
-            applyFiltersAndRender();
+            // Trigger new search to apply server-side filtering if possible
+            searchRadioBrowser(1);
         };
 
         // Handle include unknown bitrates checkbox change
         window.handleIncludeUnknownChange = function() {
             radioDatabaseIncludeUnknown = includeUnknownBitrates.checked;
-            applyFiltersAndRender();
+            // Trigger new search to switch between server/client-side filtering
+            searchRadioBrowser(1);
         };
 
         // Handle filter out HLS checkbox change
         window.handleFilterHLSChange = function() {
             radioDatabaseFilterOutHLS = filterOutHLS.checked;
-            applyFiltersAndRender();
+            // Trigger new search to switch between server/client-side filtering
+            searchRadioBrowser(1);
         };
 
         // Apply advanced filters (bitrate/HLS) to raw results
+        // Only applies client-side filters (server-side filters already applied)
         function applyAdvancedFilters(results) {
+            // Determine which filters need to be applied client-side
+            const canUseServerSideBitrate = radioDatabaseMinBitrate > 0 && !radioDatabaseIncludeUnknown;
+            const needClientSideBitrate = !canUseServerSideBitrate && radioDatabaseMinBitrate > 0;
+
             return results.filter(station => {
                 const bitrate = station.bitrate || 0;
                 const isHLS = station.hls === 1 || station.hls === true;
 
-                // Check bitrate filter
-                let bitrateMatch = false;
-                if (bitrate === 0) {
-                    // Unknown bitrate
-                    bitrateMatch = radioDatabaseIncludeUnknown;
-                } else {
-                    // Known bitrate - check if it meets minimum threshold
-                    bitrateMatch = bitrate >= radioDatabaseMinBitrate;
+                // Check bitrate filter (only if not already filtered server-side)
+                let bitrateMatch = true;
+                if (needClientSideBitrate || radioDatabaseIncludeUnknown) {
+                    if (bitrate === 0) {
+                        // Unknown bitrate
+                        bitrateMatch = radioDatabaseIncludeUnknown;
+                    } else {
+                        // Known bitrate - check if it meets minimum threshold
+                        bitrateMatch = bitrate >= radioDatabaseMinBitrate;
+                    }
                 }
 
                 // Check HLS filter
@@ -2229,15 +2263,6 @@
 
                 return bitrateMatch && hlsMatch;
             });
-        }
-
-        // Re-apply filters and re-render results (when checkboxes change)
-        function applyFiltersAndRender() {
-            const filteredResults = applyAdvancedFilters(radioDatabaseRawResults);
-            radioDatabaseTotalResults = filteredResults.length;
-            renderRadioBrowserResults(filteredResults);
-            // Use raw results count for pagination to maintain proper Next/Previous behavior
-            updateRadioDatabasePagination(radioDatabaseRawResults.length);
         }
 
         // Update pagination controls
