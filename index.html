@@ -8333,7 +8333,72 @@
                     hlsPlayer.on(Hls.Events.FRAG_PARSING_METADATA, (event, data) => {
                         console.log('📻 HLS metadata received:', data);
 
-                        if (data.samples && data.samples.length > 0) {
+                        // Check if metadata is in frag.title (iHeartRadio format)
+                        if (data.frag && data.frag.title) {
+                            try {
+                                const titleString = data.frag.title;
+                                console.log('📻 Frag title string:', titleString);
+
+                                // Parse key-value pairs from the title string
+                                // Format: title="...",artist="...",url="..."
+                                const titleMatch = titleString.match(/title="([^"]*)"/);
+                                const artistMatch = titleString.match(/artist="([^"]*)"/);
+                                const urlMatch = titleString.match(/amgArtworkURL="([^"]*)"/);
+
+                                if (titleMatch || artistMatch) {
+                                    const title = titleMatch ? titleMatch[1] : 'Unknown Track';
+                                    const artist = artistMatch ? artistMatch[1] : '';
+                                    const artworkUrl = urlMatch ? urlMatch[1] : null;
+
+                                    console.log('🎵 HLS Track Info from frag.title:', { title, artist, artworkUrl });
+
+                                    // Update the metadata display
+                                    metadataDiv.innerHTML = `
+                                        <div class="now-playing-label">NOW PLAYING</div>
+                                        <div class="song-title">${escapeHtml(title)}</div>
+                                        ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
+                                        <button class="like-btn" id="likeBtn" onclick="toggleLikeTrack()">♡</button>
+                                    `;
+
+                                    // Update current track info
+                                    currentTrack = {
+                                        title: title,
+                                        artist: artist,
+                                        album: '',
+                                        artworkUrl: artworkUrl,
+                                        lyrics: null,
+                                        lyricsUrl: null,
+                                        hasLyrics: false
+                                    };
+
+                                    // Update like button
+                                    updateLikeButton();
+
+                                    // Fetch album art if not provided in metadata
+                                    if (artworkUrl) {
+                                        // Use artwork from metadata
+                                        const albumArt = document.getElementById('albumArt');
+                                        if (albumArt) {
+                                            albumArt.src = artworkUrl;
+                                            albumArt.style.display = 'block';
+                                        }
+                                        updateMediaSession(title, artist, '', artworkUrl);
+                                    } else {
+                                        fetchAlbumArt(title, artist);
+                                    }
+
+                                    // Fetch lyrics
+                                    fetchLyricsForCurrentTrack();
+
+                                    // Track the song play
+                                    trackSongPlay(title, artist);
+                                }
+                            } catch (error) {
+                                console.error('Error parsing HLS frag.title metadata:', error);
+                            }
+                        }
+                        // Fall back to ID3 frames if frag.title is not available
+                        else if (data.samples && data.samples.length > 0) {
                             data.samples.forEach(sample => {
                                 try {
                                     // Parse ID3 frames
