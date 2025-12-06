@@ -1066,7 +1066,7 @@
         /* Color theme grid */
         .color-theme-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-top: 10px;
         }
@@ -1082,6 +1082,10 @@
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
+        }
+
+        .color-theme-btn[data-color="default"] {
+            grid-column: span 2;
         }
 
         .color-theme-btn:hover {
