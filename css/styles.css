@@ -1177,7 +1177,13 @@
             box-shadow: 0 2px 8px var(--shadow-color);
         }
         
-        [data-theme="light"] .theme-slider {
+        [data-theme="light"] .theme-slider,
+        [data-theme="ocean-blue-light"] .theme-slider,
+        [data-theme="emerald-forest-light"] .theme-slider,
+        [data-theme="slate-gray-light"] .theme-slider,
+        [data-theme="royal-purple-light"] .theme-slider,
+        [data-theme="golden-sunset-light"] .theme-slider,
+        [data-theme="fire-red-light"] .theme-slider {
             transform: translateX(calc(100% + 4px));
         }
         
