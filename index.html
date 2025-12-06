@@ -194,7 +194,7 @@
                             Switch between dark and light mode.
                         </div>
                         <button class="reset-theme-btn" id="resetThemeBtn" style="display: none;">
-                            🔄 Reset to System Theme
+                            🔄 Reset to System Brightness
                         </button>
                     </div>
 
@@ -6908,8 +6908,8 @@
         // Function to show/hide reset button
         function updateResetButtonVisibility() {
             const hasManualBrightness = localStorage.getItem('themeBrightness');
-            const hasManualColor = localStorage.getItem('themeColor');
-            if (hasManualBrightness || hasManualColor) {
+            // Only show reset button if brightness is manually set
+            if (hasManualBrightness) {
                 resetThemeBtn.style.display = 'flex';
             } else {
                 resetThemeBtn.style.display = 'none';
@@ -6978,9 +6978,10 @@
         // Reset theme button click handler
         resetThemeBtn.addEventListener('click', () => {
             localStorage.removeItem('themeBrightness');
-            localStorage.removeItem('themeColor');
+            // Keep the selected color, only reset brightness to system preference
+            const currentColor = localStorage.getItem('themeColor') || 'default';
             const systemBrightness = getSystemBrightness();
-            applyTheme('default', systemBrightness);
+            applyTheme(currentColor, systemBrightness);
             updateResetButtonVisibility();
         });
 
