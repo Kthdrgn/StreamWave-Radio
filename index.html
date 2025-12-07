@@ -139,7 +139,44 @@
             <div class="modal-body">
                 <div class="settings-content">
                     <div class="setting-item">
-                        <label class="setting-label">Theme</label>
+                        <label class="setting-label">Theme Color</label>
+                        <div class="color-theme-grid">
+                            <button class="color-theme-btn" data-color="default">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #1e1e1e, #f5f7fa);"></span>
+                                <span class="color-name">Default</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="ocean-blue">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #0a1929, #e3f2fd);"></span>
+                                <span class="color-name">Ocean Blue</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="emerald-forest">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #0d1f12, #e8f5e9);"></span>
+                                <span class="color-name">Emerald Forest</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="slate-gray">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #1a1d23, #eceff1);"></span>
+                                <span class="color-name">Slate Gray</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="royal-purple">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #1a0d2e, #f3e5f5);"></span>
+                                <span class="color-name">Royal Purple</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="golden-sunset">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #2e1a0a, #fff3e0);"></span>
+                                <span class="color-name">Golden Sunset</span>
+                            </button>
+                            <button class="color-theme-btn" data-color="fire-red">
+                                <span class="color-preview" style="background: linear-gradient(135deg, #2e0d0d, #ffebee);"></span>
+                                <span class="color-name">Fire Red</span>
+                            </button>
+                        </div>
+                        <div class="setting-description">
+                            Choose your preferred color theme.
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Brightness</label>
                         <div class="theme-toggle-container">
                             <button class="theme-toggle-btn" id="themeToggle">
                                 <span class="theme-option" data-theme="dark">
@@ -154,10 +191,10 @@
                             </button>
                         </div>
                         <div class="setting-description">
-                            Switch between dark and light theme.
+                            Switch between dark and light mode.
                         </div>
                         <button class="reset-theme-btn" id="resetThemeBtn" style="display: none;">
-                            🔄 Reset to System Theme
+                            🔄 Reset to System Brightness
                         </button>
                     </div>
 
@@ -6860,73 +6897,117 @@
         // Theme Toggle Functionality
         const themeToggle = document.getElementById('themeToggle');
         const resetThemeBtn = document.getElementById('resetThemeBtn');
+        const colorThemeBtns = document.querySelectorAll('.color-theme-btn');
         const html = document.documentElement;
-        
-        // Function to get system theme preference
-        function getSystemTheme() {
+
+        // Function to get system theme preference (brightness only)
+        function getSystemBrightness() {
             return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        
+
         // Function to show/hide reset button
         function updateResetButtonVisibility() {
-            const hasManualTheme = localStorage.getItem('theme');
-            if (hasManualTheme) {
+            const hasManualBrightness = localStorage.getItem('themeBrightness');
+            // Only show reset button if brightness is manually set
+            if (hasManualBrightness) {
                 resetThemeBtn.style.display = 'flex';
             } else {
                 resetThemeBtn.style.display = 'none';
             }
         }
-        
+
+        // Function to build full theme string
+        function buildThemeString(color, brightness) {
+            if (color === 'default') {
+                return brightness; // 'dark' or 'light'
+            }
+            return `${color}-${brightness}`; // e.g., 'ocean-blue-dark'
+        }
+
+        // Function to apply theme
+        function applyTheme(color, brightness) {
+            const themeString = buildThemeString(color, brightness);
+            html.setAttribute('data-theme', themeString);
+            updateThemeToggleUI(brightness);
+            updateColorThemeUI(color);
+        }
+
         // Load saved theme or use system preference
-        const savedTheme = localStorage.getItem('theme');
-        const initialTheme = savedTheme || getSystemTheme();
-        html.setAttribute('data-theme', initialTheme);
-        updateThemeToggleUI(initialTheme);
+        const savedColor = localStorage.getItem('themeColor') || 'default';
+        const savedBrightness = localStorage.getItem('themeBrightness') || getSystemBrightness();
+        applyTheme(savedColor, savedBrightness);
         updateResetButtonVisibility();
-        
+
         // Listen for system theme changes (only if user hasn't set a manual preference)
         const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         darkModeMediaQuery.addEventListener('change', (e) => {
-            // Only auto-update if user hasn't manually set a theme
-            if (!localStorage.getItem('theme')) {
-                const systemTheme = e.matches ? 'dark' : 'light';
-                html.setAttribute('data-theme', systemTheme);
-                updateThemeToggleUI(systemTheme);
+            // Only auto-update if user hasn't manually set brightness
+            if (!localStorage.getItem('themeBrightness')) {
+                const systemBrightness = e.matches ? 'dark' : 'light';
+                const currentColor = localStorage.getItem('themeColor') || 'default';
+                applyTheme(currentColor, systemBrightness);
             }
         });
-        
-        // Theme toggle click handler
+
+        // Brightness toggle click handler
         themeToggle.addEventListener('click', () => {
             const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeToggleUI(newTheme);
+            // Determine current brightness
+            const currentBrightness = currentTheme.endsWith('-light') || currentTheme === 'light' ? 'light' : 'dark';
+            const newBrightness = currentBrightness === 'dark' ? 'light' : 'dark';
+            const currentColor = localStorage.getItem('themeColor') || 'default';
+
+            applyTheme(currentColor, newBrightness);
+            localStorage.setItem('themeBrightness', newBrightness);
             updateResetButtonVisibility();
         });
-        
+
+        // Color theme button click handlers
+        colorThemeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newColor = btn.getAttribute('data-color');
+                const currentTheme = html.getAttribute('data-theme');
+                const currentBrightness = currentTheme.endsWith('-light') || currentTheme === 'light' ? 'light' : 'dark';
+
+                applyTheme(newColor, currentBrightness);
+                localStorage.setItem('themeColor', newColor);
+                updateResetButtonVisibility();
+            });
+        });
+
         // Reset theme button click handler
         resetThemeBtn.addEventListener('click', () => {
-            localStorage.removeItem('theme');
-            const systemTheme = getSystemTheme();
-            html.setAttribute('data-theme', systemTheme);
-            updateThemeToggleUI(systemTheme);
+            localStorage.removeItem('themeBrightness');
+            // Keep the selected color, only reset brightness to system preference
+            const currentColor = localStorage.getItem('themeColor') || 'default';
+            const systemBrightness = getSystemBrightness();
+            applyTheme(currentColor, systemBrightness);
             updateResetButtonVisibility();
         });
-        
-        // Update theme toggle UI based on current theme
-        function updateThemeToggleUI(theme) {
+
+        // Update brightness toggle UI
+        function updateThemeToggleUI(brightness) {
             const darkOption = themeToggle.querySelector('[data-theme="dark"]');
             const lightOption = themeToggle.querySelector('[data-theme="light"]');
 
-            if (theme === 'dark') {
+            if (brightness === 'dark') {
                 darkOption.classList.add('active');
                 lightOption.classList.remove('active');
             } else {
                 darkOption.classList.remove('active');
                 lightOption.classList.add('active');
             }
+        }
+
+        // Update color theme UI
+        function updateColorThemeUI(color) {
+            colorThemeBtns.forEach(btn => {
+                if (btn.getAttribute('data-color') === color) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
 
         // ======================
