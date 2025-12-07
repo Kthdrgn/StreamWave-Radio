@@ -2148,12 +2148,14 @@
             // Update current page
             radioDatabaseCurrentPage = page;
 
-            // Determine if we can use server-side filtering or need client-side
-            // We can use server-side bitrate filtering only when:
-            // 1. Bitrate > 0 AND includeUnknown is false (simple min filter)
-            // 2. HLS filter is off
+            // Determine filtering approach
+            // Server-side bitrate filtering: Use API's bitrate_min parameter when possible
+            // (bitrate > 0 AND includeUnknown is false AND HLS filter is off)
             const canUseServerSideBitrate = radioDatabaseMinBitrate > 0 && !radioDatabaseIncludeUnknown;
-            const useClientSideFiltering = radioDatabaseFilterOutHLS || (radioDatabaseMinBitrate > 0 && radioDatabaseIncludeUnknown);
+
+            // Large batch approach: Fetch 500 results when ANY filter is active
+            // This prevents sparse results across offset-based pagination
+            const useLargeBatchApproach = radioDatabaseMinBitrate > 0 || radioDatabaseFilterOutHLS;
 
             // Build query parameters
             const params = new URLSearchParams();
@@ -2167,8 +2169,8 @@
                 params.append('bitrate_min', radioDatabaseMinBitrate.toString());
             }
 
-            // Pagination - fetch more if we need client-side filtering
-            if (useClientSideFiltering) {
+            // Pagination - fetch large batch if any filter is active to avoid sparse results
+            if (useLargeBatchApproach) {
                 // Fetch more results to ensure we have enough after filtering
                 params.append('limit', '500');
                 params.append('offset', '0');
@@ -2233,12 +2235,12 @@
                 renderRadioBrowserResults(filteredResults);
 
                 // Update pagination controls
-                if (useClientSideFiltering) {
-                    // Hide pagination when using client-side filtering
-                    // (we fetch all results at once)
+                if (useLargeBatchApproach) {
+                    // Hide pagination when using large batch approach
+                    // (we fetch all matching results at once)
                     radioDatabasePagination.style.display = 'none';
                 } else {
-                    // Use normal pagination for server-side filtered results
+                    // Use normal pagination for unfiltered results
                     updateRadioDatabasePagination(results.length);
                 }
 
