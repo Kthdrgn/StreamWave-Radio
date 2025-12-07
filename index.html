@@ -1311,7 +1311,10 @@
                 tag: radioDatabaseTag.value,
                 sortBy: radioDatabaseSort.value,
                 currentPage: radioDatabaseCurrentPage,
-                viewMode: radioDatabaseViewMode
+                viewMode: radioDatabaseViewMode,
+                minBitrate: radioDatabaseMinBitrate,
+                includeUnknown: radioDatabaseIncludeUnknown,
+                filterOutHLS: radioDatabaseFilterOutHLS
             };
             sessionStorage.setItem('radioDatabaseState', JSON.stringify(state));
         }
@@ -6008,6 +6011,16 @@
                 radioDatabaseTag.value = savedState.tag || '';
                 radioDatabaseSort.value = savedState.sortBy || 'votes';
 
+                // Restore bitrate filters
+                radioDatabaseMinBitrate = savedState.minBitrate !== undefined ? savedState.minBitrate : 0;
+                radioDatabaseIncludeUnknown = savedState.includeUnknown !== undefined ? savedState.includeUnknown : true;
+                radioDatabaseFilterOutHLS = savedState.filterOutHLS !== undefined ? savedState.filterOutHLS : false;
+
+                // Update bitrate filter UI elements
+                bitrateDropdown.value = radioDatabaseMinBitrate.toString();
+                includeUnknownBitrates.checked = radioDatabaseIncludeUnknown;
+                filterOutHLS.checked = radioDatabaseFilterOutHLS;
+
                 // Restore view mode
                 radioDatabaseViewMode = savedState.viewMode || 'list';
                 updateRadioDatabaseViewUI();
@@ -6036,6 +6049,11 @@
                 radioDatabaseSort.value = 'votes';
                 radioDatabaseViewMode = 'list';
                 updateRadioDatabaseViewUI();
+
+                // Reset bitrate filter UI elements to defaults
+                bitrateDropdown.value = '0';
+                includeUnknownBitrates.checked = true;
+                filterOutHLS.checked = false;
 
                 // Hide clear button initially
                 document.getElementById('radioDatabaseClearBtn').style.display = 'none';
