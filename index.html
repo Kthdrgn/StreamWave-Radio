@@ -6311,27 +6311,6 @@
             }
         });
 
-        // Play random station button
-        document.getElementById('playRandomStationBtn').addEventListener('click', () => {
-            if (stations.length === 0) {
-                alert('No stations available');
-                return;
-            }
-
-            // Select a random station from all available stations
-            const randomIndex = Math.floor(Math.random() * stations.length);
-            const randomStation = stations[randomIndex];
-
-            // Close the overview modal
-            overviewModal.classList.remove('active');
-
-            // Select and play the random station
-            selectStation(randomStation);
-            setTimeout(() => {
-                playPauseBtn.click();
-            }, 100);
-        });
-
         // Close settings modal
         closeSettingsModal.addEventListener('click', () => {
             settingsModal.classList.remove('active');
