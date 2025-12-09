@@ -6213,23 +6213,34 @@
             browseStationsModal.classList.add('active');
             console.log('Opening browse stations modal from discover page');
 
-            // Clear any existing state
-            curatedSearchInput.value = '';
+            // Clear any existing search
+            stationSearch.value = '';
 
             // Load curated playlists
-            if (window.loadCuratedPlaylists) {
-                window.loadCuratedPlaylists();
+            loadCuratedPlaylists();
+
+            // Ensure stations are displayed
+            if (stations.length > 0) {
+                if (filteredStations.length === 0) {
+                    filteredStations = [...stations];
+                }
+                renderStationList();
             }
         });
 
         // Search Radio Database button in Discover modal
-        document.getElementById('searchDatabaseBtn').addEventListener('click', () => {
+        document.getElementById('searchDatabaseBtn').addEventListener('click', async () => {
             // Close discover modal
             discoverModal.classList.remove('active');
 
             // Open radio database modal
             radioDatabaseModal.classList.add('active');
             console.log('Opening radio database modal from discover page');
+
+            // Load filters if not already loaded
+            if (radioDatabaseCountry.children.length === 1) {
+                await loadRadioBrowserFilters();
+            }
 
             // Load state or perform initial search
             const state = loadRadioDatabaseState();
@@ -6242,15 +6253,35 @@
                 radioDatabaseSort.value = state.sortBy || 'votes';
                 radioDatabaseCurrentPage = state.currentPage || 1;
                 radioDatabaseViewMode = state.viewMode || 'list';
-                radioDatabaseMinBitrate = state.minBitrate || 0;
+                radioDatabaseMinBitrate = state.minBitrate !== undefined ? state.minBitrate : 0;
                 radioDatabaseIncludeUnknown = state.includeUnknown !== undefined ? state.includeUnknown : true;
-                radioDatabaseFilterOutHLS = state.filterOutHLS || false;
+                radioDatabaseFilterOutHLS = state.filterOutHLS !== undefined ? state.filterOutHLS : false;
 
-                // Perform search with restored state
-                radioDatabaseSearchBtn.click();
+                // Update bitrate filter UI elements
+                bitrateDropdown.value = radioDatabaseMinBitrate.toString();
+                includeUnknownBitrates.checked = radioDatabaseIncludeUnknown;
+                filterOutHLS.checked = radioDatabaseFilterOutHLS;
+
+                // Restore view mode
+                updateRadioDatabaseViewUI();
+
+                // Update dependent filters based on country selection
+                if (state.country) {
+                    await updateLanguageOptions(state.country);
+                }
+                if (state.country || state.language) {
+                    await updateTagOptions(state.country, state.language);
+                }
+
+                // Show/hide clear button based on filters
+                const hasFilters = state.searchTerm || state.country || state.language || state.tag;
+                document.getElementById('radioDatabaseClearBtn').style.display = hasFilters ? 'flex' : 'none';
+
+                // Trigger search with saved page
+                searchRadioBrowser(state.currentPage || 1);
             } else {
-                // Load countries, languages, and tags for filters
-                populateRadioDatabaseFilters();
+                // No saved state - perform default search
+                searchRadioBrowser();
             }
         });
 
