@@ -3200,6 +3200,8 @@
         }
 
         // Fetch metadata from HLS stream
+        // Note: Some HLS streams may not provide metadata due to CORS restrictions
+        // or if the stream doesn't include ID3 tags. This is expected and handled gracefully.
         async function fetchHLSMetadata(station) {
             return new Promise((resolve) => {
                 const timeout = setTimeout(() => {
@@ -3258,8 +3260,6 @@
                         tempHls.on(Hls.Events.FRAG_PARSING_METADATA, (event, data) => {
                             if (metadataReceived) return;
 
-                            console.log('HLS metadata fetched:', data);
-
                             try {
                                 // Parse ID3 frames
                                 if (data.samples && data.samples.length > 0) {
@@ -3307,7 +3307,11 @@
 
                         tempHls.on(Hls.Events.ERROR, (event, data) => {
                             if (data.fatal) {
-                                console.log('HLS metadata fetch error:', data.type, data.details);
+                                // Network errors and manifest load errors are expected for HLS streams
+                                // without proper CORS headers - fail silently
+                                if (data.type !== Hls.ErrorTypes.NETWORK_ERROR) {
+                                    console.log('HLS metadata fetch error:', data.type, data.details);
+                                }
                                 cleanup();
                                 resolve(null);
                             }
@@ -3367,7 +3371,7 @@
                         resolve(null);
                     }
                 } catch (error) {
-                    console.log('Error fetching HLS metadata:', error);
+                    // Silently handle errors - CORS and unsupported streams are expected
                     cleanup();
                     resolve(null);
                 }
@@ -3379,7 +3383,6 @@
             // Check if this is an HLS stream
             const rawUrl = station.url_standard || station.url;
             if (rawUrl && isHLSStream(rawUrl)) {
-                console.log('Fetching HLS metadata for station:', station.name);
                 return await fetchHLSMetadata(station);
             }
 
@@ -6973,7 +6976,6 @@
 
             // Check if HLS stream - use HLS metadata fetching
             if (isHLSStream(rawUrl)) {
-                console.log('Fetching HLS metadata for current station');
                 const metadata = await fetchHLSMetadata(currentStation);
                 if (metadata) {
                     displayMetadata({ StreamTitle: metadata.artist ? `${metadata.artist} - ${metadata.title}` : metadata.title });
