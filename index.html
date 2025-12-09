@@ -288,34 +288,63 @@
                     <h3 class="carousel-title">Most Played Stations</h3>
                     <div class="stations-list" id="playedStationsList"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discover Modal -->
+    <div id="discoverModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Discover</h2>
+                <button class="modal-close" id="closeDiscoverModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Search Buttons Row -->
+                <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                    <button id="searchCuratedBtn" class="form-btn form-btn-primary" style="flex: 1; padding: 12px 24px; font-size: 16px; font-weight: 600;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;" fill="none" stroke="currentColor">
+                            <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Search Curated Stations
+                    </button>
+                    <button id="searchDatabaseBtn" class="form-btn form-btn-primary" style="flex: 1; padding: 12px 24px; font-size: 16px; font-weight: 600;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;" fill="none" stroke="currentColor">
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
+                            <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
+                            <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Search Radio Database
+                    </button>
+                </div>
 
                 <!-- Explore Section -->
-                <div id="exploreSection" style="display: none;">
+                <div id="discoverExploreSection" style="display: none;">
                     <!-- Explore Header -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: 10px;">
                         <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin: 0;">Explore new stations</h2>
-                        <button id="playRandomStationBtn" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                        <button id="discoverPlayRandomStationBtn" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
                             🎲 Play Random Station
                         </button>
                     </div>
 
                     <!-- Because You Listened Carousel -->
-                    <div class="carousel-section" id="becauseListenedSection" style="display: none;">
-                        <h3 class="carousel-title" id="becauseListenedTitle">Because you listened to...</h3>
+                    <div class="carousel-section" id="discoverBecauseListenedSection" style="display: none;">
+                        <h3 class="carousel-title" id="discoverBecauseListenedTitle">Because you listened to...</h3>
                         <div class="carousel-container">
-                            <button class="carousel-btn carousel-prev" id="becauseListenedPrev">‹</button>
-                            <div class="carousel-track" id="becauseListenedTrack"></div>
-                            <button class="carousel-btn carousel-next" id="becauseListenedNext">›</button>
+                            <button class="carousel-btn carousel-prev" id="discoverBecauseListenedPrev">‹</button>
+                            <div class="carousel-track" id="discoverBecauseListenedTrack"></div>
+                            <button class="carousel-btn carousel-next" id="discoverBecauseListenedNext">›</button>
                         </div>
                     </div>
 
                     <!-- Because You Like Carousel -->
-                    <div class="carousel-section" id="becauseLikeSection" style="display: none;">
-                        <h3 class="carousel-title" id="becauseLikeTitle">Because you like...</h3>
+                    <div class="carousel-section" id="discoverBecauseLikeSection" style="display: none;">
+                        <h3 class="carousel-title" id="discoverBecauseLikeTitle">Because you like...</h3>
                         <div class="carousel-container">
-                            <button class="carousel-btn carousel-prev" id="becauseLikePrev">‹</button>
-                            <div class="carousel-track" id="becauseLikeTrack"></div>
-                            <button class="carousel-btn carousel-next" id="becauseLikeNext">›</button>
+                            <button class="carousel-btn carousel-prev" id="discoverBecauseLikePrev">‹</button>
+                            <div class="carousel-track" id="discoverBecauseLikeTrack"></div>
+                            <button class="carousel-btn carousel-next" id="discoverBecauseLikeNext">›</button>
                         </div>
                     </div>
                 </div>
@@ -1176,19 +1205,14 @@
             </svg>
             <span>Overview</span>
         </button>
-        <button id="bottomNavCurated" class="bottom-nav-btn" title="Curated Stations">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <button id="bottomNavDiscover" class="bottom-nav-btn" title="Discover">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-width="2" stroke-linecap="round"/>
+                <path d="M17 7l-5 5" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <span>Curated</span>
-        </button>
-        <button id="bottomNavDatabase" class="bottom-nav-btn" title="Radio Database">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2"/>
-                <path d="M8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12Z" stroke-width="2"/>
-                <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span>Database</span>
+            <span>Discover</span>
         </button>
         <button id="bottomNavMenu" class="bottom-nav-btn" title="Menu">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1364,6 +1388,8 @@
         const authBtn = document.getElementById('authBtn');
         const overviewModal = document.getElementById('overviewModal');
         const closeOverviewModal = document.getElementById('closeOverviewModal');
+        const discoverModal = document.getElementById('discoverModal');
+        const closeDiscoverModal = document.getElementById('closeDiscoverModal');
         const stationInfoModal = document.getElementById('stationInfoModal');
         const closeStationInfoModal = document.getElementById('closeStationInfoModal');
 
@@ -4017,9 +4043,18 @@
             // Setup carousel navigation
             setupCarouselNavigation('recent', 'recentTrack', 'recentPrev', 'recentNext');
             setupCarouselNavigation('playlists', 'playlistsTrack', 'playlistsPrev', 'playlistsNext');
+        }
+
+        // Load discover modal with explore section
+        async function loadDiscoverModal() {
+            // Load recent stations
+            const recentStations = await getMostRecentStations(10);
+
+            // Load most played stations
+            const playedStations = await getMostPlayedStations(10);
 
             // Load Explore section
-            await loadExploreSection(recentStations, playedStations);
+            await loadDiscoverExploreSection(recentStations, playedStations);
         }
 
         // Shuffle array using Fisher-Yates algorithm
@@ -4100,6 +4135,84 @@
                         document.getElementById('becauseLikeTitle').textContent = `Because you like ${genre}`;
                         renderCarousel('becauseLikeTrack', sameGenreStations, 'station');
                         setupCarouselNavigation('becauseLike', 'becauseLikeTrack', 'becauseLikePrev', 'becauseLikeNext');
+                        becauseLikeSection.style.display = 'block';
+                        hasExploreContent = true;
+                    }
+                }
+            }
+
+            // Show/hide the entire explore section based on whether we have any content
+            exploreSection.style.display = hasExploreContent ? 'block' : 'none';
+        }
+
+        // Load Discover Explore section with genre-based recommendations
+        async function loadDiscoverExploreSection(recentStations, playedStations) {
+            const exploreSection = document.getElementById('discoverExploreSection');
+            const becauseListenedSection = document.getElementById('discoverBecauseListenedSection');
+            const becauseLikeSection = document.getElementById('discoverBecauseLikeSection');
+
+            let hasExploreContent = false;
+
+            // "Because you listened to" - based on most recent station
+            if (recentStations && recentStations.length > 0) {
+                const mostRecentStation = recentStations[0];
+                if (mostRecentStation.genres && mostRecentStation.genres.length > 0) {
+                    const genre = Array.isArray(mostRecentStation.genres) ? mostRecentStation.genres[0] : mostRecentStation.genres;
+
+                    // Find stations with the same genre (excluding the recent station itself)
+                    const filteredStations = stations.filter(station => {
+                        if (station.id === mostRecentStation.id) return false;
+                        if (!station.genres) return false;
+
+                        if (Array.isArray(station.genres)) {
+                            return station.genres.some(g =>
+                                g.toLowerCase() === genre.toLowerCase()
+                            );
+                        } else if (typeof station.genres === 'string') {
+                            return station.genres.toLowerCase().includes(genre.toLowerCase());
+                        }
+                        return false;
+                    });
+                    // Shuffle and take up to 10 stations
+                    const sameGenreStations = shuffleArray(filteredStations).slice(0, 10);
+
+                    if (sameGenreStations.length > 0) {
+                        document.getElementById('discoverBecauseListenedTitle').textContent = `Because you listened to ${genre}`;
+                        renderCarousel('discoverBecauseListenedTrack', sameGenreStations, 'station');
+                        setupCarouselNavigation('discoverBecauseListened', 'discoverBecauseListenedTrack', 'discoverBecauseListenedPrev', 'discoverBecauseListenedNext');
+                        becauseListenedSection.style.display = 'block';
+                        hasExploreContent = true;
+                    }
+                }
+            }
+
+            // "Because you like" - based on most played station
+            if (playedStations && playedStations.length > 0) {
+                const mostPlayedStation = playedStations[0];
+                if (mostPlayedStation.genres && mostPlayedStation.genres.length > 0) {
+                    const genre = Array.isArray(mostPlayedStation.genres) ? mostPlayedStation.genres[0] : mostPlayedStation.genres;
+
+                    // Find stations with the same genre (excluding the most played station itself and any from "Because you listened")
+                    const filteredStations = stations.filter(station => {
+                        if (station.id === mostPlayedStation.id) return false;
+                        if (!station.genres) return false;
+
+                        if (Array.isArray(station.genres)) {
+                            return station.genres.some(g =>
+                                g.toLowerCase() === genre.toLowerCase()
+                            );
+                        } else if (typeof station.genres === 'string') {
+                            return station.genres.toLowerCase().includes(genre.toLowerCase());
+                        }
+                        return false;
+                    });
+                    // Shuffle and take up to 10 stations
+                    const sameGenreStations = shuffleArray(filteredStations).slice(0, 10);
+
+                    if (sameGenreStations.length > 0) {
+                        document.getElementById('discoverBecauseLikeTitle').textContent = `Because you like ${genre}`;
+                        renderCarousel('discoverBecauseLikeTrack', sameGenreStations, 'station');
+                        setupCarouselNavigation('discoverBecauseLike', 'discoverBecauseLikeTrack', 'discoverBecauseLikePrev', 'discoverBecauseLikeNext');
                         becauseLikeSection.style.display = 'block';
                         hasExploreContent = true;
                     }
@@ -6086,6 +6199,82 @@
             overviewModal.classList.remove('active');
         });
 
+        // Close discover modal
+        closeDiscoverModal.addEventListener('click', () => {
+            discoverModal.classList.remove('active');
+        });
+
+        // Search Curated Stations button in Discover modal
+        document.getElementById('searchCuratedBtn').addEventListener('click', () => {
+            // Close discover modal
+            discoverModal.classList.remove('active');
+
+            // Open browse stations modal
+            browseStationsModal.classList.add('active');
+            console.log('Opening browse stations modal from discover page');
+
+            // Clear any existing state
+            curatedSearchInput.value = '';
+
+            // Load curated playlists
+            if (window.loadCuratedPlaylists) {
+                window.loadCuratedPlaylists();
+            }
+        });
+
+        // Search Radio Database button in Discover modal
+        document.getElementById('searchDatabaseBtn').addEventListener('click', () => {
+            // Close discover modal
+            discoverModal.classList.remove('active');
+
+            // Open radio database modal
+            radioDatabaseModal.classList.add('active');
+            console.log('Opening radio database modal from discover page');
+
+            // Load state or perform initial search
+            const state = loadRadioDatabaseState();
+            if (state) {
+                // Restore previous state
+                radioDatabaseSearchInput.value = state.searchTerm || '';
+                radioDatabaseCountry.value = state.country || '';
+                radioDatabaseLanguage.value = state.language || '';
+                radioDatabaseTag.value = state.tag || '';
+                radioDatabaseSort.value = state.sortBy || 'votes';
+                radioDatabaseCurrentPage = state.currentPage || 1;
+                radioDatabaseViewMode = state.viewMode || 'list';
+                radioDatabaseMinBitrate = state.minBitrate || 0;
+                radioDatabaseIncludeUnknown = state.includeUnknown !== undefined ? state.includeUnknown : true;
+                radioDatabaseFilterOutHLS = state.filterOutHLS || false;
+
+                // Perform search with restored state
+                radioDatabaseSearchBtn.click();
+            } else {
+                // Load countries, languages, and tags for filters
+                populateRadioDatabaseFilters();
+            }
+        });
+
+        // Play random station button in Discover modal
+        document.getElementById('discoverPlayRandomStationBtn').addEventListener('click', () => {
+            if (stations.length === 0) {
+                alert('No stations available');
+                return;
+            }
+
+            // Select a random station from all available stations
+            const randomIndex = Math.floor(Math.random() * stations.length);
+            const randomStation = stations[randomIndex];
+
+            // Close the discover modal
+            discoverModal.classList.remove('active');
+
+            // Select and play the random station
+            selectStation(randomStation);
+            setTimeout(() => {
+                playPauseBtn.click();
+            }, 100);
+        });
+
         // Close station info modal
         closeStationInfoModal.addEventListener('click', () => {
             stationInfoModal.classList.remove('active');
@@ -6165,6 +6354,7 @@
                 browseStationsModal,
                 settingsModal,
                 overviewModal,
+                discoverModal,
                 stationInfoModal,
                 playlistModal,
                 playlistFormModal,
@@ -6193,105 +6383,11 @@
             loadOverviewModal();
         });
 
-        // Bottom nav - Curated Stations button
-        document.getElementById('bottomNavCurated').addEventListener('click', () => {
+        // Bottom nav - Discover button
+        document.getElementById('bottomNavDiscover').addEventListener('click', () => {
             closeAllModals();
-            console.log('Opening browse stations modal from bottom nav', {
-                stationsLength: stations.length,
-                filteredStationsLength: filteredStations.length
-            });
-            lastOpenedModal = 'browse';
-            browseStationsModal.classList.add('active');
-
-            // Load curated playlists for carousels
-            loadCuratedPlaylists();
-
-            // Ensure stations are displayed
-            if (stations.length > 0) {
-                if (filteredStations.length === 0) {
-                    console.log('Initializing filteredStations');
-                    filteredStations = [...stations];
-                }
-                console.log('Calling renderStationList');
-                renderStationList();
-            } else {
-                console.log('No stations loaded yet');
-            }
-        });
-
-        // Bottom nav - Radio Database button
-        document.getElementById('bottomNavDatabase').addEventListener('click', async () => {
-            closeAllModals();
-            radioDatabaseModal.classList.add('active');
-
-            // Load filters if not already loaded (checking if only default option exists)
-            if (radioDatabaseCountry.children.length === 1) {
-                await loadRadioBrowserFilters();
-            }
-
-            // Try to restore saved state from sessionStorage
-            const savedState = loadRadioDatabaseState();
-
-            if (savedState) {
-                // Restore search input
-                radioDatabaseSearchInput.value = savedState.searchTerm || '';
-
-                // Restore filters
-                radioDatabaseCountry.value = savedState.country || '';
-                radioDatabaseLanguage.value = savedState.language || '';
-                radioDatabaseTag.value = savedState.tag || '';
-                radioDatabaseSort.value = savedState.sortBy || 'votes';
-
-                // Restore bitrate filters
-                radioDatabaseMinBitrate = savedState.minBitrate !== undefined ? savedState.minBitrate : 0;
-                radioDatabaseIncludeUnknown = savedState.includeUnknown !== undefined ? savedState.includeUnknown : true;
-                radioDatabaseFilterOutHLS = savedState.filterOutHLS !== undefined ? savedState.filterOutHLS : false;
-
-                // Update bitrate filter UI elements
-                bitrateDropdown.value = radioDatabaseMinBitrate.toString();
-                includeUnknownBitrates.checked = radioDatabaseIncludeUnknown;
-                filterOutHLS.checked = radioDatabaseFilterOutHLS;
-
-                // Restore view mode
-                radioDatabaseViewMode = savedState.viewMode || 'list';
-                updateRadioDatabaseViewUI();
-
-                // Update dependent filters based on country selection
-                if (savedState.country) {
-                    await updateLanguageOptions(savedState.country);
-                }
-                if (savedState.country || savedState.language) {
-                    await updateTagOptions(savedState.country, savedState.language);
-                }
-
-                // Show/hide clear button based on filters
-                const hasFilters = savedState.searchTerm || savedState.country ||
-                                  savedState.language || savedState.tag;
-                document.getElementById('radioDatabaseClearBtn').style.display = hasFilters ? 'flex' : 'none';
-
-                // Trigger search with saved page
-                searchRadioBrowser(savedState.currentPage || 1);
-            } else {
-                // No saved state - clear input values and start fresh
-                radioDatabaseSearchInput.value = '';
-                radioDatabaseCountry.value = '';
-                radioDatabaseLanguage.value = '';
-                radioDatabaseTag.value = '';
-                radioDatabaseSort.value = 'votes';
-                radioDatabaseViewMode = 'list';
-                updateRadioDatabaseViewUI();
-
-                // Reset bitrate filter UI elements to defaults
-                bitrateDropdown.value = '0';
-                includeUnknownBitrates.checked = true;
-                filterOutHLS.checked = false;
-
-                // Hide clear button initially
-                document.getElementById('radioDatabaseClearBtn').style.display = 'none';
-
-                // Auto-populate with default search (Most Popular)
-                searchRadioBrowser();
-            }
+            discoverModal.classList.add('active');
+            loadDiscoverModal();
         });
 
         // Bottom nav - Menu button
