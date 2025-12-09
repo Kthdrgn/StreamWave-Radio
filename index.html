@@ -3380,6 +3380,23 @@
 
         // Fetch current metadata from a station's stream
         async function fetchStationCurrentMetadata(station) {
+            // If this is the currently playing station, use the live metadata we already have
+            if (currentStation && station) {
+                // Check if it's the same station (compare by ID or URL)
+                const isSameStation =
+                    (station.id && currentStation.id && station.id === currentStation.id) ||
+                    (station.external_id && currentStation.external_id && station.external_id === currentStation.external_id) ||
+                    (station.url && currentStation.url && station.url === currentStation.url);
+
+                if (isSameStation && currentTrack && (currentTrack.title || currentTrack.artist)) {
+                    // Return the live metadata from the currently playing stream
+                    return {
+                        title: currentTrack.title || 'Unknown',
+                        artist: currentTrack.artist || ''
+                    };
+                }
+            }
+
             // Check if this is an HLS stream
             const rawUrl = station.url_standard || station.url;
             if (rawUrl && isHLSStream(rawUrl)) {
