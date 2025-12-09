@@ -3199,8 +3199,190 @@
             }
         }
 
+        // Fetch metadata from HLS stream
+        async function fetchHLSMetadata(station) {
+            return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    cleanup();
+                    resolve(null);
+                }, 15000); // HLS needs more time to load manifest and segments
+
+                let tempHls = null;
+                let tempAudio = null;
+                let metadataReceived = false;
+
+                const cleanup = () => {
+                    clearTimeout(timeout);
+                    if (tempHls) {
+                        try {
+                            tempHls.destroy();
+                        } catch (e) {
+                            console.log('Error destroying temp HLS player:', e);
+                        }
+                        tempHls = null;
+                    }
+                    if (tempAudio) {
+                        try {
+                            tempAudio.pause();
+                            tempAudio.src = '';
+                            tempAudio.load();
+                        } catch (e) {
+                            console.log('Error cleaning up temp audio:', e);
+                        }
+                        tempAudio = null;
+                    }
+                };
+
+                try {
+                    const rawUrl = station.url_standard || station.url;
+                    if (!rawUrl) {
+                        cleanup();
+                        resolve(null);
+                        return;
+                    }
+
+                    // HLS streams don't need CORS proxy - browsers handle CORS for HLS
+                    const streamUrl = rawUrl;
+
+                    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                        tempAudio = document.createElement('audio');
+                        tempAudio.muted = true;
+                        tempAudio.volume = 0;
+
+                        tempHls = new Hls({
+                            enableWorker: false,
+                            debug: false
+                        });
+
+                        // Listen for metadata
+                        tempHls.on(Hls.Events.FRAG_PARSING_METADATA, (event, data) => {
+                            if (metadataReceived) return;
+
+                            console.log('HLS metadata fetched:', data);
+
+                            try {
+                                // Parse ID3 frames
+                                if (data.samples && data.samples.length > 0) {
+                                    for (const sample of data.samples) {
+                                        if (sample.data) {
+                                            const id3Data = sample.data;
+                                            const frames = parseID3Frames({ samples: [{ data: id3Data }] });
+
+                                            if (frames.TIT2 || frames.TPE1) {
+                                                metadataReceived = true;
+                                                cleanup();
+                                                resolve({
+                                                    title: frames.TIT2 || 'Unknown',
+                                                    artist: frames.TPE1 || ''
+                                                });
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Check for frag.title format
+                                if (data.frag && data.frag.title) {
+                                    const fragTitle = data.frag.title;
+                                    let title = 'Unknown';
+                                    let artist = '';
+
+                                    if (fragTitle.includes(' - ')) {
+                                        const parts = fragTitle.split(' - ');
+                                        artist = parts[0].trim();
+                                        title = parts[1].trim();
+                                    } else {
+                                        title = fragTitle;
+                                    }
+
+                                    metadataReceived = true;
+                                    cleanup();
+                                    resolve({ title, artist });
+                                    return;
+                                }
+                            } catch (error) {
+                                console.log('Error parsing HLS metadata:', error);
+                            }
+                        });
+
+                        tempHls.on(Hls.Events.ERROR, (event, data) => {
+                            if (data.fatal) {
+                                console.log('HLS metadata fetch error:', data.type, data.details);
+                                cleanup();
+                                resolve(null);
+                            }
+                        });
+
+                        tempHls.on(Hls.Events.MANIFEST_PARSED, () => {
+                            tempAudio.play().catch(() => {
+                                // Ignore play errors for silent player
+                            });
+                        });
+
+                        tempHls.loadSource(streamUrl);
+                        tempHls.attachMedia(tempAudio);
+
+                    } else if (tempAudio && tempAudio.canPlayType('application/vnd.apple.mpegurl')) {
+                        // Safari native HLS
+                        tempAudio = document.createElement('audio');
+                        tempAudio.muted = true;
+                        tempAudio.volume = 0;
+                        tempAudio.src = streamUrl;
+
+                        tempAudio.addEventListener('loadedmetadata', () => {
+                            const tracks = tempAudio.textTracks;
+                            for (let i = 0; i < tracks.length; i++) {
+                                const track = tracks[i];
+                                if (track.kind === 'metadata') {
+                                    track.mode = 'hidden';
+                                    track.addEventListener('cuechange', () => {
+                                        if (metadataReceived) return;
+
+                                        const cue = track.activeCues && track.activeCues[0];
+                                        if (cue && cue.value) {
+                                            try {
+                                                const frames = cue.value;
+                                                if (frames.data) {
+                                                    const title = frames.data.TIT2 || frames.data.info || 'Unknown';
+                                                    const artist = frames.data.TPE1 || '';
+
+                                                    metadataReceived = true;
+                                                    cleanup();
+                                                    resolve({ title, artist });
+                                                }
+                                            } catch (error) {
+                                                console.log('Error parsing Safari HLS metadata:', error);
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+
+                        tempAudio.play().catch(() => {
+                            // Ignore play errors
+                        });
+                    } else {
+                        cleanup();
+                        resolve(null);
+                    }
+                } catch (error) {
+                    console.log('Error fetching HLS metadata:', error);
+                    cleanup();
+                    resolve(null);
+                }
+            });
+        }
+
         // Fetch current metadata from a station's stream
         async function fetchStationCurrentMetadata(station) {
+            // Check if this is an HLS stream
+            const rawUrl = station.url_standard || station.url;
+            if (rawUrl && isHLSStream(rawUrl)) {
+                console.log('Fetching HLS metadata for station:', station.name);
+                return await fetchHLSMetadata(station);
+            }
+
             return new Promise((resolve) => {
                 // Timeout after 10 seconds
                 const timeout = setTimeout(() => {
@@ -3219,7 +3401,6 @@
 
                 try {
                     // Get the standard quality URL
-                    const rawUrl = station.url_standard || station.url;
                     if (!rawUrl) {
                         clearTimeout(timeout);
                         resolve(null);
@@ -6773,7 +6954,7 @@
 
         // Fetch metadata once without continuous playback
         // Uses IcecastMetadataPlayer library which properly handles all metadata formats including apostrophes
-        function fetchMetadataOnce() {
+        async function fetchMetadataOnce() {
             if (!currentStation) {
                 return;
             }
@@ -6790,9 +6971,13 @@
                 return;
             }
 
-            // Skip HLS streams - they don't support Icecast metadata
+            // Check if HLS stream - use HLS metadata fetching
             if (isHLSStream(rawUrl)) {
-                console.log('HLS streams do not support Icecast metadata, skipping metadata fetch');
+                console.log('Fetching HLS metadata for current station');
+                const metadata = await fetchHLSMetadata(currentStation);
+                if (metadata) {
+                    displayMetadata({ StreamTitle: metadata.artist ? `${metadata.artist} - ${metadata.title}` : metadata.title });
+                }
                 return;
             }
 
