@@ -2875,7 +2875,35 @@
                 }
 
                 if (existing) {
-                    console.log('External station already exists, returning existing ID:', existing.id);
+                    console.log('External station already exists, updating with latest data:', existing.id);
+                    // Update the existing station with latest data (including artwork)
+                    const { error: updateError } = await supabase
+                        .from('external_stations')
+                        .update({
+                            name: externalStation.name,
+                            url: externalStation.url,
+                            url_resolved: externalStation.url_resolved,
+                            icon_url: externalStation.icon_url,
+                            favicon: externalStation.favicon,
+                            genres: externalStation.genres,
+                            country: externalStation.country,
+                            country_code: externalStation.country_code,
+                            language: externalStation.language,
+                            bitrate: externalStation.bitrate,
+                            votes: externalStation.votes,
+                            click_count: externalStation.click_count,
+                            codec: externalStation.codec,
+                            homepage: externalStation.homepage,
+                            metadata: externalStation.metadata
+                        })
+                        .eq('id', existing.id);
+
+                    if (updateError) {
+                        console.error('Error updating existing station:', updateError);
+                    } else {
+                        console.log('Successfully updated existing station with latest data');
+                    }
+
                     return existing.id;
                 }
 
