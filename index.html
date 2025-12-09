@@ -6187,8 +6187,8 @@
 
         // Station display click - open station info modal
         stationDisplay.addEventListener('click', () => {
-            // Only open if a station is loaded
-            if (!currentStation) {
+            // Only open if a station is loaded and playing
+            if (!currentStation || !isPlaying) {
                 return;
             }
 
@@ -6208,6 +6208,15 @@
 
             stationInfoModal.classList.add('active');
         });
+
+        // Update station display cursor based on playing state
+        function updateStationDisplayCursor() {
+            if (currentStation && isPlaying) {
+                stationDisplay.style.cursor = 'pointer';
+            } else {
+                stationDisplay.style.cursor = 'default';
+            }
+        }
 
         // Close playlists modal
         closePlaylistsModal.addEventListener('click', () => {
@@ -9076,6 +9085,9 @@
                 playIcon.style.display = 'block';
                 pauseIcon.style.display = 'none';
             }
+
+            // Update station display cursor based on playing state
+            updateStationDisplayCursor();
         }
         
         // Play/Pause button handler
@@ -9918,6 +9930,9 @@
                     fetchMetadataOnce();
                 }
             });
+
+            // Set initial station display cursor state
+            updateStationDisplayCursor();
         })();
 
         // Close dropdowns when clicking outside
