@@ -318,6 +318,26 @@
                     </button>
                 </div>
 
+                <!-- Curated Playlists Carousel -->
+                <div class="carousel-section" id="discoverCuratedPlaylistsSection" style="display: none;">
+                    <h3 class="carousel-title">Curated Playlists</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverCuratedPlaylistsPrev">‹</button>
+                        <div class="carousel-track" id="discoverCuratedPlaylistsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverCuratedPlaylistsNext">›</button>
+                    </div>
+                </div>
+
+                <!-- Multi-Channel Radio Stations Carousel -->
+                <div class="carousel-section" id="discoverMultiChannelRadioSection" style="display: none;">
+                    <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverMultiChannelRadioPrev">‹</button>
+                        <div class="carousel-track" id="discoverMultiChannelRadioTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverMultiChannelRadioNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Explore Section -->
                 <div id="discoverExploreSection" style="display: none;">
                     <!-- Explore Header -->
@@ -707,26 +727,6 @@
                 <button class="modal-close" id="closeBrowseStationsModal">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- Curated Playlists Carousel -->
-                <div class="carousel-section" id="curatedPlaylistsSection" style="display: none;">
-                    <h3 class="carousel-title">Curated Playlists</h3>
-                    <div class="carousel-container">
-                        <button class="carousel-btn carousel-prev" id="curatedPlaylistsPrev">‹</button>
-                        <div class="carousel-track" id="curatedPlaylistsTrack"></div>
-                        <button class="carousel-btn carousel-next" id="curatedPlaylistsNext">›</button>
-                    </div>
-                </div>
-
-                <!-- Multi-Channel Radio Stations Carousel -->
-                <div class="carousel-section" id="multiChannelRadioSection" style="display: none;">
-                    <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
-                    <div class="carousel-container">
-                        <button class="carousel-btn carousel-prev" id="multiChannelRadioPrev">‹</button>
-                        <div class="carousel-track" id="multiChannelRadioTrack"></div>
-                        <button class="carousel-btn carousel-next" id="multiChannelRadioNext">›</button>
-                    </div>
-                </div>
-
                 <!-- Search -->
                 <div class="search-controls">
                     <div class="search-input-container">
@@ -3653,41 +3653,10 @@
         }
 
         // Render curated playlists in Browse Stations modal
+        // Note: Curated playlists sections have been moved to the Discover page
         async function renderCuratedPlaylistsInBrowseModal() {
-            const curatedPlaylistsSection = document.getElementById('curatedPlaylistsSection');
-            const multiChannelRadioSection = document.getElementById('multiChannelRadioSection');
-
-            // Separate playlists by type
-            const curatedPlaylistItems = curatedPlaylists.filter(p => p.type === 'curated_playlist');
-            const multiChannelRadioItems = curatedPlaylists.filter(p => p.type === 'multi_channel_radio');
-
-            // Load stations for each curated playlist
-            const curatedPlaylistsWithStations = await Promise.all(curatedPlaylistItems.map(async (playlist) => {
-                return await loadCuratedPlaylistStations(playlist);
-            }));
-
-            // Load stations for each multi-channel radio
-            const multiChannelRadioWithStations = await Promise.all(multiChannelRadioItems.map(async (playlist) => {
-                return await loadCuratedPlaylistStations(playlist);
-            }));
-
-            // Render Curated Playlists carousel
-            if (curatedPlaylistsWithStations.length > 0) {
-                renderCarousel('curatedPlaylistsTrack', curatedPlaylistsWithStations, 'curated-playlist');
-                setupCarouselNavigation('curatedPlaylists', 'curatedPlaylistsTrack', 'curatedPlaylistsPrev', 'curatedPlaylistsNext');
-                curatedPlaylistsSection.style.display = 'block';
-            } else {
-                curatedPlaylistsSection.style.display = 'none';
-            }
-
-            // Render Multi-Channel Radio carousel
-            if (multiChannelRadioWithStations.length > 0) {
-                renderCarousel('multiChannelRadioTrack', multiChannelRadioWithStations, 'curated-playlist');
-                setupCarouselNavigation('multiChannelRadio', 'multiChannelRadioTrack', 'multiChannelRadioPrev', 'multiChannelRadioNext');
-                multiChannelRadioSection.style.display = 'block';
-            } else {
-                multiChannelRadioSection.style.display = 'none';
-            }
+            // This function is no longer used as the sections have been moved to the Discover modal
+            // Kept for backwards compatibility
         }
 
         // Load stations for a curated playlist
@@ -4047,6 +4016,22 @@
 
         // Load discover modal with explore section
         async function loadDiscoverModal() {
+            // Load curated playlists if not already loaded
+            if (curatedPlaylists.length === 0) {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (!error) {
+                    curatedPlaylists = data || [];
+                }
+            }
+
+            // Render curated playlists in Discover modal
+            await renderCuratedPlaylistsInDiscoverModal();
+
             // Load recent stations
             const recentStations = await getMostRecentStations(10);
 
@@ -4055,6 +4040,44 @@
 
             // Load Explore section
             await loadDiscoverExploreSection(recentStations, playedStations);
+        }
+
+        // Render curated playlists in Discover modal
+        async function renderCuratedPlaylistsInDiscoverModal() {
+            const curatedPlaylistsSection = document.getElementById('discoverCuratedPlaylistsSection');
+            const multiChannelRadioSection = document.getElementById('discoverMultiChannelRadioSection');
+
+            // Separate playlists by type
+            const curatedPlaylistItems = curatedPlaylists.filter(p => p.type === 'curated_playlist');
+            const multiChannelRadioItems = curatedPlaylists.filter(p => p.type === 'multi_channel_radio');
+
+            // Load stations for each curated playlist
+            const curatedPlaylistsWithStations = await Promise.all(curatedPlaylistItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Load stations for each multi-channel radio
+            const multiChannelRadioWithStations = await Promise.all(multiChannelRadioItems.map(async (playlist) => {
+                return await loadCuratedPlaylistStations(playlist);
+            }));
+
+            // Render Curated Playlists carousel
+            if (curatedPlaylistsWithStations.length > 0) {
+                renderCarousel('discoverCuratedPlaylistsTrack', curatedPlaylistsWithStations, 'curated-playlist');
+                setupCarouselNavigation('discoverCuratedPlaylists', 'discoverCuratedPlaylistsTrack', 'discoverCuratedPlaylistsPrev', 'discoverCuratedPlaylistsNext');
+                curatedPlaylistsSection.style.display = 'block';
+            } else {
+                curatedPlaylistsSection.style.display = 'none';
+            }
+
+            // Render Multi-Channel Radio carousel
+            if (multiChannelRadioWithStations.length > 0) {
+                renderCarousel('discoverMultiChannelRadioTrack', multiChannelRadioWithStations, 'curated-playlist');
+                setupCarouselNavigation('discoverMultiChannelRadio', 'discoverMultiChannelRadioTrack', 'discoverMultiChannelRadioPrev', 'discoverMultiChannelRadioNext');
+                multiChannelRadioSection.style.display = 'block';
+            } else {
+                multiChannelRadioSection.style.display = 'none';
+            }
         }
 
         // Shuffle array using Fisher-Yates algorithm
