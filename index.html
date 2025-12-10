@@ -4060,6 +4060,7 @@
         }
 
         // Admin: Load curated playlists list
+        let adminCuratedPlaylists = []; // Store for drag and drop
         async function loadAdminCuratedPlaylists() {
             const listContainer = document.getElementById('curatedPlaylistsList');
 
@@ -4093,8 +4094,15 @@
                     };
                 }));
 
-                listContainer.innerHTML = playlistsWithCounts.map(playlist => `
-                    <div class="curated-playlist-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+                // Store playlists for drag and drop
+                adminCuratedPlaylists = playlistsWithCounts;
+
+                listContainer.innerHTML = playlistsWithCounts.map((playlist, index) => `
+                    <div class="curated-playlist-item"
+                        draggable="true"
+                        data-playlist-id="${playlist.id}"
+                        data-playlist-index="${index}"
+                        style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; cursor: move;">
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
                             <div style="font-size: 13px; color: var(--text-secondary);">
@@ -4106,18 +4114,22 @@
                                 <label style="font-size: 12px; color: var(--text-secondary);">Sort Order:</label>
                                 <input type="number"
                                     id="sort-order-${playlist.id}"
-                                    value="${playlist.sort_order !== null ? playlist.sort_order : 0}"
+                                    value="${playlist.sort_order !== null ? playlist.sort_order : index}"
                                     style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                    onclick="event.stopPropagation()"
                                     onchange="updateCuratedPlaylistSortOrder('${playlist.id}', this.value)">
-                                <small style="font-size: 11px; color: var(--text-tertiary);">Lower numbers appear first</small>
+                                <small style="font-size: 11px; color: var(--text-tertiary);">Drag to reorder or edit number</small>
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button class="btn" onclick="showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
-                            <button class="btn" onclick="confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                            <button class="btn" onclick="event.stopPropagation(); showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="event.stopPropagation(); confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
                         </div>
                     </div>
                 `).join('');
+
+                // Setup drag and drop
+                setupCuratedPlaylistDragAndDrop();
 
             } catch (error) {
                 console.error('Error loading admin curated playlists:', error);
@@ -4132,7 +4144,96 @@
             }
         }
 
-        // Update curated playlist sort order
+        // Setup drag and drop for curated playlist reordering
+        function setupCuratedPlaylistDragAndDrop() {
+            const playlistItems = document.querySelectorAll('.curated-playlist-item');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            playlistItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = index;
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    // Remove drag-over class from all items
+                    document.querySelectorAll('.curated-playlist-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        // Get the indices
+                        const dropIndex = Array.from(playlistItems).indexOf(item);
+
+                        // Reorder the playlists array
+                        const movedPlaylist = adminCuratedPlaylists.splice(draggedIndex, 1)[0];
+                        adminCuratedPlaylists.splice(dropIndex, 0, movedPlaylist);
+
+                        // Update sort orders and save to database
+                        await updateCuratedPlaylistOrder();
+
+                        // Re-render the list
+                        await loadAdminCuratedPlaylists();
+                    }
+                });
+            });
+        }
+
+        // Update curated playlist order in database
+        async function updateCuratedPlaylistOrder() {
+            try {
+                // Update each playlist with its new sort_order
+                const updates = adminCuratedPlaylists.map((playlist, index) => {
+                    return supabase
+                        .from('curated_playlists')
+                        .update({
+                            sort_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', playlist.id);
+                });
+
+                await Promise.all(updates);
+                updateStatus('Playlist order updated', 'success');
+
+                // Reload curated playlists to update Discover modal
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error updating curated playlist order:', error);
+                updateStatus('Error updating playlist order', 'error');
+            }
+        }
+
+        // Update curated playlist sort order (manual input)
         async function updateCuratedPlaylistSortOrder(playlistId, newOrder) {
             try {
                 const sortOrder = parseInt(newOrder);
@@ -4151,6 +4252,9 @@
 
                 // Reload curated playlists to update Discover modal
                 await loadCuratedPlaylists();
+
+                // Reload admin list to reflect new order
+                await loadAdminCuratedPlaylists();
 
             } catch (error) {
                 console.error('Error updating sort order:', error);
