@@ -355,6 +355,16 @@
                     </div>
                 </div>
 
+                <!-- Preset Searches Carousel -->
+                <div class="carousel-section" id="discoverPresetSearchesSection" style="display: none;">
+                    <h3 class="carousel-title">Quick Search Presets</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverPresetSearchesPrev">‹</button>
+                        <div class="carousel-track" id="discoverPresetSearchesTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverPresetSearchesNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Explore Section -->
                 <div id="discoverExploreSection" style="display: none;">
                     <!-- Explore Header -->
@@ -494,6 +504,15 @@
                             <path d="M12 5V19M5 12H19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span>Add Station</span>
+                    </button>
+
+                    <!-- Manage Preset Searches Button (Admin Only) -->
+                    <button class="menu-option-btn" id="managePresetSearchesBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M10 7V13M7 10H13" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <span>Manage Preset Searches</span>
                     </button>
 
                     <!-- Auth Button -->
@@ -1189,6 +1208,74 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="form-btn form-btn-secondary" id="cancelCuratedPlaylistFormBtn">Cancel</button>
+                        <button type="submit" class="form-btn form-btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Preset Searches Modal -->
+    <div id="adminPresetSearchesModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Preset Searches</h2>
+                <button class="modal-close" id="closeAdminPresetSearchesModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <button id="addNewPresetSearchBtn" class="btn" style="background: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        + Add New Preset Search
+                    </button>
+                </div>
+                <div id="presetSearchesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preset Search Form Modal -->
+    <div id="presetSearchFormModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="presetSearchFormTitle">Create Preset Search</h2>
+                <button class="modal-close" id="closePresetSearchFormModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="presetSearchForm">
+                    <div class="form-group">
+                        <label for="presetSearchName">Name *</label>
+                        <input type="text" id="presetSearchName" class="form-input" placeholder="e.g., Rock Music, Jazz Stations, USA Radio" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchCountry">Country</label>
+                        <input type="text" id="presetSearchCountry" class="form-input" placeholder="e.g., United States, United Kingdom (optional)">
+                        <small style="color: var(--text-secondary); font-size: 12px;">Leave blank to search all countries</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchLanguage">Language</label>
+                        <input type="text" id="presetSearchLanguage" class="form-input" placeholder="e.g., english, spanish (optional)">
+                        <small style="color: var(--text-secondary); font-size: 12px;">Leave blank to search all languages</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchTags">Tags</label>
+                        <input type="text" id="presetSearchTags" class="form-input" placeholder="e.g., rock, jazz, news (optional)">
+                        <small style="color: var(--text-secondary); font-size: 12px;">Comma-separated tags</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchImageUrl">Image URL</label>
+                        <input type="url" id="presetSearchImageUrl" class="form-input" placeholder="https://example.com/image.jpg (optional)">
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchDescription">Description</label>
+                        <textarea id="presetSearchDescription" class="form-input" rows="3" placeholder="Brief description of this preset search (optional)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="presetSearchDisplayOrder">Display Order</label>
+                        <input type="number" id="presetSearchDisplayOrder" class="form-input" value="0" min="0">
+                        <small style="color: var(--text-secondary); font-size: 12px;">Lower numbers appear first</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="form-btn form-btn-secondary" id="cancelPresetSearchFormBtn">Cancel</button>
                         <button type="submit" class="form-btn form-btn-primary">Save</button>
                     </div>
                 </form>
@@ -4034,6 +4121,9 @@
             // Render curated playlists in Discover modal
             await renderCuratedPlaylistsInDiscoverModal();
 
+            // Render preset searches carousel
+            await renderPresetSearchesCarousel();
+
             // Load recent stations
             const recentStations = await getMostRecentStations(10);
 
@@ -4079,6 +4169,261 @@
                 multiChannelRadioSection.style.display = 'block';
             } else {
                 multiChannelRadioSection.style.display = 'none';
+            }
+        }
+
+        // Fetch preset searches from database
+        async function fetchPresetSearches() {
+            try {
+                const { data, error } = await supabase
+                    .from('preset_searches')
+                    .select('*')
+                    .order('display_order', { ascending: true });
+
+                if (error) {
+                    console.error('Error fetching preset searches:', error);
+                    return [];
+                }
+
+                return data || [];
+            } catch (err) {
+                console.error('Error fetching preset searches:', err);
+                return [];
+            }
+        }
+
+        // Render preset searches carousel in Discover modal
+        async function renderPresetSearchesCarousel() {
+            const presetSearchesSection = document.getElementById('discoverPresetSearchesSection');
+            const presetSearches = await fetchPresetSearches();
+
+            if (presetSearches.length > 0) {
+                renderCarousel('discoverPresetSearchesTrack', presetSearches, 'preset-search');
+                setupCarouselNavigation('discoverPresetSearches', 'discoverPresetSearchesTrack', 'discoverPresetSearchesPrev', 'discoverPresetSearchesNext');
+                presetSearchesSection.style.display = 'block';
+            } else {
+                presetSearchesSection.style.display = 'none';
+            }
+        }
+
+        // Execute a preset search and display results
+        async function executePresetSearch(preset) {
+            // Close discover modal
+            closeAllModals();
+
+            // Open radio database modal
+            radioDatabaseModal.classList.add('active');
+
+            // Hide search input and filter controls
+            const searchContainer = radioDatabaseSearchInput.parentElement;
+            searchContainer.style.display = 'none';
+
+            // Set the title to show which preset is being displayed
+            const modalTitle = radioDatabaseModal.querySelector('.modal-title');
+            const originalTitle = modalTitle.textContent;
+            modalTitle.textContent = `Results: ${preset.name}`;
+
+            // Store original state to restore later
+            window.presetSearchActive = {
+                originalTitle: originalTitle,
+                searchContainer: searchContainer
+            };
+
+            // Build search parameters
+            const params = new URLSearchParams();
+            if (preset.country) params.append('country', preset.country);
+            if (preset.language) params.append('language', preset.language);
+            if (preset.tags) {
+                // Use first tag if comma-separated
+                const firstTag = preset.tags.split(',')[0].trim();
+                params.append('tag', firstTag);
+            }
+
+            // Always sort by votes (most popular)
+            params.append('limit', '500');
+            params.append('order', 'votes');
+            params.append('reverse', 'true');
+            params.append('hidebroken', 'true');
+
+            try {
+                // Fetch from Radio Browser API
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const results = await response.json();
+
+                // Apply any advanced filters
+                const filteredResults = applyAdvancedFilters(results);
+
+                // Render results
+                renderRadioBrowserResults(filteredResults, 1);
+            } catch (error) {
+                console.error('Error executing preset search:', error);
+                radioDatabaseResults.innerHTML = '<p style="text-align: center; padding: 20px;">Error loading stations. Please try again.</p>';
+            }
+        }
+
+        // Admin: Load preset searches list
+        async function loadAdminPresetSearches() {
+            const listContainer = document.getElementById('presetSearchesList');
+            const presetSearches = await fetchPresetSearches();
+
+            if (presetSearches.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No preset searches yet. Click "Add New Preset Search" to create one.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = presetSearches.map(preset => `
+                <div class="preset-search-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--bg-secondary);">
+                        ${preset.image_url ? `<img src="${escapeHtml(preset.image_url)}" alt="${escapeHtml(preset.name)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.innerHTML='🎵';">` : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 24px;">🎵</div>'}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(preset.name)}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">
+                            ${[
+                                preset.country ? `Country: ${escapeHtml(preset.country)}` : null,
+                                preset.language ? `Language: ${escapeHtml(preset.language)}` : null,
+                                preset.tags ? `Tags: ${escapeHtml(preset.tags)}` : null
+                            ].filter(Boolean).join(' • ') || 'All stations'}
+                        </div>
+                        ${preset.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(preset.description)}</div>` : ''}
+                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 5px;">Order: ${preset.display_order}</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="showPresetSearchForm('${preset.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                        <button class="btn" onclick="deletePresetSearch('${preset.id}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Admin: Show preset search form (for create or edit)
+        let currentEditingPresetId = null;
+        async function showPresetSearchForm(presetId = null) {
+            const formModal = document.getElementById('presetSearchFormModal');
+            const formTitle = document.getElementById('presetSearchFormTitle');
+            const form = document.getElementById('presetSearchForm');
+
+            // Reset form
+            form.reset();
+            currentEditingPresetId = presetId;
+
+            if (presetId) {
+                // Edit mode - load existing preset
+                formTitle.textContent = 'Edit Preset Search';
+                const { data, error } = await supabase
+                    .from('preset_searches')
+                    .select('*')
+                    .eq('id', presetId)
+                    .single();
+
+                if (!error && data) {
+                    document.getElementById('presetSearchName').value = data.name || '';
+                    document.getElementById('presetSearchCountry').value = data.country || '';
+                    document.getElementById('presetSearchLanguage').value = data.language || '';
+                    document.getElementById('presetSearchTags').value = data.tags || '';
+                    document.getElementById('presetSearchImageUrl').value = data.image_url || '';
+                    document.getElementById('presetSearchDescription').value = data.description || '';
+                    document.getElementById('presetSearchDisplayOrder').value = data.display_order || 0;
+                }
+            } else {
+                // Create mode
+                formTitle.textContent = 'Create Preset Search';
+                document.getElementById('presetSearchDisplayOrder').value = 0;
+            }
+
+            // Close admin list modal and open form modal
+            document.getElementById('adminPresetSearchesModal').classList.remove('active');
+            formModal.classList.add('active');
+        }
+
+        // Admin: Save preset search (create or update)
+        async function savePresetSearch(event) {
+            event.preventDefault();
+
+            const formData = {
+                name: document.getElementById('presetSearchName').value.trim(),
+                country: document.getElementById('presetSearchCountry').value.trim() || null,
+                language: document.getElementById('presetSearchLanguage').value.trim() || null,
+                tags: document.getElementById('presetSearchTags').value.trim() || null,
+                image_url: document.getElementById('presetSearchImageUrl').value.trim() || null,
+                description: document.getElementById('presetSearchDescription').value.trim() || null,
+                display_order: parseInt(document.getElementById('presetSearchDisplayOrder').value) || 0
+            };
+
+            if (!formData.name) {
+                alert('Name is required');
+                return;
+            }
+
+            try {
+                let result;
+                if (currentEditingPresetId) {
+                    // Update existing preset
+                    result = await supabase
+                        .from('preset_searches')
+                        .update(formData)
+                        .eq('id', currentEditingPresetId);
+                } else {
+                    // Create new preset
+                    result = await supabase
+                        .from('preset_searches')
+                        .insert([formData]);
+                }
+
+                if (result.error) {
+                    console.error('Error saving preset search:', result.error);
+                    alert('Error saving preset search: ' + result.error.message);
+                    return;
+                }
+
+                // Close form and reload admin list
+                document.getElementById('presetSearchFormModal').classList.remove('active');
+                document.getElementById('adminPresetSearchesModal').classList.add('active');
+                await loadAdminPresetSearches();
+
+                // Refresh the discover modal if it's open
+                if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderPresetSearchesCarousel();
+                }
+            } catch (error) {
+                console.error('Error saving preset search:', error);
+                alert('Error saving preset search. Please try again.');
+            }
+        }
+
+        // Admin: Delete preset search
+        async function deletePresetSearch(presetId) {
+            const presetSearches = await fetchPresetSearches();
+            const preset = presetSearches.find(p => p.id === presetId);
+
+            if (!preset) return;
+
+            if (!confirm(`Are you sure you want to delete "${preset.name}"?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('preset_searches')
+                    .delete()
+                    .eq('id', presetId);
+
+                if (error) {
+                    console.error('Error deleting preset search:', error);
+                    alert('Error deleting preset search: ' + error.message);
+                    return;
+                }
+
+                // Reload admin list
+                await loadAdminPresetSearches();
+
+                // Refresh the discover modal if it's open
+                if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderPresetSearchesCarousel();
+                }
+            } catch (error) {
+                console.error('Error deleting preset search:', error);
+                alert('Error deleting preset search. Please try again.');
             }
         }
 
@@ -4269,6 +4614,32 @@
                             </div>
                         </div>
                     `;
+                } else if (type === 'preset-search') {
+                    // Check if user is admin (for preset search menu)
+                    const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
+
+                    return `
+                        <div class="carousel-item" data-preset-id="${item.id}" data-preset-index="${index}">
+                            ${isAdmin ? `
+                            <button class="carousel-item-menu-btn" data-preset-id="${item.id}" onclick="event.stopPropagation()">⋮</button>
+                            <div class="carousel-item-dropdown">
+                                <div class="dropdown-item" data-action="edit-preset-search" data-preset-id="${item.id}">
+                                    <span>✏️</span> Edit
+                                </div>
+                                <div class="dropdown-item danger" data-action="delete-preset-search" data-preset-id="${item.id}">
+                                    <span>🗑️</span> Delete
+                                </div>
+                            </div>
+                            ` : ''}
+                            <div class="carousel-item-image">
+                                ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
+                            </div>
+                            <div class="carousel-item-content">
+                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                ${item.description ? `<div class="carousel-item-subtitle">${escapeHtml(item.description)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {
                     // Create a collage of station artworks (or single icon for multi-channel radio)
                     const stations = item.stations || [];
@@ -4340,6 +4711,12 @@
                             selectStation(station);
                             overviewModal.classList.remove('active');
                         }
+                    } else if (type === 'preset-search') {
+                        const presetIndex = parseInt(item.dataset.presetIndex);
+                        const preset = items[presetIndex];
+                        if (preset) {
+                            executePresetSearch(preset);
+                        }
                     } else if (type === 'playlist') {
                         const playlistId = item.dataset.playlistId; // Don't parseInt - IDs are UUIDs (strings)
                         openPlaylist(playlistId);
@@ -4382,6 +4759,43 @@
                             const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
                             if (playlist && confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
                                 deleteCuratedPlaylist(curatedPlaylistId);
+                            }
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        }
+                    });
+                });
+            }
+
+            // Add event listeners for preset search menu buttons
+            if (type === 'preset-search') {
+                track.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dropdown = btn.nextElementSibling;
+
+                        // Close all other dropdowns in this track
+                        track.querySelectorAll('.carousel-item-dropdown').forEach(d => {
+                            if (d !== dropdown) d.classList.remove('active');
+                        });
+
+                        dropdown.classList.toggle('active');
+                    });
+                });
+
+                // Add event listeners for dropdown actions
+                track.querySelectorAll('.carousel-item-dropdown .dropdown-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const action = item.dataset.action;
+                        const presetId = item.dataset.presetId;
+
+                        if (action === 'edit-preset-search') {
+                            showPresetSearchForm(presetId);
+                            track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
+                        } else if (action === 'delete-preset-search') {
+                            const preset = items.find(p => p.id === presetId);
+                            if (preset && confirm(`Are you sure you want to delete "${preset.name}"?`)) {
+                                deletePresetSearch(presetId);
                             }
                             track.querySelectorAll('.carousel-item-dropdown').forEach(d => d.classList.remove('active'));
                         }
@@ -6454,14 +6868,38 @@
             hamburgerMenuModal.classList.add('active');
         });
 
+        // Helper function to restore radio database search UI
+        function restoreRadioDatabaseSearchUI() {
+            // Check if we were in preset search mode
+            if (window.presetSearchActive) {
+                const modalTitle = radioDatabaseModal.querySelector('.modal-title');
+                const searchContainer = window.presetSearchActive.searchContainer;
+
+                // Restore original title
+                if (modalTitle) {
+                    modalTitle.textContent = window.presetSearchActive.originalTitle;
+                }
+
+                // Show search controls again
+                if (searchContainer) {
+                    searchContainer.style.display = '';
+                }
+
+                // Clear the preset search active flag
+                window.presetSearchActive = null;
+            }
+        }
+
         // Close Radio Database modal
         closeRadioDatabaseModal.addEventListener('click', () => {
+            restoreRadioDatabaseSearchUI();
             radioDatabaseModal.classList.remove('active');
         });
 
         // Close Radio Database modal when clicking outside
         radioDatabaseModal.addEventListener('click', (e) => {
             if (e.target === radioDatabaseModal) {
+                restoreRadioDatabaseSearchUI();
                 radioDatabaseModal.classList.remove('active');
             }
         });
@@ -7600,7 +8038,37 @@
         document.getElementById('addStationBtn').addEventListener('click', () => {
             showStationForm();
         });
-        
+
+        // Manage Preset Searches button (admin only)
+        document.getElementById('managePresetSearchesBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            document.getElementById('adminPresetSearchesModal').classList.add('active');
+            loadAdminPresetSearches();
+        });
+
+        // Close admin preset searches modal
+        document.getElementById('closeAdminPresetSearchesModal').addEventListener('click', () => {
+            document.getElementById('adminPresetSearchesModal').classList.remove('active');
+        });
+
+        // Add new preset search button
+        document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
+            showPresetSearchForm();
+        });
+
+        // Close preset search form modal
+        document.getElementById('closePresetSearchFormModal').addEventListener('click', () => {
+            document.getElementById('presetSearchFormModal').classList.remove('active');
+        });
+
+        // Cancel preset search form
+        document.getElementById('cancelPresetSearchFormBtn').addEventListener('click', () => {
+            document.getElementById('presetSearchFormModal').classList.remove('active');
+        });
+
+        // Preset search form submission
+        document.getElementById('presetSearchForm').addEventListener('submit', savePresetSearch);
+
         // Playlist form
         playlistForm.addEventListener('submit', async (e) => {
             e.preventDefault();
