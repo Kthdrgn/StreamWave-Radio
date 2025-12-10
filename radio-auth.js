@@ -75,6 +75,9 @@ function updateAuthUI() {
 
     // Show/hide Manage Preset Searches button based on admin status
     updateManagePresetSearchesButton();
+
+    // Show/hide Manage Curated Playlists button based on admin status
+    updateManageCuratedPlaylistsButton();
 }
 
 // Update auth button text
@@ -119,6 +122,22 @@ function updateManagePresetSearchesButton() {
             managePresetSearchesBtn.style.display = '';
         } else {
             managePresetSearchesBtn.style.display = 'none';
+        }
+    }
+}
+
+// Update Manage Curated Playlists button visibility based on admin status
+function updateManageCuratedPlaylistsButton() {
+    const manageCuratedPlaylistsBtn = document.getElementById('manageCuratedPlaylistsBtn');
+    if (manageCuratedPlaylistsBtn) {
+        // Check if current user is admin
+        const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+
+        // Show button only if user is admin
+        if (isAdmin) {
+            manageCuratedPlaylistsBtn.style.display = '';
+        } else {
+            manageCuratedPlaylistsBtn.style.display = 'none';
         }
     }
 }

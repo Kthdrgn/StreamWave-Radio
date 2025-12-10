@@ -527,6 +527,15 @@
                         <span>Manage Preset Searches</span>
                     </button>
 
+                    <!-- Manage Curated Playlists Button (Admin Only) -->
+                    <button class="menu-option-btn" id="manageCuratedPlaylistsBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11L12 14L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Manage Curated Playlists</span>
+                    </button>
+
                     <!-- Chromecast button temporarily disabled - needs styling work -->
                     <!-- <google-cast-launcher id="castButton" class="menu-option-btn cast-menu-btn" title="Cast to Chromecast">
                         <span>Chromecast</span>
@@ -1233,6 +1242,24 @@
                     </button>
                 </div>
                 <div id="presetSearchesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Curated Playlists Modal -->
+    <div id="adminCuratedPlaylistsModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Curated Playlists</h2>
+                <button class="modal-close" id="closeAdminCuratedPlaylistsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <button id="addNewCuratedPlaylistBtn" class="btn" style="background: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        + Add New Curated Playlist
+                    </button>
+                </div>
+                <div id="curatedPlaylistsList"></div>
             </div>
         </div>
     </div>
@@ -3907,22 +3934,36 @@
         }
 
         // Show curated playlist form for create/edit
-        function showCuratedPlaylistForm(id = null) {
+        async function showCuratedPlaylistForm(id = null) {
             editingCuratedPlaylistId = id;
 
             if (id) {
-                const playlist = curatedPlaylists.find(p => p.id === id);
-                if (!playlist) return;
+                // Fetch the playlist from database to ensure we have the latest data
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error || !data) {
+                    console.error('Error fetching playlist:', error);
+                    return;
+                }
 
                 curatedPlaylistFormTitle.textContent = 'Edit Curated Playlist';
-                curatedPlaylistName.value = playlist.name;
-                curatedPlaylistType.value = playlist.type;
-                curatedPlaylistDescription.value = playlist.description || '';
+                curatedPlaylistName.value = data.name;
+                curatedPlaylistType.value = data.type;
+                curatedPlaylistDescription.value = data.description || '';
             } else {
                 curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
                 curatedPlaylistName.value = '';
                 curatedPlaylistType.value = 'curated_playlist';
                 curatedPlaylistDescription.value = '';
+            }
+
+            // Close admin modal if it's open
+            if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
+                document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
             }
 
             curatedPlaylistFormModal.classList.add('active');
@@ -3977,6 +4018,15 @@
                         renderCuratedPlaylistSelectorList();
                         curatedPlaylistSelectorModal.classList.add('active');
                     }, 300);
+                } else {
+                    // If we came from the admin modal, reopen it
+                    setTimeout(() => {
+                        const adminModal = document.getElementById('adminCuratedPlaylistsModal');
+                        if (adminModal && !pendingCuratedPlaylistStation) {
+                            adminModal.classList.add('active');
+                            loadAdminCuratedPlaylists();
+                        }
+                    }, 300);
                 }
 
             } catch (error) {
@@ -3998,9 +4048,79 @@
                 updateStatus('Curated playlist deleted', 'success');
                 await loadCuratedPlaylists();
 
+                // Reload admin list if in admin mode
+                if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
+                    await loadAdminCuratedPlaylists();
+                }
+
             } catch (error) {
                 console.error('Error deleting curated playlist:', error);
                 updateStatus('Error deleting curated playlist', 'error');
+            }
+        }
+
+        // Admin: Load curated playlists list
+        async function loadAdminCuratedPlaylists() {
+            const listContainer = document.getElementById('curatedPlaylistsList');
+
+            // Fetch curated playlists directly
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const playlists = data || [];
+
+                if (playlists.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No curated playlists yet. Click "Add New Curated Playlist" to create one.</p>';
+                    return;
+                }
+
+                // Load station counts for each playlist
+                const playlistsWithCounts = await Promise.all(playlists.map(async (playlist) => {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('curated_playlist_items')
+                        .select('id')
+                        .eq('curated_playlist_id', playlist.id);
+
+                    return {
+                        ...playlist,
+                        stationCount: itemsError ? 0 : (itemsData?.length || 0)
+                    };
+                }));
+
+                listContainer.innerHTML = playlistsWithCounts.map(playlist => `
+                    <div class="curated-playlist-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                Type: ${playlist.type === 'multi_channel_radio' ? 'Multi-Channel Radio' : 'Curated Playlist'}
+                                • Stations: ${playlist.stationCount}
+                                ${playlist.sort_order !== null ? `• Order: ${playlist.sort_order}` : ''}
+                            </div>
+                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading admin curated playlists:', error);
+                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading playlists.</p>';
+            }
+        }
+
+        // Confirm delete curated playlist from admin view
+        function confirmDeleteCuratedPlaylist(id, name) {
+            if (confirm(`Are you sure you want to delete "${name}"? This will also remove all stations from this playlist.`)) {
+                deleteCuratedPlaylist(id);
             }
         }
 
@@ -8115,6 +8235,23 @@
         // Add new preset search button
         document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
             showPresetSearchForm();
+        });
+
+        // Manage Curated Playlists button (admin only)
+        document.getElementById('manageCuratedPlaylistsBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            document.getElementById('adminCuratedPlaylistsModal').classList.add('active');
+            loadAdminCuratedPlaylists();
+        });
+
+        // Close admin curated playlists modal
+        document.getElementById('closeAdminCuratedPlaylistsModal').addEventListener('click', () => {
+            document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
+        });
+
+        // Add new curated playlist button
+        document.getElementById('addNewCuratedPlaylistBtn').addEventListener('click', () => {
+            showCuratedPlaylistForm();
         });
 
         // Close preset search form modal
