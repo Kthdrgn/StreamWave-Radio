@@ -4060,6 +4060,7 @@
         }
 
         // Admin: Load curated playlists list
+        let adminCuratedPlaylists = []; // Store for drag and drop
         async function loadAdminCuratedPlaylists() {
             const listContainer = document.getElementById('curatedPlaylistsList');
 
@@ -4093,8 +4094,15 @@
                     };
                 }));
 
-                listContainer.innerHTML = playlistsWithCounts.map(playlist => `
-                    <div class="curated-playlist-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+                // Store playlists for drag and drop
+                adminCuratedPlaylists = playlistsWithCounts;
+
+                listContainer.innerHTML = playlistsWithCounts.map((playlist, index) => `
+                    <div class="curated-playlist-item"
+                        draggable="true"
+                        data-playlist-id="${playlist.id}"
+                        data-playlist-index="${index}"
+                        style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; cursor: move;">
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
                             <div style="font-size: 13px; color: var(--text-secondary);">
@@ -4106,18 +4114,22 @@
                                 <label style="font-size: 12px; color: var(--text-secondary);">Sort Order:</label>
                                 <input type="number"
                                     id="sort-order-${playlist.id}"
-                                    value="${playlist.sort_order !== null ? playlist.sort_order : 0}"
+                                    value="${playlist.sort_order !== null ? playlist.sort_order : index}"
                                     style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                    onclick="event.stopPropagation()"
                                     onchange="updateCuratedPlaylistSortOrder('${playlist.id}', this.value)">
-                                <small style="font-size: 11px; color: var(--text-tertiary);">Lower numbers appear first</small>
+                                <small style="font-size: 11px; color: var(--text-tertiary);">Drag to reorder or edit number</small>
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button class="btn" onclick="showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
-                            <button class="btn" onclick="confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                            <button class="btn" onclick="event.stopPropagation(); showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="event.stopPropagation(); confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
                         </div>
                     </div>
                 `).join('');
+
+                // Setup drag and drop
+                setupCuratedPlaylistDragAndDrop();
 
             } catch (error) {
                 console.error('Error loading admin curated playlists:', error);
@@ -4132,7 +4144,96 @@
             }
         }
 
-        // Update curated playlist sort order
+        // Setup drag and drop for curated playlist reordering
+        function setupCuratedPlaylistDragAndDrop() {
+            const playlistItems = document.querySelectorAll('.curated-playlist-item');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            playlistItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = index;
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    // Remove drag-over class from all items
+                    document.querySelectorAll('.curated-playlist-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        // Get the indices
+                        const dropIndex = Array.from(playlistItems).indexOf(item);
+
+                        // Reorder the playlists array
+                        const movedPlaylist = adminCuratedPlaylists.splice(draggedIndex, 1)[0];
+                        adminCuratedPlaylists.splice(dropIndex, 0, movedPlaylist);
+
+                        // Update sort orders and save to database
+                        await updateCuratedPlaylistOrder();
+
+                        // Re-render the list
+                        await loadAdminCuratedPlaylists();
+                    }
+                });
+            });
+        }
+
+        // Update curated playlist order in database
+        async function updateCuratedPlaylistOrder() {
+            try {
+                // Update each playlist with its new sort_order
+                const updates = adminCuratedPlaylists.map((playlist, index) => {
+                    return supabase
+                        .from('curated_playlists')
+                        .update({
+                            sort_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', playlist.id);
+                });
+
+                await Promise.all(updates);
+                updateStatus('Playlist order updated', 'success');
+
+                // Reload curated playlists to update Discover modal
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error updating curated playlist order:', error);
+                updateStatus('Error updating playlist order', 'error');
+            }
+        }
+
+        // Update curated playlist sort order (manual input)
         async function updateCuratedPlaylistSortOrder(playlistId, newOrder) {
             try {
                 const sortOrder = parseInt(newOrder);
@@ -4151,6 +4252,9 @@
 
                 // Reload curated playlists to update Discover modal
                 await loadCuratedPlaylists();
+
+                // Reload admin list to reflect new order
+                await loadAdminCuratedPlaylists();
 
             } catch (error) {
                 console.error('Error updating sort order:', error);
@@ -4437,6 +4541,7 @@
         }
 
         // Admin: Load preset searches list
+        let adminPresetSearches = []; // Store for drag and drop
         async function loadAdminPresetSearches() {
             const listContainer = document.getElementById('presetSearchesList');
             const presetSearches = await fetchPresetSearches();
@@ -4446,8 +4551,15 @@
                 return;
             }
 
-            listContainer.innerHTML = presetSearches.map(preset => `
-                <div class="preset-search-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+            // Store preset searches for drag and drop
+            adminPresetSearches = presetSearches;
+
+            listContainer.innerHTML = presetSearches.map((preset, index) => `
+                <div class="preset-search-item"
+                    draggable="true"
+                    data-preset-id="${preset.id}"
+                    data-preset-index="${index}"
+                    style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; cursor: move;">
                     <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--bg-secondary);">
                         ${preset.image_url ? `<img src="${escapeHtml(preset.image_url)}" alt="${escapeHtml(preset.name)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.innerHTML='🎵';">` : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 24px;">🎵</div>'}
                     </div>
@@ -4462,14 +4574,147 @@
                             ].filter(Boolean).join(' • ') || 'All stations'}
                         </div>
                         ${preset.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(preset.description)}</div>` : ''}
-                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 5px;">Order: ${preset.display_order}</div>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 12px; color: var(--text-secondary);">Display Order:</label>
+                            <input type="number"
+                                id="display-order-${preset.id}"
+                                value="${preset.display_order !== null ? preset.display_order : index}"
+                                style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                onclick="event.stopPropagation()"
+                                onchange="updatePresetSearchDisplayOrder('${preset.id}', this.value)">
+                            <small style="font-size: 11px; color: var(--text-tertiary);">Drag to reorder or edit number</small>
+                        </div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn" onclick="showPresetSearchForm('${preset.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
-                        <button class="btn" onclick="deletePresetSearch('${preset.id}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                        <button class="btn" onclick="event.stopPropagation(); showPresetSearchForm('${preset.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                        <button class="btn" onclick="event.stopPropagation(); deletePresetSearch('${preset.id}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
                     </div>
                 </div>
             `).join('');
+
+            // Setup drag and drop
+            setupPresetSearchDragAndDrop();
+        }
+
+        // Setup drag and drop for preset search reordering
+        function setupPresetSearchDragAndDrop() {
+            const presetItems = document.querySelectorAll('.preset-search-item');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            presetItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = index;
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    // Remove drag-over class from all items
+                    document.querySelectorAll('.preset-search-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        // Get the indices
+                        const dropIndex = Array.from(presetItems).indexOf(item);
+
+                        // Reorder the preset searches array
+                        const movedPreset = adminPresetSearches.splice(draggedIndex, 1)[0];
+                        adminPresetSearches.splice(dropIndex, 0, movedPreset);
+
+                        // Update display orders and save to database
+                        await updatePresetSearchOrder();
+
+                        // Re-render the list
+                        await loadAdminPresetSearches();
+                    }
+                });
+            });
+        }
+
+        // Update preset search order in database
+        async function updatePresetSearchOrder() {
+            try {
+                // Update each preset search with its new display_order
+                const updates = adminPresetSearches.map((preset, index) => {
+                    return supabase
+                        .from('preset_searches')
+                        .update({
+                            display_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', preset.id);
+                });
+
+                await Promise.all(updates);
+                updateStatus('Preset search order updated', 'success');
+
+                // Reload preset searches to update Discover modal
+                await renderPresetSearchesCarousel();
+
+            } catch (error) {
+                console.error('Error updating preset search order:', error);
+                updateStatus('Error updating preset search order', 'error');
+            }
+        }
+
+        // Update preset search display order (manual input)
+        async function updatePresetSearchDisplayOrder(presetId, newOrder) {
+            try {
+                const displayOrder = parseInt(newOrder);
+
+                const { error } = await supabase
+                    .from('preset_searches')
+                    .update({
+                        display_order: displayOrder,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', presetId);
+
+                if (error) throw error;
+
+                updateStatus('Display order updated', 'success');
+
+                // Reload preset searches to update Discover modal
+                await renderPresetSearchesCarousel();
+
+                // Reload admin list to reflect new order
+                await loadAdminPresetSearches();
+
+            } catch (error) {
+                console.error('Error updating display order:', error);
+                updateStatus('Error updating display order', 'error');
+
+                // Reload admin list to restore original value
+                await loadAdminPresetSearches();
+            }
         }
 
         // Admin: Show preset search form (for create or edit)
