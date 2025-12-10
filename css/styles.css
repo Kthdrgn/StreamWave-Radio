@@ -2309,11 +2309,13 @@
     display: flex;
     gap: 15px;
     overflow-x: auto;
+    overflow-y: hidden;
     scroll-behavior: smooth;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */
     padding: 10px 0;
     flex: 1;
+    align-items: flex-start;
 }
 
 .carousel-track::-webkit-scrollbar {
