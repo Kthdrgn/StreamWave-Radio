@@ -6209,12 +6209,22 @@
             stationInfoModal.classList.add('active');
         });
 
-        // Update station display cursor based on playing state
+        // Update station display and metadata section cursor based on playing state
         function updateStationDisplayCursor() {
             if (currentStation && isPlaying) {
                 stationDisplay.style.cursor = 'pointer';
             } else {
                 stationDisplay.style.cursor = 'default';
+            }
+
+            // Update metadata section cursor
+            const metadataSection = document.getElementById('metadataSection');
+            if (metadataSection) {
+                if (isPlaying && currentTrack && (currentTrack.title || currentTrack.artist)) {
+                    metadataSection.style.cursor = 'pointer';
+                } else {
+                    metadataSection.style.cursor = 'default';
+                }
             }
         }
 
@@ -7563,7 +7573,12 @@
         const closeNowPlayingModalBtn = document.getElementById('closeNowPlayingModal');
         const metadataSection = document.getElementById('metadataSection');
 
-        metadataSection.addEventListener('click', openNowPlayingModal);
+        metadataSection.addEventListener('click', () => {
+            // Only open if a song is playing
+            if (isPlaying && currentTrack && (currentTrack.title || currentTrack.artist)) {
+                openNowPlayingModal();
+            }
+        });
 
         closeNowPlayingModalBtn.addEventListener('click', closeNowPlayingModal);
 
@@ -8130,7 +8145,10 @@
                 ${artist ? `<div class="artist-name">${escapeHtml(artist)}</div>` : ''}
                 ${album ? `<div class="album-name">${escapeHtml(album)}</div>` : ''}
             `;
-            
+
+            // Update cursor state for metadata section
+            updateStationDisplayCursor();
+
             // Try to fetch album art
             fetchAlbumArt(title, artist);
 
