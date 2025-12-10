@@ -263,6 +263,17 @@
                 <button class="modal-close" id="closeOverviewModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Auth Button -->
+                <div class="menu-options" style="margin-bottom: 24px;">
+                    <button class="menu-option-btn" id="authBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="authIcon">
+                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span id="authBtnText">Sign In</span>
+                    </button>
+                </div>
+
                 <!-- Playlists Carousel -->
                 <div class="carousel-section">
                     <h3 class="carousel-title">Your Playlists</h3>
@@ -496,14 +507,6 @@
                         <span>Add Station</span>
                     </button>
 
-                    <!-- Auth Button -->
-                    <button class="menu-option-btn" id="authBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="authIcon">
-                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span id="authBtnText">Sign In</span>
-                    </button>
                     <!-- Chromecast button temporarily disabled - needs styling work -->
                     <!-- <google-cast-launcher id="castButton" class="menu-option-btn cast-menu-btn" title="Cast to Chromecast">
                         <span>Chromecast</span>
