@@ -72,6 +72,9 @@ function updateAuthUI() {
 
     // Show/hide Add Station button based on admin status
     updateAddStationButton();
+
+    // Show/hide Manage Preset Searches button based on admin status
+    updateManagePresetSearchesButton();
 }
 
 // Update auth button text
@@ -100,6 +103,22 @@ function updateAddStationButton() {
             addStationBtn.style.display = '';
         } else {
             addStationBtn.style.display = 'none';
+        }
+    }
+}
+
+// Update Manage Preset Searches button visibility based on admin status
+function updateManagePresetSearchesButton() {
+    const managePresetSearchesBtn = document.getElementById('managePresetSearchesBtn');
+    if (managePresetSearchesBtn) {
+        // Check if current user is admin
+        const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+
+        // Show button only if user is admin
+        if (isAdmin) {
+            managePresetSearchesBtn.style.display = '';
+        } else {
+            managePresetSearchesBtn.style.display = 'none';
         }
     }
 }
