@@ -7356,11 +7356,38 @@
                     // Open the previous modal
                     modalElement.classList.add('active');
 
-                    // Restore context if needed
+                    // Restore context if needed - do NOT call functions that push to history
                     if (previousEntry.context.playlistId) {
-                        openPlaylist(previousEntry.context.playlistId);
+                        // Restore user playlist content without calling openPlaylist
+                        const id = previousEntry.context.playlistId;
+                        currentPlaylist = playlists.find(p => p.id === id);
+                        if (currentPlaylist) {
+                            lastOpenedModal = { type: 'playlist', id: id };
+                            playlistModalTitle.textContent = currentPlaylist.name;
+                            if (currentPlaylist.description) {
+                                playlistModalDescription.textContent = currentPlaylist.description;
+                                playlistModalDescription.style.display = 'block';
+                            } else {
+                                playlistModalDescription.style.display = 'none';
+                            }
+                            loadPlaylistStations(id);
+                        }
                     } else if (previousEntry.context.curatedPlaylistId) {
-                        openCuratedPlaylist(previousEntry.context.curatedPlaylistId);
+                        // Restore curated playlist content without calling openCuratedPlaylist
+                        const id = previousEntry.context.curatedPlaylistId;
+                        const curatedPlaylist = curatedPlaylists.find(p => p.id === id);
+                        if (curatedPlaylist) {
+                            currentPlaylist = { ...curatedPlaylist, is_curated: true };
+                            lastOpenedModal = { type: 'curated_playlist', id: id };
+                            playlistModalTitle.textContent = curatedPlaylist.name;
+                            if (curatedPlaylist.description) {
+                                playlistModalDescription.textContent = curatedPlaylist.description;
+                                playlistModalDescription.style.display = 'block';
+                            } else {
+                                playlistModalDescription.style.display = 'none';
+                            }
+                            loadCuratedPlaylistStationsForModal(id);
+                        }
                     } else if (previousEntry.modalId === 'overviewModal') {
                         loadOverviewModal();
                     } else if (previousEntry.modalId === 'discoverModal') {
