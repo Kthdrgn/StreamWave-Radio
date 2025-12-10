@@ -7320,6 +7320,7 @@
             // Don't add to history if it's the same as the current top
             const currentTop = navigationHistory[navigationHistory.length - 1];
             if (currentTop && currentTop.modalId === modalId) {
+                console.log('[NAV] Skipping duplicate push:', modalId);
                 return;
             }
 
@@ -7330,20 +7331,31 @@
                 timestamp: Date.now()
             });
 
+            console.log('[NAV] Pushed to history:', modalId, context);
+            console.log('[NAV] History stack length:', navigationHistory.length);
+            console.log('[NAV] Full history:', navigationHistory.map(h => h.modalId));
+
             // Update back button state
             updateBackButtonState();
         }
 
         function navigateBack() {
+            console.log('[NAV] Back button clicked');
+            console.log('[NAV] History before pop:', navigationHistory.map(h => h.modalId));
+
             if (navigationHistory.length === 0) {
+                console.log('[NAV] No history to go back to');
                 return;
             }
 
             // Pop the current/last entry
-            navigationHistory.pop();
+            const poppedEntry = navigationHistory.pop();
+            console.log('[NAV] Popped entry:', poppedEntry.modalId);
 
             // Get the previous modal
             const previousEntry = navigationHistory[navigationHistory.length - 1];
+            console.log('[NAV] Previous entry:', previousEntry ? previousEntry.modalId : 'none');
+            console.log('[NAV] Previous context:', previousEntry ? previousEntry.context : 'none');
 
             if (previousEntry) {
                 // Close all modals
@@ -7355,10 +7367,12 @@
                 if (modalElement) {
                     // Open the previous modal
                     modalElement.classList.add('active');
+                    console.log('[NAV] Opened modal:', previousEntry.modalId);
 
                     // Restore context if needed - do NOT call functions that push to history
                     if (previousEntry.context.playlistId) {
                         // Restore user playlist content without calling openPlaylist
+                        console.log('[NAV] Restoring user playlist:', previousEntry.context.playlistId);
                         const id = previousEntry.context.playlistId;
                         currentPlaylist = playlists.find(p => p.id === id);
                         if (currentPlaylist) {
@@ -7374,6 +7388,7 @@
                         }
                     } else if (previousEntry.context.curatedPlaylistId) {
                         // Restore curated playlist content without calling openCuratedPlaylist
+                        console.log('[NAV] Restoring curated playlist:', previousEntry.context.curatedPlaylistId);
                         const id = previousEntry.context.curatedPlaylistId;
                         const curatedPlaylist = curatedPlaylists.find(p => p.id === id);
                         if (curatedPlaylist) {
@@ -7411,6 +7426,7 @@
             if (backBtn) {
                 // Enable back button if there's history to go back to
                 backBtn.disabled = navigationHistory.length <= 1;
+                console.log('[NAV] Back button state:', backBtn.disabled ? 'disabled' : 'enabled', '(history length:', navigationHistory.length + ')');
             }
         }
 
