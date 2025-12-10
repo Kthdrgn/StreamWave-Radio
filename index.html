@@ -262,6 +262,18 @@
                 <h2 class="modal-title">StreamWave Radio</h2>
                 <button class="modal-close" id="closeOverviewModal">&times;</button>
             </div>
+
+            <!-- Auth Button at Top of Overview -->
+            <div style="padding: 0 20px 12px 20px; border-bottom: 1px solid var(--border-color);">
+                <button class="menu-option-btn" id="authBtn" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="authIcon">
+                        <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span id="authBtnText">Sign In</span>
+                </button>
+            </div>
+
             <div class="modal-body">
                 <!-- Playlists Carousel -->
                 <div class="carousel-section">
@@ -287,6 +299,23 @@
                 <div class="carousel-section">
                     <h3 class="carousel-title">Most Played Stations</h3>
                     <div class="stations-list" id="playedStationsList"></div>
+                </div>
+
+                <!-- Track Actions Buttons at Bottom -->
+                <div class="menu-options" style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button class="menu-option-btn" id="overviewViewLikedTracksBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69365 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69365 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.57831 8.50903 2.99871 7.05 2.99871C5.59096 2.99871 4.19169 3.57831 3.16 4.61C2.1283 5.64169 1.54871 7.04096 1.54871 8.5C1.54871 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6054C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.0621 22.0329 6.39464C21.7563 5.72718 21.351 5.12075 20.84 4.61Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
+                        </svg>
+                        <span>View Liked Songs</span>
+                    </button>
+                    <button class="menu-option-btn" id="overviewViewRecentTracksBtn">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 6V12L16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Recent Songs</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -315,23 +344,6 @@
                             <path d="M12 15L12 19" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                         <span>Search Radio Database</span>
-                    </button>
-                </div>
-
-                <!-- Track Actions Buttons -->
-                <div class="menu-options" style="margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <button class="menu-option-btn" id="discoverViewLikedTracksBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69365 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69365 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.57831 8.50903 2.99871 7.05 2.99871C5.59096 2.99871 4.19169 3.57831 3.16 4.61C2.1283 5.64169 1.54871 7.04096 1.54871 8.5C1.54871 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6054C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.0621 22.0329 6.39464C21.7563 5.72718 21.351 5.12075 20.84 4.61Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
-                        </svg>
-                        <span>View Liked Songs</span>
-                    </button>
-                    <button class="menu-option-btn" id="discoverViewRecentTracksBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 6V12L16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>Recent Songs</span>
                     </button>
                 </div>
 
@@ -515,14 +527,15 @@
                         <span>Manage Preset Searches</span>
                     </button>
 
-                    <!-- Auth Button -->
-                    <button class="menu-option-btn" id="authBtn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="authIcon">
-                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Manage Curated Playlists Button (Admin Only) -->
+                    <button class="menu-option-btn" id="manageCuratedPlaylistsBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11L12 14L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span id="authBtnText">Sign In</span>
+                        <span>Manage Curated Playlists</span>
                     </button>
+
                     <!-- Chromecast button temporarily disabled - needs styling work -->
                     <!-- <google-cast-launcher id="castButton" class="menu-option-btn cast-menu-btn" title="Cast to Chromecast">
                         <span>Chromecast</span>
@@ -1229,6 +1242,24 @@
                     </button>
                 </div>
                 <div id="presetSearchesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Curated Playlists Modal -->
+    <div id="adminCuratedPlaylistsModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Curated Playlists</h2>
+                <button class="modal-close" id="closeAdminCuratedPlaylistsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <button id="addNewCuratedPlaylistBtn" class="btn" style="background: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        + Add New Curated Playlist
+                    </button>
+                </div>
+                <div id="curatedPlaylistsList"></div>
             </div>
         </div>
     </div>
@@ -3903,22 +3934,36 @@
         }
 
         // Show curated playlist form for create/edit
-        function showCuratedPlaylistForm(id = null) {
+        async function showCuratedPlaylistForm(id = null) {
             editingCuratedPlaylistId = id;
 
             if (id) {
-                const playlist = curatedPlaylists.find(p => p.id === id);
-                if (!playlist) return;
+                // Fetch the playlist from database to ensure we have the latest data
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error || !data) {
+                    console.error('Error fetching playlist:', error);
+                    return;
+                }
 
                 curatedPlaylistFormTitle.textContent = 'Edit Curated Playlist';
-                curatedPlaylistName.value = playlist.name;
-                curatedPlaylistType.value = playlist.type;
-                curatedPlaylistDescription.value = playlist.description || '';
+                curatedPlaylistName.value = data.name;
+                curatedPlaylistType.value = data.type;
+                curatedPlaylistDescription.value = data.description || '';
             } else {
                 curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
                 curatedPlaylistName.value = '';
                 curatedPlaylistType.value = 'curated_playlist';
                 curatedPlaylistDescription.value = '';
+            }
+
+            // Close admin modal if it's open
+            if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
+                document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
             }
 
             curatedPlaylistFormModal.classList.add('active');
@@ -3973,6 +4018,15 @@
                         renderCuratedPlaylistSelectorList();
                         curatedPlaylistSelectorModal.classList.add('active');
                     }, 300);
+                } else {
+                    // If we came from the admin modal, reopen it
+                    setTimeout(() => {
+                        const adminModal = document.getElementById('adminCuratedPlaylistsModal');
+                        if (adminModal && !pendingCuratedPlaylistStation) {
+                            adminModal.classList.add('active');
+                            loadAdminCuratedPlaylists();
+                        }
+                    }, 300);
                 }
 
             } catch (error) {
@@ -3994,9 +4048,116 @@
                 updateStatus('Curated playlist deleted', 'success');
                 await loadCuratedPlaylists();
 
+                // Reload admin list if in admin mode
+                if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
+                    await loadAdminCuratedPlaylists();
+                }
+
             } catch (error) {
                 console.error('Error deleting curated playlist:', error);
                 updateStatus('Error deleting curated playlist', 'error');
+            }
+        }
+
+        // Admin: Load curated playlists list
+        async function loadAdminCuratedPlaylists() {
+            const listContainer = document.getElementById('curatedPlaylistsList');
+
+            // Fetch curated playlists directly
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const playlists = data || [];
+
+                if (playlists.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No curated playlists yet. Click "Add New Curated Playlist" to create one.</p>';
+                    return;
+                }
+
+                // Load station counts for each playlist
+                const playlistsWithCounts = await Promise.all(playlists.map(async (playlist) => {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('curated_playlist_items')
+                        .select('id')
+                        .eq('curated_playlist_id', playlist.id);
+
+                    return {
+                        ...playlist,
+                        stationCount: itemsError ? 0 : (itemsData?.length || 0)
+                    };
+                }));
+
+                listContainer.innerHTML = playlistsWithCounts.map(playlist => `
+                    <div class="curated-playlist-item" style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                Type: ${playlist.type === 'multi_channel_radio' ? 'Multi-Channel Radio' : 'Curated Playlist'}
+                                • Stations: ${playlist.stationCount}
+                            </div>
+                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
+                            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Sort Order:</label>
+                                <input type="number"
+                                    id="sort-order-${playlist.id}"
+                                    value="${playlist.sort_order !== null ? playlist.sort_order : 0}"
+                                    style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                    onchange="updateCuratedPlaylistSortOrder('${playlist.id}', this.value)">
+                                <small style="font-size: 11px; color: var(--text-tertiary);">Lower numbers appear first</small>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading admin curated playlists:', error);
+                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading playlists.</p>';
+            }
+        }
+
+        // Confirm delete curated playlist from admin view
+        function confirmDeleteCuratedPlaylist(id, name) {
+            if (confirm(`Are you sure you want to delete "${name}"? This will also remove all stations from this playlist.`)) {
+                deleteCuratedPlaylist(id);
+            }
+        }
+
+        // Update curated playlist sort order
+        async function updateCuratedPlaylistSortOrder(playlistId, newOrder) {
+            try {
+                const sortOrder = parseInt(newOrder);
+
+                const { error } = await supabase
+                    .from('curated_playlists')
+                    .update({
+                        sort_order: sortOrder,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', playlistId);
+
+                if (error) throw error;
+
+                updateStatus('Sort order updated', 'success');
+
+                // Reload curated playlists to update Discover modal
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error updating sort order:', error);
+                updateStatus('Error updating sort order', 'error');
+
+                // Reload admin list to restore original value
+                await loadAdminCuratedPlaylists();
             }
         }
 
@@ -4619,7 +4780,7 @@
                 return;
             }
 
-            track.innerHTML = items.map((item, index) => {
+            const itemsHTML = items.map((item, index) => {
                 if (type === 'station') {
                     return `
                         <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
@@ -4636,7 +4797,7 @@
                     const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
 
                     return `
-                        <div class="carousel-item" data-preset-id="${item.id}" data-preset-index="${index}">
+                        <div class="preset-search-button" data-preset-id="${item.id}" data-preset-index="${index}">
                             ${isAdmin ? `
                             <button class="carousel-item-menu-btn" data-preset-id="${item.id}" onclick="event.stopPropagation()">⋮</button>
                             <div class="carousel-item-dropdown">
@@ -4648,13 +4809,10 @@
                                 </div>
                             </div>
                             ` : ''}
-                            <div class="carousel-item-image">
+                            <div class="preset-search-icon">
                                 ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
-                            <div class="carousel-item-content">
-                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
-                                ${item.description ? `<div class="carousel-item-subtitle">${escapeHtml(item.description)}</div>` : ''}
-                            </div>
+                            <div class="preset-search-name">${escapeHtml(item.name)}</div>
                         </div>
                     `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {
@@ -4711,10 +4869,30 @@
                         </div>
                     `;
                 }
-            }).join('');
+            });
+
+            // For preset-search, group items into columns of 4
+            if (type === 'preset-search') {
+                const columns = [];
+
+                // Group buttons into columns of 4
+                for (let i = 0; i < itemsHTML.length; i += 4) {
+                    const columnButtons = itemsHTML.slice(i, i + 4);
+                    columns.push(`
+                        <div class="preset-search-column">
+                            ${columnButtons.join('')}
+                        </div>
+                    `);
+                }
+
+                track.innerHTML = columns.join('');
+            } else {
+                track.innerHTML = itemsHTML.join('');
+            }
 
             // Add click handlers
-            track.querySelectorAll('.carousel-item').forEach(item => {
+            const itemSelector = type === 'preset-search' ? '.preset-search-button' : '.carousel-item';
+            track.querySelectorAll(itemSelector).forEach(item => {
                 item.addEventListener('click', (e) => {
                     // Don't open playlist if clicking menu button or dropdown
                     if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
@@ -5939,6 +6117,19 @@
         function selectStation(station) {
             currentStation = station;
 
+            // Close Discover modal and related modals if they're open
+            if (discoverModal.classList.contains('active')) {
+                discoverModal.classList.remove('active');
+            }
+            if (radioDatabaseModal.classList.contains('active')) {
+                radioDatabaseModal.classList.remove('active');
+                // Restore radio database search UI if we were in preset search mode
+                restoreRadioDatabaseSearchUI();
+            }
+            if (browseStationsModal.classList.contains('active')) {
+                browseStationsModal.classList.remove('active');
+            }
+
             // Reset fallback attempt flag for new station
             hasFallbackAttempted = false;
 
@@ -6771,17 +6962,17 @@
             }, 100);
         });
 
-        // View Liked Songs button in Discover modal
-        document.getElementById('discoverViewLikedTracksBtn').addEventListener('click', () => {
+        // View Liked Songs button in Overview modal
+        document.getElementById('overviewViewLikedTracksBtn').addEventListener('click', () => {
             displayLikedTracks();
-            discoverModal.classList.remove('active');
+            overviewModal.classList.remove('active');
             likedTracksModal.classList.add('active');
         });
 
-        // View Recent Songs button in Discover modal
-        document.getElementById('discoverViewRecentTracksBtn').addEventListener('click', () => {
+        // View Recent Songs button in Overview modal
+        document.getElementById('overviewViewRecentTracksBtn').addEventListener('click', () => {
             displayRecentTracks();
-            discoverModal.classList.remove('active');
+            overviewModal.classList.remove('active');
             recentTracksModal.classList.add('active');
         });
 
@@ -8081,6 +8272,23 @@
         // Add new preset search button
         document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
             showPresetSearchForm();
+        });
+
+        // Manage Curated Playlists button (admin only)
+        document.getElementById('manageCuratedPlaylistsBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            document.getElementById('adminCuratedPlaylistsModal').classList.add('active');
+            loadAdminCuratedPlaylists();
+        });
+
+        // Close admin curated playlists modal
+        document.getElementById('closeAdminCuratedPlaylistsModal').addEventListener('click', () => {
+            document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
+        });
+
+        // Add new curated playlist button
+        document.getElementById('addNewCuratedPlaylistBtn').addEventListener('click', () => {
+            showCuratedPlaylistForm();
         });
 
         // Close preset search form modal

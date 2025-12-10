@@ -2309,11 +2309,13 @@
     display: flex;
     gap: 15px;
     overflow-x: auto;
+    overflow-y: hidden;
     scroll-behavior: smooth;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */
     padding: 10px 0;
     flex: 1;
+    align-items: flex-start;
 }
 
 .carousel-track::-webkit-scrollbar {
@@ -2431,6 +2433,73 @@
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
+}
+
+/* Preset Search Column Container (YouTube Music Quick Picks style) */
+.preset-search-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 280px;
+    max-width: 280px;
+    flex-shrink: 0;
+}
+
+/* Preset Search Button Styles - Horizontal layout with icon on left */
+.preset-search-button {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 64px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    gap: 12px;
+}
+
+.preset-search-button:hover {
+    background: var(--card-hover);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-color);
+}
+
+.preset-search-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+}
+
+.preset-search-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preset-search-icon .carousel-item-icon {
+    font-size: 24px;
+}
+
+.preset-search-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: left;
+    line-height: 1.3;
+    word-break: break-word;
+    flex: 1;
 }
 
 .carousel-btn {
