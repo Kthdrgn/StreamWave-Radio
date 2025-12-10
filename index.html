@@ -4219,9 +4219,16 @@
             // Open radio database modal
             radioDatabaseModal.classList.add('active');
 
-            // Hide search input and filter controls
-            const searchContainer = radioDatabaseSearchInput.parentElement;
+            // Hide search input and all filter controls
+            const searchContainer = radioDatabaseSearchInput.parentElement.parentElement;
+            const filterControls = document.querySelector('#radioDatabaseModal .filter-controls');
+            const advancedFiltersButton = document.getElementById('toggleAdvancedFilters');
+            const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
+
             searchContainer.style.display = 'none';
+            if (filterControls) filterControls.style.display = 'none';
+            if (advancedFiltersButton) advancedFiltersButton.style.display = 'none';
+            if (advancedFiltersPanel) advancedFiltersPanel.style.display = 'none';
 
             // Set the title to show which preset is being displayed
             const modalTitle = radioDatabaseModal.querySelector('.modal-title');
@@ -4231,7 +4238,10 @@
             // Store original state to restore later
             window.presetSearchActive = {
                 originalTitle: originalTitle,
-                searchContainer: searchContainer
+                searchContainer: searchContainer,
+                filterControls: filterControls,
+                advancedFiltersButton: advancedFiltersButton,
+                advancedFiltersPanel: advancedFiltersPanel
             };
 
             // Build search parameters
@@ -6883,16 +6893,26 @@
             if (window.presetSearchActive) {
                 const modalTitle = radioDatabaseModal.querySelector('.modal-title');
                 const searchContainer = window.presetSearchActive.searchContainer;
+                const filterControls = window.presetSearchActive.filterControls;
+                const advancedFiltersButton = window.presetSearchActive.advancedFiltersButton;
+                const advancedFiltersPanel = window.presetSearchActive.advancedFiltersPanel;
 
                 // Restore original title
                 if (modalTitle) {
                     modalTitle.textContent = window.presetSearchActive.originalTitle;
                 }
 
-                // Show search controls again
+                // Show all search and filter controls again
                 if (searchContainer) {
                     searchContainer.style.display = '';
                 }
+                if (filterControls) {
+                    filterControls.style.display = '';
+                }
+                if (advancedFiltersButton) {
+                    advancedFiltersButton.style.display = '';
+                }
+                // Don't restore advancedFiltersPanel visibility - it should stay closed unless user opened it
 
                 // Clear the preset search active flag
                 window.presetSearchActive = null;
