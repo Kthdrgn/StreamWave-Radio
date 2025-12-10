@@ -4638,7 +4638,7 @@
                     const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
 
                     return `
-                        <div class="carousel-item" data-preset-id="${item.id}" data-preset-index="${index}">
+                        <div class="preset-search-button" data-preset-id="${item.id}" data-preset-index="${index}">
                             ${isAdmin ? `
                             <button class="carousel-item-menu-btn" data-preset-id="${item.id}" onclick="event.stopPropagation()">⋮</button>
                             <div class="carousel-item-dropdown">
@@ -4650,13 +4650,10 @@
                                 </div>
                             </div>
                             ` : ''}
-                            <div class="carousel-item-image">
+                            <div class="preset-search-icon">
                                 ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
-                            <div class="carousel-item-content">
-                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
-                                ${item.description ? `<div class="carousel-item-subtitle">${escapeHtml(item.description)}</div>` : ''}
-                            </div>
+                            <div class="preset-search-name">${escapeHtml(item.name)}</div>
                         </div>
                     `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {
@@ -4716,7 +4713,8 @@
             }).join('');
 
             // Add click handlers
-            track.querySelectorAll('.carousel-item').forEach(item => {
+            const itemSelector = type === 'preset-search' ? '.preset-search-button' : '.carousel-item';
+            track.querySelectorAll(itemSelector).forEach(item => {
                 item.addEventListener('click', (e) => {
                     // Don't open playlist if clicking menu button or dropdown
                     if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
