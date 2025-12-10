@@ -5960,6 +5960,19 @@
         function selectStation(station) {
             currentStation = station;
 
+            // Close Discover modal and related modals if they're open
+            if (discoverModal.classList.contains('active')) {
+                discoverModal.classList.remove('active');
+            }
+            if (radioDatabaseModal.classList.contains('active')) {
+                radioDatabaseModal.classList.remove('active');
+                // Restore radio database search UI if we were in preset search mode
+                restoreRadioDatabaseSearchUI();
+            }
+            if (browseStationsModal.classList.contains('active')) {
+                browseStationsModal.classList.remove('active');
+            }
+
             // Reset fallback attempt flag for new station
             hasFallbackAttempted = false;
 
