@@ -5583,6 +5583,7 @@
             browseStationsModal.classList.remove('active');
             playlistsModal.classList.remove('active');
             playlistModal.classList.remove('active');
+            discoverModal.classList.remove('active');
             
             // Re-render lists to update selected state
             renderStationList();
@@ -5701,6 +5702,9 @@
 
             // Load curated playlist stations into the playlist modal
             loadCuratedPlaylistStationsForModal(id);
+
+            // Close other modals
+            discoverModal.classList.remove('active');
 
             playlistModal.classList.add('active');
         }
