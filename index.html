@@ -4619,7 +4619,7 @@
                 return;
             }
 
-            track.innerHTML = items.map((item, index) => {
+            const itemsHTML = items.map((item, index) => {
                 if (type === 'station') {
                     return `
                         <div class="carousel-item" data-station-id="${item.id}" data-station-index="${index}" data-is-external="${item.is_external || false}">
@@ -4708,7 +4708,26 @@
                         </div>
                     `;
                 }
-            }).join('');
+            });
+
+            // For preset-search, group items into columns of 4
+            if (type === 'preset-search') {
+                const columns = [];
+
+                // Group buttons into columns of 4
+                for (let i = 0; i < itemsHTML.length; i += 4) {
+                    const columnButtons = itemsHTML.slice(i, i + 4);
+                    columns.push(`
+                        <div class="preset-search-column">
+                            ${columnButtons.join('')}
+                        </div>
+                    `);
+                }
+
+                track.innerHTML = columns.join('');
+            } else {
+                track.innerHTML = itemsHTML.join('');
+            }
 
             // Add click handlers
             const itemSelector = type === 'preset-search' ? '.preset-search-button' : '.carousel-item';
