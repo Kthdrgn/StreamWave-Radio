@@ -104,6 +104,11 @@
             <!-- Player controls -->
             <div class="controls">
                 <div class="controls-buttons">
+                    <button id="backBtn" class="control-icon-btn btn-back" disabled title="Go back">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 19L8 12L15 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                    </button>
                     <button id="playPauseBtn" class="control-icon-btn btn-play" disabled>
                         <svg class="play-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.6582 9.28638C18.098 10.1862 18.8178 10.6361 19.0647 11.2122C19.2803 11.7152 19.2803 12.2847 19.0647 12.7878C18.8178 13.3638 18.098 13.8137 16.6582 14.7136L9.896 18.94C8.29805 19.9387 7.49907 20.4381 6.83973 20.385C6.26501 20.3388 5.73818 20.0469 5.3944 19.584C5 19.053 5 18.1108 5 16.2264V7.77357C5 5.88919 5 4.94701 5.3944 4.41598C5.73818 3.9531 6.26501 3.66111 6.83973 3.6149C7.49907 3.5619 8.29805 4.06126 9.896 5.05998L16.6582 9.28638Z" stroke-width="2" stroke-linejoin="round"/>
@@ -1400,6 +1405,7 @@
         let curatedPlaylists = []; // Admin-curated playlists
         let currentPlaylist = null;
         let lastOpenedModal = null;
+        let navigationHistory = []; // Stack to track modal navigation history
         let pendingPlaylistSelectorContext = null; // Track context when creating playlist from selector
         let pendingCuratedPlaylistStation = null; // Track station to be added to curated playlist
         let pendingCuratedPlaylistIsExternal = false; // Track if pending station is external
@@ -4481,6 +4487,7 @@
 
             // Open radio database modal
             radioDatabaseModal.classList.add('active');
+            pushToNavigationHistory('radioDatabaseModal');
 
             // Hide search input and all filter controls
             const searchContainer = radioDatabaseSearchInput.parentElement.parentElement;
@@ -6546,6 +6553,7 @@
 
             playlistsModal.classList.remove('active');
             playlistModal.classList.add('active');
+            pushToNavigationHistory('playlistModal', { playlistId: id });
         }
 
         // Open curated playlist (reuses playlist modal UI)
@@ -6570,6 +6578,7 @@
             loadCuratedPlaylistStationsForModal(id);
 
             playlistModal.classList.add('active');
+            pushToNavigationHistory('playlistModal', { curatedPlaylistId: id });
         }
 
         // Load curated playlist stations for display in modal
@@ -7050,6 +7059,7 @@
         settingsMenuBtn.addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
             settingsModal.classList.add('active');
+            pushToNavigationHistory('settingsModal');
         });
 
         // Station display click - open station info modal
@@ -7112,6 +7122,7 @@
 
             // Open browse stations modal
             browseStationsModal.classList.add('active');
+            pushToNavigationHistory('browseStationsModal');
             console.log('Opening browse stations modal from discover page');
 
             // Clear any existing search
@@ -7136,6 +7147,7 @@
 
             // Open radio database modal
             radioDatabaseModal.classList.add('active');
+            pushToNavigationHistory('radioDatabaseModal');
             console.log('Opening radio database modal from discover page');
 
             // Load filters if not already loaded
@@ -7212,6 +7224,7 @@
             displayLikedTracks();
             overviewModal.classList.remove('active');
             likedTracksModal.classList.add('active');
+            pushToNavigationHistory('likedTracksModal');
         });
 
         // View Recent Songs button in Overview modal
@@ -7219,6 +7232,7 @@
             displayRecentTracks();
             overviewModal.classList.remove('active');
             recentTracksModal.classList.add('active');
+            pushToNavigationHistory('recentTracksModal');
         });
 
         // Close station info modal
@@ -7301,11 +7315,84 @@
             });
         }
 
+        // Navigation history helper functions
+        function pushToNavigationHistory(modalId, context = {}) {
+            // Don't add to history if it's the same as the current top
+            const currentTop = navigationHistory[navigationHistory.length - 1];
+            if (currentTop && currentTop.modalId === modalId) {
+                return;
+            }
+
+            // Push the modal to navigation history
+            navigationHistory.push({
+                modalId: modalId,
+                context: context,
+                timestamp: Date.now()
+            });
+
+            // Update back button state
+            updateBackButtonState();
+        }
+
+        function navigateBack() {
+            if (navigationHistory.length === 0) {
+                return;
+            }
+
+            // Pop the current/last entry
+            navigationHistory.pop();
+
+            // Get the previous modal
+            const previousEntry = navigationHistory[navigationHistory.length - 1];
+
+            if (previousEntry) {
+                // Close all modals
+                closeAllModals();
+
+                // Get the modal element
+                const modalElement = document.getElementById(previousEntry.modalId);
+
+                if (modalElement) {
+                    // Open the previous modal
+                    modalElement.classList.add('active');
+
+                    // Restore context if needed
+                    if (previousEntry.context.playlistId) {
+                        openPlaylist(previousEntry.context.playlistId);
+                    } else if (previousEntry.context.curatedPlaylistId) {
+                        openCuratedPlaylist(previousEntry.context.curatedPlaylistId);
+                    } else if (previousEntry.modalId === 'overviewModal') {
+                        loadOverviewModal();
+                    } else if (previousEntry.modalId === 'discoverModal') {
+                        loadDiscoverModal();
+                    } else if (previousEntry.modalId === 'likedTracksModal') {
+                        displayLikedTracks();
+                    } else if (previousEntry.modalId === 'recentTracksModal') {
+                        displayRecentTracks();
+                    } else if (previousEntry.modalId === 'browseStationsModal') {
+                        loadCuratedPlaylists();
+                    }
+                }
+            }
+
+            // Update back button state
+            updateBackButtonState();
+        }
+
+        function updateBackButtonState() {
+            const backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                // Enable back button if there's history to go back to
+                backBtn.disabled = navigationHistory.length <= 1;
+            }
+        }
+
         // Bottom nav - Overview button
         document.getElementById('bottomNavOverview').addEventListener('click', () => {
             closeAllModals();
             overviewModal.classList.add('active');
             loadOverviewModal();
+            pushToNavigationHistory('overviewModal');
         });
 
         // Bottom nav - Discover button
@@ -7313,12 +7400,14 @@
             closeAllModals();
             discoverModal.classList.add('active');
             loadDiscoverModal();
+            pushToNavigationHistory('discoverModal');
         });
 
         // Bottom nav - Menu button
         document.getElementById('bottomNavMenu').addEventListener('click', () => {
             closeAllModals();
             hamburgerMenuModal.classList.add('active');
+            pushToNavigationHistory('hamburgerMenuModal');
         });
 
         // Helper function to restore radio database search UI
@@ -8436,6 +8525,7 @@
                 displayLikedTracks();
                 nowPlayingModal.classList.remove('active');
                 likedTracksModal.classList.add('active');
+                pushToNavigationHistory('likedTracksModal');
             });
         }
 
@@ -8444,6 +8534,7 @@
                 displayRecentTracks();
                 nowPlayingModal.classList.remove('active');
                 recentTracksModal.classList.add('active');
+                pushToNavigationHistory('recentTracksModal');
             });
         }
 
@@ -8495,6 +8586,7 @@
         document.getElementById('viewPlaylistsBtn').addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
             playlistsModal.classList.add('active');
+            pushToNavigationHistory('playlistsModal');
         });
 
         // Add station button
@@ -10037,7 +10129,12 @@
             // Update station display cursor based on playing state
             updateStationDisplayCursor();
         }
-        
+
+        // Back button handler
+        document.getElementById('backBtn').addEventListener('click', () => {
+            navigateBack();
+        });
+
         // Play/Pause button handler
         playPauseBtn.addEventListener('click', async () => {
             // If we're casting, control the Cast media session instead of local playback
