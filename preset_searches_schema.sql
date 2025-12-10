@@ -5,6 +5,7 @@
 CREATE TABLE preset_searches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
+    station_name TEXT,
     country TEXT,
     language TEXT,
     tags TEXT,
@@ -68,9 +69,12 @@ CREATE TRIGGER trigger_update_preset_searches_updated_at
     EXECUTE FUNCTION update_preset_searches_updated_at();
 
 -- Sample data (optional - you can remove this if you want to start with an empty table)
-INSERT INTO preset_searches (name, country, language, tags, description, display_order)
+INSERT INTO preset_searches (name, station_name, country, language, tags, description, display_order)
 VALUES
-    ('Rock Music', NULL, 'english', 'rock', 'Popular rock music stations from around the world', 1),
-    ('Jazz Stations', NULL, NULL, 'jazz', 'Smooth jazz and contemporary jazz stations', 2),
-    ('USA Radio', 'United States', NULL, NULL, 'Radio stations from the United States', 3),
-    ('UK Radio', 'United Kingdom', 'english', NULL, 'British radio stations', 4);
+    ('Rock Music', NULL, NULL, 'english', 'rock', 'Popular rock music stations from around the world', 1),
+    ('Jazz Stations', NULL, NULL, NULL, 'jazz', 'Smooth jazz and contemporary jazz stations', 2),
+    ('USA Radio', NULL, 'United States', NULL, NULL, 'Radio stations from the United States', 3),
+    ('UK Radio', NULL, 'United Kingdom', 'english', NULL, 'British radio stations', 4);
+
+-- MIGRATION: If you already created the table without the station_name field, run this:
+-- ALTER TABLE preset_searches ADD COLUMN station_name TEXT;
