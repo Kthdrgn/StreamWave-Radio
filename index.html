@@ -7341,39 +7341,52 @@
 
         function navigateBack() {
             console.log('[NAV] Back button clicked');
-            console.log('[NAV] History before pop:', navigationHistory.map(h => h.modalId));
+            console.log('[NAV] History stack:', navigationHistory.map(h => h.modalId));
 
             if (navigationHistory.length === 0) {
                 console.log('[NAV] No history to go back to');
                 return;
             }
 
-            // Pop the current/last entry
-            const poppedEntry = navigationHistory.pop();
-            console.log('[NAV] Popped entry:', poppedEntry.modalId);
+            // Get the last entry in history
+            const lastEntry = navigationHistory[navigationHistory.length - 1];
+            console.log('[NAV] Last entry in history:', lastEntry.modalId);
 
-            // Get the previous modal
-            const previousEntry = navigationHistory[navigationHistory.length - 1];
-            console.log('[NAV] Previous entry:', previousEntry ? previousEntry.modalId : 'none');
-            console.log('[NAV] Previous context:', previousEntry ? previousEntry.context : 'none');
+            // Check if the last modal in history is currently open
+            const lastModal = document.getElementById(lastEntry.modalId);
+            const isLastModalOpen = lastModal && lastModal.classList.contains('active');
+            console.log('[NAV] Is last modal currently open?', isLastModalOpen);
 
-            if (previousEntry) {
+            let targetEntry;
+
+            if (isLastModalOpen) {
+                // If the last modal is currently open, pop it and go to the previous one
+                navigationHistory.pop();
+                targetEntry = navigationHistory[navigationHistory.length - 1];
+                console.log('[NAV] Modal is open, going back to:', targetEntry ? targetEntry.modalId : 'none');
+            } else {
+                // If no modal is open (main player), just open the last modal in history
+                targetEntry = lastEntry;
+                console.log('[NAV] No modal open, reopening last modal:', targetEntry.modalId);
+            }
+
+            if (targetEntry) {
                 // Close all modals
                 closeAllModals();
 
                 // Get the modal element
-                const modalElement = document.getElementById(previousEntry.modalId);
+                const modalElement = document.getElementById(targetEntry.modalId);
 
                 if (modalElement) {
-                    // Open the previous modal
+                    // Open the target modal
                     modalElement.classList.add('active');
-                    console.log('[NAV] Opened modal:', previousEntry.modalId);
+                    console.log('[NAV] Opened modal:', targetEntry.modalId);
 
                     // Restore context if needed - do NOT call functions that push to history
-                    if (previousEntry.context.playlistId) {
+                    if (targetEntry.context.playlistId) {
                         // Restore user playlist content without calling openPlaylist
-                        console.log('[NAV] Restoring user playlist:', previousEntry.context.playlistId);
-                        const id = previousEntry.context.playlistId;
+                        console.log('[NAV] Restoring user playlist:', targetEntry.context.playlistId);
+                        const id = targetEntry.context.playlistId;
                         currentPlaylist = playlists.find(p => p.id === id);
                         if (currentPlaylist) {
                             lastOpenedModal = { type: 'playlist', id: id };
@@ -7386,10 +7399,10 @@
                             }
                             loadPlaylistStations(id);
                         }
-                    } else if (previousEntry.context.curatedPlaylistId) {
+                    } else if (targetEntry.context.curatedPlaylistId) {
                         // Restore curated playlist content without calling openCuratedPlaylist
-                        console.log('[NAV] Restoring curated playlist:', previousEntry.context.curatedPlaylistId);
-                        const id = previousEntry.context.curatedPlaylistId;
+                        console.log('[NAV] Restoring curated playlist:', targetEntry.context.curatedPlaylistId);
+                        const id = targetEntry.context.curatedPlaylistId;
                         const curatedPlaylist = curatedPlaylists.find(p => p.id === id);
                         if (curatedPlaylist) {
                             currentPlaylist = { ...curatedPlaylist, is_curated: true };
@@ -7403,15 +7416,15 @@
                             }
                             loadCuratedPlaylistStationsForModal(id);
                         }
-                    } else if (previousEntry.modalId === 'overviewModal') {
+                    } else if (targetEntry.modalId === 'overviewModal') {
                         loadOverviewModal();
-                    } else if (previousEntry.modalId === 'discoverModal') {
+                    } else if (targetEntry.modalId === 'discoverModal') {
                         loadDiscoverModal();
-                    } else if (previousEntry.modalId === 'likedTracksModal') {
+                    } else if (targetEntry.modalId === 'likedTracksModal') {
                         displayLikedTracks();
-                    } else if (previousEntry.modalId === 'recentTracksModal') {
+                    } else if (targetEntry.modalId === 'recentTracksModal') {
                         displayRecentTracks();
-                    } else if (previousEntry.modalId === 'browseStationsModal') {
+                    } else if (targetEntry.modalId === 'browseStationsModal') {
                         loadCuratedPlaylists();
                     }
                 }
@@ -7424,8 +7437,8 @@
         function updateBackButtonState() {
             const backBtn = document.getElementById('backBtn');
             if (backBtn) {
-                // Enable back button if there's history to go back to
-                backBtn.disabled = navigationHistory.length <= 1;
+                // Enable back button if there's any history (can go back to at least one modal)
+                backBtn.disabled = navigationHistory.length === 0;
                 console.log('[NAV] Back button state:', backBtn.disabled ? 'disabled' : 'enabled', '(history length:', navigationHistory.length + ')');
             }
         }
