@@ -7926,12 +7926,7 @@
                 const streamUrl = selectedQuality === 'low' && currentStation.url_low ? currentStation.url_low :
                                  selectedQuality === 'high' && currentStation.url_high ? currentStation.url_high :
                                  currentStation.url;
-                
-                    streamUrl,
-                    stationName: currentStation.name,
-                    hasIcon: !!currentStation.icon_url
-                });
-                
+
                 // Create media info
                 const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'audio/mpeg');
                 
