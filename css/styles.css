@@ -510,7 +510,21 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+
+        /* Back button */
+        .control-icon-btn.btn-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .control-icon-btn.btn-back svg {
+            stroke: white;
+        }
+
+        .control-icon-btn.btn-back:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.5);
+        }
+
         /* Station display with info */
         .station-display {
             width: 100%;
