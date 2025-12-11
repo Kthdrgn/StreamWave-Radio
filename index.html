@@ -10328,24 +10328,51 @@
             if (isPaused) {
                 isPaused = false;
                 if (audioElement && audioElement.src) {
-                    audioElement.play();
-                    isPlaying = true;
-                    updateStatus('Playing', 'playing');
-                    updatePlayPauseButton(true);
-                    // Update media session playback state
-                    if ('mediaSession' in navigator) {
-                        navigator.mediaSession.playbackState = 'playing';
-                    }
+                    audioElement.play().then(() => {
+                        isPlaying = true;
+                        updateStatus('Playing', 'playing');
+                        updatePlayPauseButton(true);
+                        // Update media session playback state
+                        if ('mediaSession' in navigator) {
+                            navigator.mediaSession.playbackState = 'playing';
+                        }
+                    }).catch(error => {
+                        console.error('Resume play failed:', error);
+                        // If resume fails, show error and stop
+                        isPlaying = false;
+                        isPaused = false;
+                        audioElement.src = '';
+                        updateStatus('Error: Unable to play stream', 'error');
+                        updatePlayPauseButton(false);
+                        playPauseBtn.disabled = false;
+                    });
                     return;
                 } else if (player && player.audioElement && player.audioElement.src) {
-                    player.audioElement.play();
-                    isPlaying = true;
-                    updateStatus('Playing', 'playing');
-                    updatePlayPauseButton(true);
-                    // Update media session playback state
-                    if ('mediaSession' in navigator) {
-                        navigator.mediaSession.playbackState = 'playing';
-                    }
+                    player.audioElement.play().then(() => {
+                        isPlaying = true;
+                        updateStatus('Playing', 'playing');
+                        updatePlayPauseButton(true);
+                        // Update media session playback state
+                        if ('mediaSession' in navigator) {
+                            navigator.mediaSession.playbackState = 'playing';
+                        }
+                    }).catch(error => {
+                        console.error('Resume play failed:', error);
+                        // If resume fails, show error and stop
+                        isPlaying = false;
+                        isPaused = false;
+                        if (player) {
+                            try {
+                                player.stop();
+                            } catch (e) {
+                                console.error('Error stopping player:', e);
+                            }
+                            player = null;
+                        }
+                        updateStatus('Error: Unable to play stream', 'error');
+                        updatePlayPauseButton(false);
+                        playPauseBtn.disabled = false;
+                    });
                     return;
                 }
             }
