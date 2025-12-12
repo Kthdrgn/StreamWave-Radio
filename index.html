@@ -1125,10 +1125,18 @@
                             </div>
 
                             <!-- Filter out HLS Streams Checkbox -->
-                            <div>
+                            <div style="margin-bottom: 15px;">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
                                     <input type="checkbox" id="filterOutHLS" onchange="handleFilterHLSChange()" style="cursor: pointer;">
                                     <span>Filter out HLS streams</span>
+                                </label>
+                            </div>
+
+                            <!-- Hide Broken Stations Checkbox -->
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                                    <input type="checkbox" id="hideBrokenStations" checked onchange="handleHideBrokenChange()" style="cursor: pointer;">
+                                    <span>Hide broken stations</span>
                                 </label>
                             </div>
                         </div>
@@ -1419,6 +1427,7 @@
         let radioDatabaseMinBitrate = 0; // Minimum bitrate filter (0 = all)
         let radioDatabaseIncludeUnknown = true; // Include stations with unknown/0 bitrate
         let radioDatabaseFilterOutHLS = false; // Filter out HLS streams
+        let radioDatabaseHideBroken = true; // Hide broken stations
 
         // Curated Stations pagination
         let curatedStationsCurrentPage = 1;
@@ -1467,7 +1476,8 @@
                 viewMode: radioDatabaseViewMode,
                 minBitrate: radioDatabaseMinBitrate,
                 includeUnknown: radioDatabaseIncludeUnknown,
-                filterOutHLS: radioDatabaseFilterOutHLS
+                filterOutHLS: radioDatabaseFilterOutHLS,
+                hideBroken: radioDatabaseHideBroken
             };
             sessionStorage.setItem('radioDatabaseState', JSON.stringify(state));
         }
@@ -2156,7 +2166,7 @@
                 const params = new URLSearchParams();
                 params.append('country', country);
                 params.append('limit', '10000');
-                params.append('hidebroken', 'true');
+                params.append('hidebroken', radioDatabaseHideBroken.toString());
 
                 const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
                 const stations = await response.json();
@@ -2211,7 +2221,7 @@
                 if (country) params.append('country', country);
                 if (language) params.append('language', language);
                 params.append('limit', '10000');
-                params.append('hidebroken', 'true');
+                params.append('hidebroken', radioDatabaseHideBroken.toString());
 
                 const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
                 const stations = await response.json();
@@ -2337,7 +2347,7 @@
             // Sorting
             params.append('order', sortBy);
             params.append('reverse', 'true');
-            params.append('hidebroken', 'true');
+            params.append('hidebroken', radioDatabaseHideBroken.toString());
 
             // Only show loading indicator if there are no existing results
             // This prevents the jittery "Searching..." message during typing
@@ -2429,6 +2439,13 @@
         window.handleFilterHLSChange = function() {
             radioDatabaseFilterOutHLS = filterOutHLS.checked;
             // Trigger new search to switch between server/client-side filtering
+            searchRadioBrowser(1);
+        };
+
+        // Handle hide broken stations checkbox change
+        window.handleHideBrokenChange = function() {
+            radioDatabaseHideBroken = hideBrokenStations.checked;
+            // Trigger new search with updated hidebroken parameter
             searchRadioBrowser(1);
         };
 
@@ -4524,7 +4541,7 @@
             params.append('limit', '500');
             params.append('order', 'votes');
             params.append('reverse', 'true');
-            params.append('hidebroken', 'true');
+            params.append('hidebroken', radioDatabaseHideBroken.toString());
 
             try {
                 // Fetch from Radio Browser API
@@ -7162,11 +7179,13 @@
                 radioDatabaseMinBitrate = state.minBitrate !== undefined ? state.minBitrate : 0;
                 radioDatabaseIncludeUnknown = state.includeUnknown !== undefined ? state.includeUnknown : true;
                 radioDatabaseFilterOutHLS = state.filterOutHLS !== undefined ? state.filterOutHLS : false;
+                radioDatabaseHideBroken = state.hideBroken !== undefined ? state.hideBroken : true;
 
                 // Update bitrate filter UI elements
                 bitrateDropdown.value = radioDatabaseMinBitrate.toString();
                 includeUnknownBitrates.checked = radioDatabaseIncludeUnknown;
                 filterOutHLS.checked = radioDatabaseFilterOutHLS;
+                hideBrokenStations.checked = radioDatabaseHideBroken;
 
                 // Restore view mode
                 updateRadioDatabaseViewUI();
@@ -7582,9 +7601,11 @@
             radioDatabaseMinBitrate = 0;
             radioDatabaseIncludeUnknown = true;
             radioDatabaseFilterOutHLS = false;
+            radioDatabaseHideBroken = true;
             bitrateDropdown.value = '0';
             includeUnknownBitrates.checked = true;
             filterOutHLS.checked = false;
+            hideBrokenStations.checked = true;
 
             // Restore original filter options
             restoreLanguageOptions();
