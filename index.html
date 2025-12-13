@@ -362,6 +362,16 @@
                     </div>
                 </div>
 
+                <!-- Tag-Based Preset Searches Carousel -->
+                <div class="carousel-section" id="discoverTagPresetsSection" style="display: none;">
+                    <h3 class="carousel-title">Discover by Genre & Tags</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverTagPresetsPrev">‹</button>
+                        <div class="carousel-track" id="discoverTagPresetsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverTagPresetsNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Multi-Channel Radio Stations Carousel -->
                 <div class="carousel-section" id="discoverMultiChannelRadioSection" style="display: none;">
                     <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
@@ -4390,7 +4400,8 @@
             // Render curated playlists in Discover modal
             await renderCuratedPlaylistsInDiscoverModal();
 
-            // Render preset searches carousel
+            // Render preset searches carousels
+            await renderTagPresetsCarousel();
             await renderPresetSearchesCarousel();
 
             // Load recent stations
@@ -4461,17 +4472,41 @@
             }
         }
 
-        // Render preset searches carousel in Discover modal
+        // Render preset searches carousel in Discover modal (name-based searches only)
         async function renderPresetSearchesCarousel() {
             const presetSearchesSection = document.getElementById('discoverPresetSearchesSection');
-            const presetSearches = await fetchPresetSearches();
+            const allPresetSearches = await fetchPresetSearches();
 
-            if (presetSearches.length > 0) {
-                renderCarousel('discoverPresetSearchesTrack', presetSearches, 'preset-search');
+            // Filter for name-based searches (searches that have station_name and no tags)
+            const nameBasedSearches = allPresetSearches.filter(preset =>
+                preset.station_name && preset.station_name.trim() !== ''
+            );
+
+            if (nameBasedSearches.length > 0) {
+                renderCarousel('discoverPresetSearchesTrack', nameBasedSearches, 'preset-search');
                 setupCarouselNavigation('discoverPresetSearches', 'discoverPresetSearchesTrack', 'discoverPresetSearchesPrev', 'discoverPresetSearchesNext');
                 presetSearchesSection.style.display = 'block';
             } else {
                 presetSearchesSection.style.display = 'none';
+            }
+        }
+
+        // Render tag-based preset searches carousel in Discover modal
+        async function renderTagPresetsCarousel() {
+            const tagPresetsSection = document.getElementById('discoverTagPresetsSection');
+            const allPresetSearches = await fetchPresetSearches();
+
+            // Filter for tag-based searches (searches that have tags)
+            const tagBasedSearches = allPresetSearches.filter(preset =>
+                preset.tags && preset.tags.trim() !== ''
+            );
+
+            if (tagBasedSearches.length > 0) {
+                renderCarousel('discoverTagPresetsTrack', tagBasedSearches, 'preset-search');
+                setupCarouselNavigation('discoverTagPresets', 'discoverTagPresetsTrack', 'discoverTagPresetsPrev', 'discoverTagPresetsNext');
+                tagPresetsSection.style.display = 'block';
+            } else {
+                tagPresetsSection.style.display = 'none';
             }
         }
 
@@ -4679,6 +4714,7 @@
                 updateStatus('Preset search order updated', 'success');
 
                 // Reload preset searches to update Discover modal
+                await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
 
             } catch (error) {
@@ -4705,6 +4741,7 @@
                 updateStatus('Display order updated', 'success');
 
                 // Reload preset searches to update Discover modal
+                await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
 
                 // Reload admin list to reflect new order
@@ -4808,6 +4845,7 @@
 
                 // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
                 }
             } catch (error) {
@@ -4844,6 +4882,7 @@
 
                 // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
                 }
             } catch (error) {
