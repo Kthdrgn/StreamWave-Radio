@@ -6381,19 +6381,20 @@
             if (!currentPlaylist || !currentPlaylist.is_curated) return;
 
             try {
-                // Update each station with its new sort_order
+                // Update each station with its new sort_order using the playlist_item_id
                 const updates = playlistStations.map((station, index) => {
-                    // Determine the station's curated_playlist_items ID
-                    // We need to match by station ID and playlist ID
+                    if (!station.playlist_item_id) {
+                        console.warn('Station missing playlist_item_id:', station);
+                        return Promise.resolve();
+                    }
+
                     return supabase
                         .from('curated_playlist_items')
                         .update({
                             sort_order: index,
                             updated_at: new Date().toISOString()
                         })
-                        .eq('curated_playlist_id', currentPlaylist.id)
-                        .eq(station.is_external ? 'external_station_id' : 'radio_station_id',
-                            station.is_external ? station.external_id : station.id);
+                        .eq('id', station.playlist_item_id);
                 });
 
                 await Promise.all(updates);
@@ -6746,11 +6747,15 @@
                             frequency: '',
                             country: ext.country,
                             is_external: true,
-                            external_id: ext.id
+                            external_id: ext.id,
+                            playlist_item_id: item.id  // Store the curated_playlist_items ID
                         };
                     } else if (item.radio_stations) {
                         // Internal curated station
-                        return item.radio_stations;
+                        return {
+                            ...item.radio_stations,
+                            playlist_item_id: item.id  // Store the curated_playlist_items ID
+                        };
                     }
                     return null;
                 }).filter(s => s !== null) : [];
