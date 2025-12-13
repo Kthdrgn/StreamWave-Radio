@@ -362,6 +362,16 @@
                     </div>
                 </div>
 
+                <!-- Tag-Based Preset Searches Carousel -->
+                <div class="carousel-section" id="discoverTagPresetsSection" style="display: none;">
+                    <h3 class="carousel-title">Discover by Genre & Tags</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverTagPresetsPrev">‹</button>
+                        <div class="carousel-track" id="discoverTagPresetsTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverTagPresetsNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Multi-Channel Radio Stations Carousel -->
                 <div class="carousel-section" id="discoverMultiChannelRadioSection" style="display: none;">
                     <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
@@ -4390,7 +4400,8 @@
             // Render curated playlists in Discover modal
             await renderCuratedPlaylistsInDiscoverModal();
 
-            // Render preset searches carousel
+            // Render preset searches carousels
+            await renderTagPresetsCarousel();
             await renderPresetSearchesCarousel();
 
             // Load recent stations
@@ -4461,17 +4472,41 @@
             }
         }
 
-        // Render preset searches carousel in Discover modal
+        // Render preset searches carousel in Discover modal (name-based searches only)
         async function renderPresetSearchesCarousel() {
             const presetSearchesSection = document.getElementById('discoverPresetSearchesSection');
-            const presetSearches = await fetchPresetSearches();
+            const allPresetSearches = await fetchPresetSearches();
 
-            if (presetSearches.length > 0) {
-                renderCarousel('discoverPresetSearchesTrack', presetSearches, 'preset-search');
+            // Filter for name-based searches (searches that have station_name and no tags)
+            const nameBasedSearches = allPresetSearches.filter(preset =>
+                preset.station_name && preset.station_name.trim() !== ''
+            );
+
+            if (nameBasedSearches.length > 0) {
+                renderCarousel('discoverPresetSearchesTrack', nameBasedSearches, 'preset-search');
                 setupCarouselNavigation('discoverPresetSearches', 'discoverPresetSearchesTrack', 'discoverPresetSearchesPrev', 'discoverPresetSearchesNext');
                 presetSearchesSection.style.display = 'block';
             } else {
                 presetSearchesSection.style.display = 'none';
+            }
+        }
+
+        // Render tag-based preset searches carousel in Discover modal
+        async function renderTagPresetsCarousel() {
+            const tagPresetsSection = document.getElementById('discoverTagPresetsSection');
+            const allPresetSearches = await fetchPresetSearches();
+
+            // Filter for tag-based searches (searches that have tags)
+            const tagBasedSearches = allPresetSearches.filter(preset =>
+                preset.tags && preset.tags.trim() !== ''
+            );
+
+            if (tagBasedSearches.length > 0) {
+                renderCarousel('discoverTagPresetsTrack', tagBasedSearches, 'preset-search');
+                setupCarouselNavigation('discoverTagPresets', 'discoverTagPresetsTrack', 'discoverTagPresetsPrev', 'discoverTagPresetsNext');
+                tagPresetsSection.style.display = 'block';
+            } else {
+                tagPresetsSection.style.display = 'none';
             }
         }
 
@@ -4679,6 +4714,7 @@
                 updateStatus('Preset search order updated', 'success');
 
                 // Reload preset searches to update Discover modal
+                await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
 
             } catch (error) {
@@ -4705,6 +4741,7 @@
                 updateStatus('Display order updated', 'success');
 
                 // Reload preset searches to update Discover modal
+                await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
 
                 // Reload admin list to reflect new order
@@ -4808,6 +4845,7 @@
 
                 // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
                 }
             } catch (error) {
@@ -4844,6 +4882,7 @@
 
                 // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
+                    await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
                 }
             } catch (error) {
@@ -6111,6 +6150,11 @@
 
         // Render playlist stations
         async function renderPlaylistStations() {
+            // Check if admin and viewing curated playlist
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
+            const canReorder = isAdmin && isCuratedPlaylist;
+
             // Apply grid view class if in grid mode
             if (playlistStationViewMode === 'grid') {
                 playlistStationList.classList.add('grid-view');
@@ -6145,7 +6189,11 @@
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
 
                 return `
-                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
+                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}"
+                     data-id="${station.id}"
+                     data-station-index="${index}"
+                     ${canReorder ? 'draggable="true" style="cursor: move;"' : ''}>
+                    ${canReorder ? '<div class="drag-handle" style="margin-right: 8px; color: var(--text-secondary); cursor: move;">⋮⋮</div>' : ''}
                     ${station.icon_url ?
                         `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
                         `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
@@ -6259,6 +6307,108 @@
                     }
                 }
             });
+
+            // Setup drag and drop if admin and curated playlist
+            if (canReorder) {
+                setupPlaylistStationDragAndDrop();
+            }
+        }
+
+        // Setup drag and drop for playlist station reordering (admin only for curated playlists)
+        function setupPlaylistStationDragAndDrop() {
+            const stationItems = document.querySelectorAll('#playlistStationList .station-item[draggable="true"]');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            stationItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = parseInt(item.dataset.stationIndex);
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    // Remove border from all items
+                    document.querySelectorAll('#playlistStationList .station-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        const dropIndex = parseInt(item.dataset.stationIndex);
+
+                        // Reorder the playlistStations array
+                        const movedStation = playlistStations.splice(draggedIndex, 1)[0];
+                        playlistStations.splice(dropIndex, 0, movedStation);
+
+                        // Update sort orders in database
+                        await updateCuratedPlaylistStationOrder();
+
+                        // Re-render the list
+                        await renderPlaylistStations();
+                    }
+                });
+            });
+        }
+
+        // Update curated playlist station order in database
+        async function updateCuratedPlaylistStationOrder() {
+            if (!currentPlaylist || !currentPlaylist.is_curated) return;
+
+            try {
+                // Update each station with its new sort_order using the playlist_item_id
+                const updates = playlistStations.map(async (station, index) => {
+                    if (!station.playlist_item_id) {
+                        console.warn('Station missing playlist_item_id:', station);
+                        return;
+                    }
+
+                    const { data, error } = await supabase
+                        .from('curated_playlist_items')
+                        .update({
+                            sort_order: index
+                        })
+                        .eq('id', station.playlist_item_id);
+
+                    if (error) {
+                        console.error('Error updating station:', station.name, 'Error:', error);
+                        throw error;
+                    }
+                    return data;
+                });
+
+                const results = await Promise.all(updates);
+                console.log('Curated playlist station order updated successfully');
+
+            } catch (error) {
+                console.error('Error updating curated playlist station order:', error);
+                alert('Failed to save station order: ' + (error.message || 'Unknown error'));
+            }
         }
 
         // Populate station overview in the station info modal
@@ -6602,11 +6752,15 @@
                             frequency: '',
                             country: ext.country,
                             is_external: true,
-                            external_id: ext.id
+                            external_id: ext.id,
+                            playlist_item_id: item.id  // Store the curated_playlist_items ID
                         };
                     } else if (item.radio_stations) {
                         // Internal curated station
-                        return item.radio_stations;
+                        return {
+                            ...item.radio_stations,
+                            playlist_item_id: item.id  // Store the curated_playlist_items ID
+                        };
                     }
                     return null;
                 }).filter(s => s !== null) : [];
