@@ -6391,8 +6391,7 @@
                     const { data, error } = await supabase
                         .from('curated_playlist_items')
                         .update({
-                            sort_order: index,
-                            updated_at: new Date().toISOString()
+                            sort_order: index
                         })
                         .eq('id', station.playlist_item_id);
 
