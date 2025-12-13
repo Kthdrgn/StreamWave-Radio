@@ -6382,27 +6382,33 @@
 
             try {
                 // Update each station with its new sort_order using the playlist_item_id
-                const updates = playlistStations.map((station, index) => {
+                const updates = playlistStations.map(async (station, index) => {
                     if (!station.playlist_item_id) {
                         console.warn('Station missing playlist_item_id:', station);
-                        return Promise.resolve();
+                        return;
                     }
 
-                    return supabase
+                    const { data, error } = await supabase
                         .from('curated_playlist_items')
                         .update({
                             sort_order: index,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', station.playlist_item_id);
+
+                    if (error) {
+                        console.error('Error updating station:', station.name, 'Error:', error);
+                        throw error;
+                    }
+                    return data;
                 });
 
-                await Promise.all(updates);
+                const results = await Promise.all(updates);
                 console.log('Curated playlist station order updated successfully');
 
             } catch (error) {
                 console.error('Error updating curated playlist station order:', error);
-                alert('Failed to save station order');
+                alert('Failed to save station order: ' + (error.message || 'Unknown error'));
             }
         }
 
