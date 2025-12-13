@@ -6150,6 +6150,11 @@
 
         // Render playlist stations
         async function renderPlaylistStations() {
+            // Check if admin and viewing curated playlist
+            const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+            const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
+            const canReorder = isAdmin && isCuratedPlaylist;
+
             // Apply grid view class if in grid mode
             if (playlistStationViewMode === 'grid') {
                 playlistStationList.classList.add('grid-view');
@@ -6184,7 +6189,11 @@
                 const detailsDisplay = detailsParts.length > 0 ? detailsParts.join(' • ') : '';
 
                 return `
-                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}" data-id="${station.id}" data-station-index="${index}">
+                <div class="station-item ${currentStation?.id === station.id ? 'selected' : ''}"
+                     data-id="${station.id}"
+                     data-station-index="${index}"
+                     ${canReorder ? 'draggable="true" style="cursor: move;"' : ''}>
+                    ${canReorder ? '<div class="drag-handle" style="margin-right: 8px; color: var(--text-secondary); cursor: move;">⋮⋮</div>' : ''}
                     ${station.icon_url ?
                         `<img src="${station.icon_url}" class="station-icon" alt="${escapeHtml(station.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` :
                         `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
@@ -6298,6 +6307,102 @@
                     }
                 }
             });
+
+            // Setup drag and drop if admin and curated playlist
+            if (canReorder) {
+                setupPlaylistStationDragAndDrop();
+            }
+        }
+
+        // Setup drag and drop for playlist station reordering (admin only for curated playlists)
+        function setupPlaylistStationDragAndDrop() {
+            const stationItems = document.querySelectorAll('#playlistStationList .station-item[draggable="true"]');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            stationItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = parseInt(item.dataset.stationIndex);
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    // Remove border from all items
+                    document.querySelectorAll('#playlistStationList .station-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        const dropIndex = parseInt(item.dataset.stationIndex);
+
+                        // Reorder the playlistStations array
+                        const movedStation = playlistStations.splice(draggedIndex, 1)[0];
+                        playlistStations.splice(dropIndex, 0, movedStation);
+
+                        // Update sort orders in database
+                        await updateCuratedPlaylistStationOrder();
+
+                        // Re-render the list
+                        await renderPlaylistStations();
+                    }
+                });
+            });
+        }
+
+        // Update curated playlist station order in database
+        async function updateCuratedPlaylistStationOrder() {
+            if (!currentPlaylist || !currentPlaylist.is_curated) return;
+
+            try {
+                // Update each station with its new sort_order
+                const updates = playlistStations.map((station, index) => {
+                    // Determine the station's curated_playlist_items ID
+                    // We need to match by station ID and playlist ID
+                    return supabase
+                        .from('curated_playlist_items')
+                        .update({
+                            sort_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('curated_playlist_id', currentPlaylist.id)
+                        .eq(station.is_external ? 'external_station_id' : 'radio_station_id',
+                            station.is_external ? station.external_id : station.id);
+                });
+
+                await Promise.all(updates);
+                console.log('Curated playlist station order updated successfully');
+
+            } catch (error) {
+                console.error('Error updating curated playlist station order:', error);
+                alert('Failed to save station order');
+            }
         }
 
         // Populate station overview in the station info modal
