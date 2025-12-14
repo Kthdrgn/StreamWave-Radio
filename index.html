@@ -6177,6 +6177,17 @@
                 return;
             }
 
+            // Sort stations: curated stations first, then external stations
+            // Preserve original order within each group
+            playlistStations = playlistStations.sort((a, b) => {
+                const aIsCurated = isStationCurated(a);
+                const bIsCurated = isStationCurated(b);
+
+                if (aIsCurated && !bIsCurated) return -1; // a comes first
+                if (!aIsCurated && bIsCurated) return 1;  // b comes first
+                return 0; // maintain original order for stations of the same type
+            });
+
             playlistStationList.innerHTML = playlistStations.map((station, index) => {
                 // Handle genres as array or string
                 const genresDisplay = station.genres && Array.isArray(station.genres)
