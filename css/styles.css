@@ -1333,7 +1333,15 @@
         /* Add extra bottom padding for pages with bottom navigation */
         #overviewModal .modal-body,
         #browseStationsModal .modal-body,
-        #radioDatabaseModal .modal-body {
+        #radioDatabaseModal .modal-body,
+        #settingsModal .modal-body,
+        #discoverModal .modal-body,
+        #playlistsModal .modal-body,
+        #playlistModal .modal-body,
+        #likedTracksModal .modal-body,
+        #recentTracksModal .modal-body,
+        #adminPresetSearchesModal .modal-body,
+        #adminCuratedPlaylistsModal .modal-body {
             padding-bottom: 100px;
         }
 
