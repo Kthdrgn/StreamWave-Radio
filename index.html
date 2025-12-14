@@ -1374,7 +1374,7 @@
         const MUSIC_NOTE_DATA_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM2NjdlZWEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDN2MTAuNTVjLS41OS0uMzQtMS4yNy0uNTUtMi0uNTUtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNCA0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==';
 
         // Verified checkmark icon for curated stations
-        const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 14px; height: 14px; vertical-align: text-top; margin-right: 4px; color: var(--primary-color);">
+        const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="#667eea" xmlns="http://www.w3.org/2000/svg" style="width: 14px; height: 14px; vertical-align: text-top; margin-right: 4px;">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>`;
 
@@ -7191,25 +7191,27 @@
 
         // Check if a station is curated (in the curated stations database)
         function isStationCurated(station) {
-            // Stations from radio_stations table or external_stations table are curated
-            // Radio Browser search results that haven't been saved are not curated
+            if (!station) return false;
 
-            // If station has is_external flag, it's from external_stations (curated external station)
-            // If station doesn't have is_external and has an id, it's from radio_stations (curated)
-            // If station has source='radio-browser' but no database id, it's not curated yet
+            // Curated stations come from two sources:
+            // 1. radio_stations table (internal curated stations) - don't have stationuuid property
+            // 2. external_stations table (curated external stations) - have is_external flag set
 
-            // Simplest check: if the station is in the stations array or has been saved to database,
-            // it's curated. Unsaved Radio Browser results won't be in stations array and won't have
-            // a persistent id.
+            // Radio Browser search results have stationuuid property and no is_external flag
+            // These are NOT curated until they're saved to the database
 
-            // For now, we'll assume:
-            // - All stations in the Browse Stations modal (from stations array) are curated
-            // - All stations in playlists (curated or regular) are curated
-            // - Radio Browser search results are NOT curated (they're just search results)
+            // Check if it's a curated external station
+            if (station.is_external === true) {
+                return true;
+            }
 
-            // A station is curated if it has an id (from our database) or is in the stations array
-            // Radio Browser results that haven't been saved won't have a real database id
-            return station && (station.id !== null && station.id !== undefined);
+            // Check if it's a Radio Browser search result (has stationuuid = not curated yet)
+            if (station.stationuuid) {
+                return false;
+            }
+
+            // If it has an id and no stationuuid, it's from radio_stations table (curated)
+            return station.id !== null && station.id !== undefined;
         }
 
         // ======================
