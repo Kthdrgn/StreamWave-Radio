@@ -1373,6 +1373,11 @@
         // Musical note icon as data URI for use in img src attributes (onerror fallback)
         const MUSIC_NOTE_DATA_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM2NjdlZWEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDN2MTAuNTVjLS41OS0uMzQtMS4yNy0uNTUtMi0uNTUtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNCA0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==';
 
+        // Verified checkmark icon for curated stations
+        const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="#667eea" xmlns="http://www.w3.org/2000/svg" style="width: 14px; height: 14px; vertical-align: text-top; margin-right: 4px;">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>`;
+
         // LrcLib API - No access token needed
 
         let supabase;
@@ -5074,7 +5079,7 @@
                                 ${item.icon_url ? `<img src="${escapeHtml(item.icon_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
                             <div class="carousel-item-content">
-                                <div class="carousel-item-title">${escapeHtml(item.name)}</div>
+                                <div class="carousel-item-title">${isStationCurated(item) ? VERIFIED_ICON : ''}${escapeHtml(item.name)}</div>
                             </div>
                         </div>
                     `;
@@ -6001,7 +6006,7 @@
                         `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
-                        <div class="station-name">${escapeHtml(station.name)}</div>
+                        <div class="station-name">${isStationCurated(station) ? VERIFIED_ICON : ''}${escapeHtml(station.name)}</div>
                         ${detailsDisplay ? `<div class="station-details">${escapeHtml(detailsDisplay)}</div>` : ''}
                         <div class="station-genres">${escapeHtml(genresDisplay)}</div>
                     </div>
@@ -6199,7 +6204,7 @@
                         `<div class="station-icon">${MUSIC_NOTE_ICON}</div>`
                     }
                     <div class="station-info">
-                        <div class="station-name">${escapeHtml(station.name)}</div>
+                        <div class="station-name">${isStationCurated(station) ? VERIFIED_ICON : ''}${escapeHtml(station.name)}</div>
                         ${detailsDisplay ? `<div class="station-details">${escapeHtml(detailsDisplay)}</div>` : ''}
                         <div class="station-now-playing-loading">Loading current track...</div>
                     </div>
@@ -6555,7 +6560,7 @@
                 this.onerror = null;
                 this.src = MUSIC_NOTE_DATA_URI;
             };
-            stationDisplayName.textContent = station.name;
+            stationDisplayName.innerHTML = `${isStationCurated(station) ? VERIFIED_ICON : ''}${escapeHtml(station.name)}`;
             
             
             // Display call letters and frequency
@@ -7183,7 +7188,29 @@
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
+        // Check if a station is curated (in the curated stations database)
+        function isStationCurated(station) {
+            if (!station) return false;
+
+            // "Curated stations" means stations from the radio_stations table only
+            // These are manually curated internal stations
+
+            // External stations (Radio Browser) are NOT considered curated
+            // even if they're saved to external_stations table or in playlists
+            if (station.is_external === true) {
+                return false;
+            }
+
+            // Radio Browser search results (not curated)
+            if (station.stationuuid) {
+                return false;
+            }
+
+            // If it has an id and is not external, it's from radio_stations table (curated)
+            return station.id !== null && station.id !== undefined;
+        }
+
         // ======================
         // EVENT LISTENERS
         // ======================
