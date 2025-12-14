@@ -7193,24 +7193,21 @@
         function isStationCurated(station) {
             if (!station) return false;
 
-            // Curated stations come from two sources:
-            // 1. radio_stations table (internal curated stations) - don't have stationuuid property
-            // 2. external_stations table (curated external stations) - have is_external flag set
+            // "Curated stations" means stations from the radio_stations table only
+            // These are manually curated internal stations
 
-            // Radio Browser search results have stationuuid property and no is_external flag
-            // These are NOT curated until they're saved to the database
-
-            // Check if it's a curated external station
+            // External stations (Radio Browser) are NOT considered curated
+            // even if they're saved to external_stations table or in playlists
             if (station.is_external === true) {
-                return true;
+                return false;
             }
 
-            // Check if it's a Radio Browser search result (has stationuuid = not curated yet)
+            // Radio Browser search results (not curated)
             if (station.stationuuid) {
                 return false;
             }
 
-            // If it has an id and no stationuuid, it's from radio_stations table (curated)
+            // If it has an id and is not external, it's from radio_stations table (curated)
             return station.id !== null && station.id !== undefined;
         }
 
