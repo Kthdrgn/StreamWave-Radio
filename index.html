@@ -255,6 +255,28 @@
                             Automatically fetch album artwork from iTunes when available.
                         </div>
                     </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Keep Screen Awake</label>
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="keepScreenAwake">
+                            <label for="keepScreenAwake" style="cursor: pointer;">Prevent screen from sleeping</label>
+                        </div>
+                        <div class="setting-description">
+                            Keep your screen on while listening to music. Useful for viewing now playing info.
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Fullscreen Mode</label>
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="fullscreenMode">
+                            <label for="fullscreenMode" style="cursor: pointer;">Enable fullscreen mode</label>
+                        </div>
+                        <div class="setting-description">
+                            Toggle fullscreen mode for an immersive listening experience.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -7923,7 +7945,133 @@
             autoFallbackEnabled = e.target.checked;
             console.log('Auto-fallback:', autoFallbackEnabled ? 'enabled' : 'disabled');
         });
-        
+
+        // Keep Screen Awake functionality
+        let wakeLock = null;
+        const keepScreenAwakeCheckbox = document.getElementById('keepScreenAwake');
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock activated');
+
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Screen Wake Lock released');
+                    });
+                } catch (err) {
+                    console.error('Failed to activate Screen Wake Lock:', err);
+                }
+            } else {
+                console.warn('Screen Wake Lock API not supported');
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log('Screen Wake Lock manually released');
+                } catch (err) {
+                    console.error('Failed to release Screen Wake Lock:', err);
+                }
+            }
+        }
+
+        keepScreenAwakeCheckbox.addEventListener('change', async (e) => {
+            const isEnabled = e.target.checked;
+            localStorage.setItem('keepScreenAwake', isEnabled);
+
+            if (isEnabled) {
+                await requestWakeLock();
+            } else {
+                await releaseWakeLock();
+            }
+        });
+
+        // Re-acquire wake lock when page becomes visible again
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                const isEnabled = localStorage.getItem('keepScreenAwake') === 'true';
+                if (isEnabled) {
+                    await requestWakeLock();
+                }
+            }
+        });
+
+        // Fullscreen Mode functionality
+        const fullscreenCheckbox = document.getElementById('fullscreenMode');
+
+        async function toggleFullscreen(enable) {
+            try {
+                if (enable) {
+                    if (document.documentElement.requestFullscreen) {
+                        await document.documentElement.requestFullscreen();
+                    } else if (document.documentElement.webkitRequestFullscreen) {
+                        await document.documentElement.webkitRequestFullscreen();
+                    } else if (document.documentElement.mozRequestFullScreen) {
+                        await document.documentElement.mozRequestFullScreen();
+                    } else if (document.documentElement.msRequestFullscreen) {
+                        await document.documentElement.msRequestFullscreen();
+                    }
+                    console.log('Fullscreen mode activated');
+                } else {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        await document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        await document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        await document.msExitFullscreen();
+                    }
+                    console.log('Fullscreen mode deactivated');
+                }
+            } catch (err) {
+                console.error('Fullscreen toggle failed:', err);
+            }
+        }
+
+        fullscreenCheckbox.addEventListener('change', async (e) => {
+            const isEnabled = e.target.checked;
+            localStorage.setItem('fullscreenMode', isEnabled);
+            await toggleFullscreen(isEnabled);
+        });
+
+        // Listen for fullscreen changes (e.g., user presses ESC)
+        document.addEventListener('fullscreenchange', () => {
+            const isFullscreen = !!document.fullscreenElement;
+            if (fullscreenCheckbox.checked !== isFullscreen) {
+                fullscreenCheckbox.checked = isFullscreen;
+                localStorage.setItem('fullscreenMode', isFullscreen);
+            }
+        });
+
+        document.addEventListener('webkitfullscreenchange', () => {
+            const isFullscreen = !!document.webkitFullscreenElement;
+            if (fullscreenCheckbox.checked !== isFullscreen) {
+                fullscreenCheckbox.checked = isFullscreen;
+                localStorage.setItem('fullscreenMode', isFullscreen);
+            }
+        });
+
+        document.addEventListener('mozfullscreenchange', () => {
+            const isFullscreen = !!document.mozFullScreenElement;
+            if (fullscreenCheckbox.checked !== isFullscreen) {
+                fullscreenCheckbox.checked = isFullscreen;
+                localStorage.setItem('fullscreenMode', isFullscreen);
+            }
+        });
+
+        document.addEventListener('msfullscreenchange', () => {
+            const isFullscreen = !!document.msFullscreenElement;
+            if (fullscreenCheckbox.checked !== isFullscreen) {
+                fullscreenCheckbox.checked = isFullscreen;
+                localStorage.setItem('fullscreenMode', isFullscreen);
+            }
+        });
+
         // Toggle Chromecast section
         // ======================
         // GOOGLE CAST SDK INTEGRATION
@@ -11107,6 +11255,27 @@
                 autoFallbackEnabled = savedAutoFallback === 'true';
                 const checkbox = document.getElementById('autoFallback');
                 if (checkbox) checkbox.checked = autoFallbackEnabled;
+            }
+
+            // Load Keep Screen Awake setting
+            const savedKeepScreenAwake = localStorage.getItem('keepScreenAwake');
+            if (savedKeepScreenAwake === 'true') {
+                const checkbox = document.getElementById('keepScreenAwake');
+                if (checkbox) {
+                    checkbox.checked = true;
+                    await requestWakeLock();
+                }
+            }
+
+            // Load Fullscreen setting
+            const savedFullscreen = localStorage.getItem('fullscreenMode');
+            if (savedFullscreen === 'true') {
+                const checkbox = document.getElementById('fullscreenMode');
+                if (checkbox) {
+                    checkbox.checked = true;
+                    // Note: Fullscreen can only be triggered by user interaction
+                    // So we don't automatically enter fullscreen on page load
+                }
             }
 
             // Load stations from Supabase on startup
