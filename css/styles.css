@@ -2524,6 +2524,16 @@
     flex: 1;
 }
 
+.preset-search-description {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-align: left;
+    line-height: 1.4;
+    word-break: break-word;
+    margin-top: 4px;
+}
+
 .carousel-btn {
     background: var(--button-bg);
     border: 1px solid var(--border-color);

@@ -5126,6 +5126,7 @@
                                 ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
                             <div class="preset-search-name">${escapeHtml(item.name)}</div>
+                            ${item.description ? `<div class="preset-search-description">${escapeHtml(item.description)}</div>` : ''}
                         </div>
                     `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {
