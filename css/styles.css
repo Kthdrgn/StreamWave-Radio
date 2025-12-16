@@ -2530,8 +2530,10 @@
     color: var(--text-secondary);
     text-align: left;
     line-height: 1.4;
-    word-break: break-word;
     margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .carousel-btn {
