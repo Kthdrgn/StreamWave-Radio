@@ -1402,7 +1402,6 @@
 
         // LrcLib API - No access token needed
 
-        let supabase;
         let player = null;
         let hlsPlayer = null;
         let audioElement = null;
@@ -2115,7 +2114,7 @@
 
         // Use the Supabase client initialized by radio-auth.js
         // radio-auth.js sets up window.supabaseClient, window.currentUser, etc.
-        supabase = window.supabaseClient;
+        const supabase = window.supabaseClient;
 
         // Check authentication status on load
         if (window.checkAuth) {
