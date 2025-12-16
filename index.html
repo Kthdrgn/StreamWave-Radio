@@ -1274,7 +1274,7 @@
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 20px;">
-                    <button id="addNewPresetSearchBtn" class="btn" style="background: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    <button id="addNewPresetSearchBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
                         + Add New Preset Search
                     </button>
                 </div>
@@ -1292,7 +1292,7 @@
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 20px;">
-                    <button id="addNewCuratedPlaylistBtn" class="btn" style="background: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    <button id="addNewCuratedPlaylistBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
                         + Add New Curated Playlist
                     </button>
                 </div>
@@ -1402,7 +1402,6 @@
 
         // LrcLib API - No access token needed
 
-        let supabase;
         let player = null;
         let hlsPlayer = null;
         let audioElement = null;
@@ -2115,7 +2114,7 @@
 
         // Use the Supabase client initialized by radio-auth.js
         // radio-auth.js sets up window.supabaseClient, window.currentUser, etc.
-        supabase = window.supabaseClient;
+        const supabase = window.supabaseClient;
 
         // Check authentication status on load
         if (window.checkAuth) {
@@ -5125,7 +5124,10 @@
                             <div class="preset-search-icon">
                                 ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'">` : `<span class="carousel-item-icon">${MUSIC_NOTE_ICON}</span>`}
                             </div>
-                            <div class="preset-search-name">${escapeHtml(item.name)}</div>
+                            <div class="preset-search-content">
+                                <div class="preset-search-name">${escapeHtml(item.name)}</div>
+                                ${item.description ? `<div class="preset-search-description">${escapeHtml(item.description)}</div>` : ''}
+                            </div>
                         </div>
                     `;
                 } else if (type === 'playlist' || type === 'curated-playlist') {

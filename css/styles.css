@@ -18,8 +18,10 @@
             --input-border: rgba(255, 255, 255, 0.2);
             --button-bg: rgba(255, 255, 255, 0.1);
             --button-hover: rgba(255, 255, 255, 0.2);
+            --accent-color: #667eea;
+            --accent-button-text: #ffffff;
         }
-        
+
         [data-theme="light"] {
             /* Light theme */
             --bg-gradient-start: #f5f7fa;
@@ -40,6 +42,8 @@
             --input-border: rgba(0, 0, 0, 0.15);
             --button-bg: rgba(0, 0, 0, 0.05);
             --button-hover: rgba(0, 0, 0, 0.1);
+            --accent-color: #667eea;
+            --accent-button-text: #1a202c;
         }
 
         /* Ocean Blue - Dark */
@@ -62,6 +66,8 @@
             --input-border: rgba(100, 181, 246, 0.2);
             --button-bg: rgba(66, 165, 245, 0.15);
             --button-hover: rgba(66, 165, 245, 0.25);
+            --accent-color: #42a5f5;
+            --accent-button-text: #ffffff;
         }
 
         /* Ocean Blue - Light */
@@ -84,6 +90,8 @@
             --input-border: rgba(1, 87, 155, 0.2);
             --button-bg: rgba(3, 169, 244, 0.1);
             --button-hover: rgba(3, 169, 244, 0.2);
+            --accent-color: #0288d1;
+            --accent-button-text: #ffffff;
         }
 
         /* Emerald Forest - Dark */
@@ -106,6 +114,8 @@
             --input-border: rgba(129, 199, 132, 0.2);
             --button-bg: rgba(102, 187, 106, 0.15);
             --button-hover: rgba(102, 187, 106, 0.25);
+            --accent-color: #66bb6a;
+            --accent-button-text: #ffffff;
         }
 
         /* Emerald Forest - Light */
@@ -128,6 +138,8 @@
             --input-border: rgba(27, 94, 32, 0.2);
             --button-bg: rgba(76, 175, 80, 0.1);
             --button-hover: rgba(76, 175, 80, 0.2);
+            --accent-color: #388e3c;
+            --accent-button-text: #ffffff;
         }
 
         /* Slate Gray - Dark */
@@ -150,6 +162,8 @@
             --input-border: rgba(176, 190, 197, 0.2);
             --button-bg: rgba(144, 164, 174, 0.15);
             --button-hover: rgba(144, 164, 174, 0.25);
+            --accent-color: #90a4ae;
+            --accent-button-text: #ffffff;
         }
 
         /* Slate Gray - Light */
@@ -172,6 +186,8 @@
             --input-border: rgba(38, 50, 56, 0.2);
             --button-bg: rgba(84, 110, 122, 0.1);
             --button-hover: rgba(84, 110, 122, 0.2);
+            --accent-color: #546e7a;
+            --accent-button-text: #ffffff;
         }
 
         /* Royal Purple - Dark */
@@ -194,6 +210,8 @@
             --input-border: rgba(186, 104, 200, 0.2);
             --button-bg: rgba(156, 39, 176, 0.15);
             --button-hover: rgba(156, 39, 176, 0.25);
+            --accent-color: #9c27b0;
+            --accent-button-text: #ffffff;
         }
 
         /* Royal Purple - Light */
@@ -216,6 +234,8 @@
             --input-border: rgba(74, 20, 140, 0.2);
             --button-bg: rgba(142, 36, 170, 0.1);
             --button-hover: rgba(142, 36, 170, 0.2);
+            --accent-color: #7b1fa2;
+            --accent-button-text: #ffffff;
         }
 
         /* Golden Sunset - Dark */
@@ -238,6 +258,8 @@
             --input-border: rgba(255, 183, 77, 0.2);
             --button-bg: rgba(255, 152, 0, 0.15);
             --button-hover: rgba(255, 152, 0, 0.25);
+            --accent-color: #ff9800;
+            --accent-button-text: #ffffff;
         }
 
         /* Golden Sunset - Light */
@@ -260,6 +282,8 @@
             --input-border: rgba(230, 81, 0, 0.2);
             --button-bg: rgba(251, 140, 0, 0.1);
             --button-hover: rgba(251, 140, 0, 0.2);
+            --accent-color: #f57c00;
+            --accent-button-text: #ffffff;
         }
 
         /* Fire Red - Dark */
@@ -282,6 +306,8 @@
             --input-border: rgba(239, 83, 80, 0.2);
             --button-bg: rgba(229, 57, 53, 0.15);
             --button-hover: rgba(229, 57, 53, 0.25);
+            --accent-color: #e53935;
+            --accent-button-text: #ffffff;
         }
 
         /* Fire Red - Light */
@@ -304,6 +330,8 @@
             --input-border: rgba(183, 28, 28, 0.2);
             --button-bg: rgba(229, 57, 53, 0.1);
             --button-hover: rgba(229, 57, 53, 0.2);
+            --accent-color: #d32f2f;
+            --accent-button-text: #ffffff;
         }
         
         * {
@@ -2514,6 +2542,13 @@
     font-size: 24px;
 }
 
+.preset-search-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
 .preset-search-name {
     font-size: 14px;
     font-weight: 600;
@@ -2521,7 +2556,18 @@
     text-align: left;
     line-height: 1.3;
     word-break: break-word;
-    flex: 1;
+}
+
+.preset-search-description {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-align: left;
+    line-height: 1.4;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .carousel-btn {
