@@ -11319,8 +11319,9 @@
                 });
             }
         });
+        })(); // End of IIFE
     </script>
-    
+
     <!-- Service Worker Registration -->
     <script>
         // Register service worker for PWA functionality
@@ -11381,7 +11382,6 @@
             console.log('PWA was installed');
             deferredPrompt = null;
         });
-        })(); // End of IIFE
     </script>
 </body>
 </html>
