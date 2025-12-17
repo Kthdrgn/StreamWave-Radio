@@ -3487,11 +3487,21 @@
                                     let title = 'Unknown';
                                     let artist = '';
 
-                                    if (fragTitle.includes(' - ')) {
+                                    // Check for attribute-based format: title="...",artist="..."
+                                    const titleMatch = fragTitle.match(/title=["']([^"']+)["']/i);
+                                    const artistMatch = fragTitle.match(/artist=["']([^"']+)["']/i);
+
+                                    if (titleMatch || artistMatch) {
+                                        // Extract from attributes
+                                        title = titleMatch ? titleMatch[1].trim() : 'Unknown';
+                                        artist = artistMatch ? artistMatch[1].trim() : '';
+                                    } else if (fragTitle.includes(' - ')) {
+                                        // Fall back to dash-separated format
                                         const parts = fragTitle.split(' - ');
                                         artist = parts[0].trim();
                                         title = parts[1].trim();
                                     } else {
+                                        // No recognized format, use as-is
                                         title = fragTitle;
                                     }
 
