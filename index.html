@@ -4672,15 +4672,9 @@
                         return;
                     }
 
-                    const playlistId = parseInt(item.dataset.playlistId);
-
-                    // Close this modal first
+                    const playlistId = item.dataset.playlistId;  // Don't parseInt - keep as-is like carousel
+                    openCuratedPlaylist(playlistId);
                     modal.classList.remove('active');
-
-                    // Use setTimeout to ensure modal closes before opening new one
-                    setTimeout(() => {
-                        openCuratedPlaylist(playlistId);
-                    }, 50);
                 });
 
                 // Add hover effect
