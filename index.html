@@ -376,7 +376,10 @@
 
                 <!-- Curated Playlists Carousel -->
                 <div class="carousel-section" id="discoverCuratedPlaylistsSection" style="display: none;">
-                    <h3 class="carousel-title">Curated Playlists</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 class="carousel-title" style="margin: 0;">Curated Playlists</h3>
+                        <a id="viewAllCuratedPlaylistsLink" href="#" style="color: #4a90e2; font-size: 14px; text-decoration: none; font-weight: 500; display: none;">View All →</a>
+                    </div>
                     <div class="carousel-container">
                         <button class="carousel-btn carousel-prev" id="discoverCuratedPlaylistsPrev">‹</button>
                         <div class="carousel-track" id="discoverCuratedPlaylistsTrack"></div>
@@ -443,6 +446,21 @@
                             <button class="carousel-btn carousel-next" id="discoverBecauseLikeNext">›</button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Curated Playlists Modal -->
+    <div id="allCuratedPlaylistsModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h2 class="modal-title">All Curated Playlists</h2>
+                <button class="modal-close" id="closeAllCuratedPlaylistsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="allCuratedPlaylistsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 10px;">
+                    <!-- Playlists will be inserted here -->
                 </div>
             </div>
         </div>
@@ -4533,6 +4551,9 @@
         }
 
         // Render curated playlists in Discover modal
+        // Store all curated playlists for "View All" modal
+        let allCuratedPlaylistsWithStations = [];
+
         async function renderCuratedPlaylistsInDiscoverModal() {
             const curatedPlaylistsSection = document.getElementById('discoverCuratedPlaylistsSection');
             const multiChannelRadioSection = document.getElementById('discoverMultiChannelRadioSection');
@@ -4546,16 +4567,26 @@
                 return await loadCuratedPlaylistStations(playlist);
             }));
 
+            // Store all playlists for "View All" modal
+            allCuratedPlaylistsWithStations = curatedPlaylistsWithStations;
+
             // Load stations for each multi-channel radio
             const multiChannelRadioWithStations = await Promise.all(multiChannelRadioItems.map(async (playlist) => {
                 return await loadCuratedPlaylistStations(playlist);
             }));
 
-            // Render Curated Playlists carousel
+            // Render Curated Playlists carousel (limit to 8 items)
             if (curatedPlaylistsWithStations.length > 0) {
-                renderCarousel('discoverCuratedPlaylistsTrack', curatedPlaylistsWithStations, 'curated-playlist');
+                const limitedPlaylists = curatedPlaylistsWithStations.slice(0, 8);
+                renderCarousel('discoverCuratedPlaylistsTrack', limitedPlaylists, 'curated-playlist');
                 setupCarouselNavigation('discoverCuratedPlaylists', 'discoverCuratedPlaylistsTrack', 'discoverCuratedPlaylistsPrev', 'discoverCuratedPlaylistsNext');
                 curatedPlaylistsSection.style.display = 'block';
+
+                // Show/hide "View All" link based on whether there are more than 8 playlists
+                const viewAllLink = document.getElementById('viewAllCuratedPlaylistsLink');
+                if (viewAllLink) {
+                    viewAllLink.style.display = curatedPlaylistsWithStations.length > 8 ? 'block' : 'none';
+                }
             } else {
                 curatedPlaylistsSection.style.display = 'none';
             }
@@ -4568,6 +4599,139 @@
             } else {
                 multiChannelRadioSection.style.display = 'none';
             }
+        }
+
+        // Open All Curated Playlists modal and populate it with a grid of all playlists
+        function openAllCuratedPlaylistsModal() {
+            const modal = document.getElementById('allCuratedPlaylistsModal');
+            const grid = document.getElementById('allCuratedPlaylistsGrid');
+
+            // Clear existing content
+            grid.innerHTML = '';
+
+            // Render all playlists in a grid
+            allCuratedPlaylistsWithStations.forEach((playlist) => {
+                const stations = playlist.stations || [];
+                const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
+
+                // Multi-Channel Radio stations always show just the first station icon (no collage)
+                const isMultiChannelRadio = playlist.type === 'multi_channel_radio';
+
+                let imageContent;
+                if (stationIcons.length === 0) {
+                    // No stations with icons - show music note
+                    imageContent = `<span style="font-size: 48px;">${MUSIC_NOTE_ICON}</span>`;
+                } else if (stationIcons.length === 1 || isMultiChannelRadio) {
+                    // Single station OR multi-channel radio - show first icon only
+                    imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">`;
+                } else {
+                    // Multiple stations (curated playlist) - create collage
+                    const collageHTML = stationIcons.map(s => `
+                        <div style="width: 50%; height: 50%; padding: 2px;">
+                            <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+                        </div>
+                    `).join('');
+                    imageContent = `<div style="display: flex; flex-wrap: wrap; width: 100%; height: 100%;">${collageHTML}</div>`;
+                }
+
+                // Check if user is admin
+                const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
+
+                const playlistHTML = `
+                    <div class="playlist-grid-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="cursor: pointer; transition: transform 0.2s ease;">
+                        ${isAdmin ? `
+                        <button class="carousel-item-menu-btn" data-curated-playlist-id="${playlist.id}" onclick="event.stopPropagation()" style="position: absolute; top: 8px; right: 8px; z-index: 10;">⋮</button>
+                        <div class="carousel-item-dropdown" style="position: absolute; top: 32px; right: 8px; z-index: 20;">
+                            <div class="dropdown-item" data-action="edit-curated-playlist" data-curated-playlist-id="${playlist.id}">
+                                <span>✏️</span> Edit
+                            </div>
+                            <div class="dropdown-item danger" data-action="delete-curated-playlist" data-curated-playlist-id="${playlist.id}">
+                                <span>🗑️</span> Delete
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div style="position: relative; width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            ${imageContent}
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(playlist.name)}</div>
+                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHtml(playlist.description)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                grid.innerHTML += playlistHTML;
+            });
+
+            // Add click handlers to playlist items
+            grid.querySelectorAll('.playlist-grid-item').forEach((item) => {
+                item.addEventListener('click', async (e) => {
+                    const playlistId = parseInt(item.dataset.playlistId);
+                    const playlist = allCuratedPlaylistsWithStations.find(p => p.id === playlistId);
+
+                    if (playlist) {
+                        // Close this modal
+                        modal.classList.remove('active');
+
+                        // Open playlist modal
+                        openCuratedPlaylistModal(playlist);
+                    }
+                });
+
+                // Add hover effect
+                item.addEventListener('mouseenter', () => {
+                    item.style.transform = 'scale(1.05)';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.transform = 'scale(1)';
+                });
+            });
+
+            // Handle admin menu buttons if present
+            if (window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon') {
+                grid.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dropdown = btn.nextElementSibling;
+                        // Close all other dropdowns
+                        document.querySelectorAll('.carousel-item-dropdown').forEach(d => {
+                            if (d !== dropdown) d.classList.remove('active');
+                        });
+                        dropdown.classList.toggle('active');
+                    });
+                });
+
+                // Handle dropdown actions
+                grid.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const action = item.dataset.action;
+                        const playlistId = parseInt(item.dataset.curatedPlaylistId);
+
+                        if (action === 'edit-curated-playlist') {
+                            const playlist = allCuratedPlaylistsWithStations.find(p => p.id === playlistId);
+                            if (playlist) {
+                                modal.classList.remove('active');
+                                openEditCuratedPlaylistModal(playlist);
+                            }
+                        } else if (action === 'delete-curated-playlist') {
+                            if (confirm('Are you sure you want to delete this curated playlist?')) {
+                                await deleteCuratedPlaylist(playlistId);
+                                // Reload the modal
+                                await renderCuratedPlaylistsInDiscoverModal();
+                                openAllCuratedPlaylistsModal();
+                            }
+                        }
+
+                        // Close dropdown
+                        item.closest('.carousel-item-dropdown').classList.remove('active');
+                    });
+                });
+            }
+
+            // Open the modal
+            modal.classList.add('active');
+            pushToNavigationHistory('allCuratedPlaylistsModal');
         }
 
         // Fetch preset searches from database
@@ -7432,6 +7596,20 @@
             discoverModal.classList.remove('active');
         });
 
+        // Close all curated playlists modal
+        const allCuratedPlaylistsModal = document.getElementById('allCuratedPlaylistsModal');
+        const closeAllCuratedPlaylistsModal = document.getElementById('closeAllCuratedPlaylistsModal');
+
+        closeAllCuratedPlaylistsModal.addEventListener('click', () => {
+            allCuratedPlaylistsModal.classList.remove('active');
+        });
+
+        // View All Curated Playlists link
+        document.getElementById('viewAllCuratedPlaylistsLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            openAllCuratedPlaylistsModal();
+        });
+
         // Search Curated Stations button in Discover modal
         document.getElementById('searchCuratedBtn').addEventListener('click', () => {
             // Close discover modal
@@ -7609,6 +7787,7 @@
                 settingsModal,
                 overviewModal,
                 discoverModal,
+                allCuratedPlaylistsModal,
                 stationInfoModal,
                 playlistModal,
                 playlistFormModal,
@@ -7719,6 +7898,8 @@
                         loadOverviewModal();
                     } else if (targetEntry.modalId === 'discoverModal') {
                         loadDiscoverModal();
+                    } else if (targetEntry.modalId === 'allCuratedPlaylistsModal') {
+                        openAllCuratedPlaylistsModal();
                     } else if (targetEntry.modalId === 'likedTracksModal') {
                         displayLikedTracks();
                     } else if (targetEntry.modalId === 'recentTracksModal') {
@@ -9483,7 +9664,7 @@
         */
 
         // Close modals on overlay click
-        [playlistsModal, browseStationsModal, playlistModal, playlistFormModal, stationFormModal, qualityModal, playbackModeModal].forEach(modal => {
+        [playlistsModal, browseStationsModal, playlistModal, playlistFormModal, stationFormModal, qualityModal, playbackModeModal, allCuratedPlaylistsModal].forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     modal.classList.remove('active');
