@@ -699,6 +699,31 @@
                             <span>Like This Song</span>
                         </button>
                     </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="audioDbLoadingIndicator" class="audiodb-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <span>Loading additional info...</span>
+                    </div>
+
+                    <!-- Enhanced Track Details -->
+                    <div id="trackDetailsSection" class="track-details-section" style="display: none;">
+                        <h3 class="section-header">Track Information</h3>
+                        <div id="trackDetailsContent" class="details-content">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Artist Information -->
+                    <div id="artistInfoSection" class="artist-info-section" style="display: none;">
+                        <h3 class="section-header">About the Artist</h3>
+                        <div class="artist-info-container">
+                            <img id="artistThumbnail" class="artist-thumbnail" alt="Artist" style="display: none;">
+                            <div id="artistInfoContent" class="details-content">
+                                <!-- Will be populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -9895,6 +9920,72 @@
             modal.classList.remove('active');
         }
 
+        // TheAudioDB API Service
+        const AudioDBService = {
+            baseUrl: 'https://www.theaudiodb.com/api/v1/json/2',
+            cache: new Map(),
+
+            // Search for artist by name
+            async searchArtist(artistName) {
+                if (!artistName) return null;
+
+                const cacheKey = `artist_${artistName.toLowerCase()}`;
+                if (this.cache.has(cacheKey)) {
+                    return this.cache.get(cacheKey);
+                }
+
+                try {
+                    const response = await fetch(`${this.baseUrl}/search.php?s=${encodeURIComponent(artistName)}`);
+                    if (!response.ok) return null;
+
+                    const data = await response.json();
+                    const artist = data.artists && data.artists.length > 0 ? data.artists[0] : null;
+
+                    this.cache.set(cacheKey, artist);
+                    return artist;
+                } catch (error) {
+                    console.error('Error fetching artist info:', error);
+                    return null;
+                }
+            },
+
+            // Search for track by artist and track name
+            async searchTrack(artistName, trackName) {
+                if (!artistName || !trackName) return null;
+
+                const cacheKey = `track_${artistName.toLowerCase()}_${trackName.toLowerCase()}`;
+                if (this.cache.has(cacheKey)) {
+                    return this.cache.get(cacheKey);
+                }
+
+                try {
+                    const response = await fetch(
+                        `${this.baseUrl}/searchtrack.php?s=${encodeURIComponent(artistName)}&t=${encodeURIComponent(trackName)}`
+                    );
+                    if (!response.ok) return null;
+
+                    const data = await response.json();
+                    const track = data.track && data.track.length > 0 ? data.track[0] : null;
+
+                    this.cache.set(cacheKey, track);
+                    return track;
+                } catch (error) {
+                    console.error('Error fetching track info:', error);
+                    return null;
+                }
+            },
+
+            // Get combined info for modal
+            async getTrackAndArtistInfo(artistName, trackName) {
+                const [artistInfo, trackInfo] = await Promise.all([
+                    this.searchArtist(artistName),
+                    this.searchTrack(artistName, trackName)
+                ]);
+
+                return { artistInfo, trackInfo };
+            }
+        };
+
         // Open now playing modal
         async function openNowPlayingModal() {
             const modal = document.getElementById('nowPlayingModal');
@@ -9923,7 +10014,152 @@
                 modalLyricsBtn.classList.add('disabled');
             }
 
+            // Show modal immediately with basic info
             modal.classList.add('active');
+
+            // Hide enhanced sections initially
+            const loadingIndicator = document.getElementById('audioDbLoadingIndicator');
+            const trackDetailsSection = document.getElementById('trackDetailsSection');
+            const artistInfoSection = document.getElementById('artistInfoSection');
+
+            trackDetailsSection.style.display = 'none';
+            artistInfoSection.style.display = 'none';
+
+            // Fetch enhanced data from TheAudioDB if we have artist and track info
+            if (currentTrack.artist && currentTrack.title) {
+                loadingIndicator.style.display = 'flex';
+
+                try {
+                    const { artistInfo, trackInfo } = await AudioDBService.getTrackAndArtistInfo(
+                        currentTrack.artist,
+                        currentTrack.title
+                    );
+
+                    // Hide loading indicator
+                    loadingIndicator.style.display = 'none';
+
+                    // Populate track details if available
+                    if (trackInfo) {
+                        populateTrackDetails(trackInfo);
+                        trackDetailsSection.style.display = 'block';
+                    }
+
+                    // Populate artist info if available
+                    if (artistInfo) {
+                        populateArtistInfo(artistInfo);
+                        artistInfoSection.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error fetching enhanced track/artist info:', error);
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+        }
+
+        // Populate track details section
+        function populateTrackDetails(trackInfo) {
+            const trackDetailsContent = document.getElementById('trackDetailsContent');
+            let html = '';
+
+            if (trackInfo.strGenre) {
+                html += `<div class="info-row">
+                    <span class="info-label">Genre:</span>
+                    <span class="info-value"><span class="info-badge">${trackInfo.strGenre}</span></span>
+                </div>`;
+            }
+
+            if (trackInfo.intMusicVidViews) {
+                html += `<div class="info-row">
+                    <span class="info-label">Year:</span>
+                    <span class="info-value">${trackInfo.intMusicVidViews}</span>
+                </div>`;
+            }
+
+            if (trackInfo.strMood) {
+                html += `<div class="info-row">
+                    <span class="info-label">Mood:</span>
+                    <span class="info-value"><span class="info-badge">${trackInfo.strMood}</span></span>
+                </div>`;
+            }
+
+            if (trackInfo.strDescriptionEN) {
+                html += `<div class="info-row" style="flex-direction: column;">
+                    <span class="info-label">About this track:</span>
+                    <p style="margin-top: 8px; line-height: 1.6;">${trackInfo.strDescriptionEN}</p>
+                </div>`;
+            }
+
+            if (trackInfo.strMusicVid) {
+                html += `<div class="info-row" style="margin-top: 10px;">
+                    <a href="${trackInfo.strMusicVid}" target="_blank" rel="noopener noreferrer" class="artist-link-btn">
+                        Watch Music Video
+                    </a>
+                </div>`;
+            }
+
+            trackDetailsContent.innerHTML = html || '<p style="color: var(--text-tertiary);">No additional track information available.</p>';
+        }
+
+        // Populate artist info section
+        function populateArtistInfo(artistInfo) {
+            const artistThumbnail = document.getElementById('artistThumbnail');
+            const artistInfoContent = document.getElementById('artistInfoContent');
+
+            // Show artist thumbnail if available
+            if (artistInfo.strArtistThumb) {
+                artistThumbnail.src = artistInfo.strArtistThumb;
+                artistThumbnail.style.display = 'block';
+            } else {
+                artistThumbnail.style.display = 'none';
+            }
+
+            let html = '';
+
+            // Artist genre and style
+            if (artistInfo.strGenre || artistInfo.strStyle) {
+                html += '<div class="info-row" style="flex-direction: column;">';
+                if (artistInfo.strGenre) {
+                    html += `<span class="info-badge">${artistInfo.strGenre}</span>`;
+                }
+                if (artistInfo.strStyle) {
+                    html += `<span class="info-badge">${artistInfo.strStyle}</span>`;
+                }
+                if (artistInfo.strMood) {
+                    html += `<span class="info-badge">${artistInfo.strMood}</span>`;
+                }
+                html += '</div>';
+            }
+
+            // Artist biography
+            if (artistInfo.strBiographyEN) {
+                const bio = artistInfo.strBiographyEN;
+                // Truncate bio if it's too long
+                const maxLength = 600;
+                const truncatedBio = bio.length > maxLength ? bio.substring(0, maxLength) + '...' : bio;
+                html += `<div class="artist-bio">${truncatedBio}</div>`;
+            }
+
+            // Artist links
+            const links = [];
+            if (artistInfo.strWebsite) {
+                links.push({ url: `https://${artistInfo.strWebsite}`, label: 'Website' });
+            }
+            if (artistInfo.strFacebook) {
+                links.push({ url: `https://${artistInfo.strFacebook}`, label: 'Facebook' });
+            }
+            if (artistInfo.strTwitter) {
+                links.push({ url: `https://${artistInfo.strTwitter}`, label: 'Twitter' });
+            }
+
+            if (links.length > 0) {
+                html += '<div class="artist-links">';
+                links.forEach(link => {
+                    html += `<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="artist-link-btn">${link.label}</a>`;
+                });
+                html += '</div>';
+            }
+
+            artistInfoContent.innerHTML = html || '<p style="color: var(--text-tertiary);">No artist information available.</p>';
         }
 
         // Close now playing modal
