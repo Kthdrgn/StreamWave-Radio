@@ -4830,6 +4830,9 @@
             }
         }
 
+        // Expose to global scope for onclick handlers
+        window.updatePresetSearchDisplayOrder = updatePresetSearchDisplayOrder;
+
         // Admin: Show preset search form (for create or edit)
         let currentEditingPresetId = null;
         async function showPresetSearchForm(presetId = null) {
@@ -4870,6 +4873,9 @@
             document.getElementById('adminPresetSearchesModal').classList.remove('active');
             formModal.classList.add('active');
         }
+
+        // Expose to global scope for onclick handlers
+        window.showPresetSearchForm = showPresetSearchForm;
 
         // Admin: Save preset search (create or update)
         async function savePresetSearch(event) {
@@ -4964,6 +4970,9 @@
                 alert('Error deleting preset search. Please try again.');
             }
         }
+
+        // Expose to global scope for onclick handlers
+        window.deletePresetSearch = deletePresetSearch;
 
         // Shuffle array using Fisher-Yates algorithm
         function shuffleArray(array) {
