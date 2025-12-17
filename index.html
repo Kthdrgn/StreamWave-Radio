@@ -3457,7 +3457,7 @@
                                     for (const sample of data.samples) {
                                         if (sample.data) {
                                             const id3Data = sample.data;
-                                            const frames = parseID3Frames({ samples: [{ data: id3Data }] });
+                                            const frames = parseID3Frames(id3Data);
 
                                             if (frames.TIT2 || frames.TPE1) {
                                                 metadataReceived = true;
@@ -9978,8 +9978,27 @@
             const frames = {};
 
             try {
+                // Validate input data
+                if (!data) {
+                    console.warn('parseID3Frames: No data provided');
+                    return frames;
+                }
+
+                // Convert to ArrayBuffer if needed
+                let buffer;
+                if (data instanceof ArrayBuffer) {
+                    buffer = data;
+                } else if (data.buffer instanceof ArrayBuffer) {
+                    buffer = data.buffer;
+                } else if (ArrayBuffer.isView(data)) {
+                    buffer = data.buffer;
+                } else {
+                    console.warn('parseID3Frames: Invalid data type, expected ArrayBuffer or TypedArray');
+                    return frames;
+                }
+
                 // ID3 tags in HLS are typically in ID3v2 format
-                const view = new DataView(data.buffer || data);
+                const view = new DataView(buffer);
                 let offset = 0;
 
                 // Check for ID3 header
