@@ -4609,8 +4609,8 @@
             // Clear existing content
             grid.innerHTML = '';
 
-            // Render all playlists in a grid
-            allCuratedPlaylistsWithStations.forEach((playlist) => {
+            // Build all HTML at once
+            const playlistsHTML = allCuratedPlaylistsWithStations.map((playlist) => {
                 const stations = playlist.stations || [];
                 const stationIcons = stations.filter(s => s && s.icon_url).slice(0, 4);
 
@@ -4637,7 +4637,7 @@
                 // Check if user is admin
                 const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
 
-                const playlistHTML = `
+                return `
                     <div class="playlist-grid-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="cursor: pointer; transition: transform 0.2s ease; position: relative;">
                         ${isAdmin ? `
                         <button class="carousel-item-menu-btn" data-curated-playlist-id="${playlist.id}" onclick="event.stopPropagation()" style="position: absolute; top: 8px; right: 8px; z-index: 10;">⋮</button>
@@ -4659,20 +4659,28 @@
                         </div>
                     </div>
                 `;
+            }).join('');
 
-                grid.innerHTML += playlistHTML;
-            });
+            // Set all HTML at once
+            grid.innerHTML = playlistsHTML;
 
             // Add click handlers to playlist items
             grid.querySelectorAll('.playlist-grid-item').forEach((item) => {
-                item.addEventListener('click', async (e) => {
+                item.addEventListener('click', (e) => {
+                    // Don't trigger if clicking on admin menu
+                    if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
+                        return;
+                    }
+
                     const playlistId = parseInt(item.dataset.playlistId);
 
-                    // Close this modal
+                    // Close this modal first
                     modal.classList.remove('active');
 
-                    // Open playlist modal using the existing function
-                    openCuratedPlaylist(playlistId);
+                    // Use setTimeout to ensure modal closes before opening new one
+                    setTimeout(() => {
+                        openCuratedPlaylist(playlistId);
+                    }, 50);
                 });
 
                 // Add hover effect
