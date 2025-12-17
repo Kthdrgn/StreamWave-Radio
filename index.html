@@ -1711,6 +1711,9 @@
             closeNowPlayingModal();
         }
 
+        // Expose to global scope for onclick handlers
+        window.toggleLikeTrack = toggleLikeTrack;
+
         // Update like button state
         async function updateLikeButton() {
             // Update modal like button if it exists
@@ -9848,6 +9851,9 @@
             modal.classList.add('active');
             lastOpenedModal = 'lyricsModal';
         }
+
+        // Expose to global scope for onclick handlers
+        window.showLyricsModal = showLyricsModal;
 
         // Close lyrics modal
         function closeLyricsModal() {
