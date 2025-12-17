@@ -4054,6 +4054,9 @@
             curatedPlaylistFormModal.classList.add('active');
         }
 
+        // Expose to global scope for onclick handlers
+        window.showCuratedPlaylistForm = showCuratedPlaylistForm;
+
         // Save curated playlist (create or update)
         async function saveCuratedPlaylist() {
             try {
@@ -4229,6 +4232,9 @@
             }
         }
 
+        // Expose to global scope for onclick handlers
+        window.confirmDeleteCuratedPlaylist = confirmDeleteCuratedPlaylist;
+
         // Setup drag and drop for curated playlist reordering
         function setupCuratedPlaylistDragAndDrop() {
             const playlistItems = document.querySelectorAll('.curated-playlist-item');
@@ -4349,6 +4355,9 @@
                 await loadAdminCuratedPlaylists();
             }
         }
+
+        // Expose to global scope for onchange handlers
+        window.updateCuratedPlaylistSortOrder = updateCuratedPlaylistSortOrder;
 
         // Load playlist stations (includes both internal and external stations)
         async function loadPlaylistStations(playlistId) {
