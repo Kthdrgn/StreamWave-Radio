@@ -3700,18 +3700,56 @@
                     if (tempPlayer.audioElement) {
                         tempPlayer.audioElement.volume = 0;
                         tempPlayer.audioElement.muted = true;
-                        tempPlayer.play().catch(() => {
-                            clearTimeout(timeout);
-                            resolve(null);
+
+                        // Add error event listener to catch AbortError and other playback errors
+                        tempPlayer.audioElement.addEventListener('error', (e) => {
+                            // Silently handle AbortError - it's expected when streams are interrupted
+                            if (!metadataReceived) {
+                                clearTimeout(timeout);
+                                if (tempPlayer) {
+                                    try {
+                                        tempPlayer.stop();
+                                    } catch (err) {
+                                        // Ignore cleanup errors
+                                    }
+                                }
+                                resolve(null);
+                            }
+                        }, { once: true });
+
+                        tempPlayer.play().catch((err) => {
+                            // Silently handle AbortError - it's expected when multiple streams load
+                            if (!metadataReceived) {
+                                clearTimeout(timeout);
+                                resolve(null);
+                            }
                         });
                     } else {
                         setTimeout(() => {
                             if (tempPlayer && tempPlayer.audioElement) {
                                 tempPlayer.audioElement.volume = 0;
                                 tempPlayer.audioElement.muted = true;
-                                tempPlayer.play().catch(() => {
-                                    clearTimeout(timeout);
-                                    resolve(null);
+
+                                // Add error event listener
+                                tempPlayer.audioElement.addEventListener('error', (e) => {
+                                    if (!metadataReceived) {
+                                        clearTimeout(timeout);
+                                        if (tempPlayer) {
+                                            try {
+                                                tempPlayer.stop();
+                                            } catch (err) {
+                                                // Ignore cleanup errors
+                                            }
+                                        }
+                                        resolve(null);
+                                    }
+                                }, { once: true });
+
+                                tempPlayer.play().catch((err) => {
+                                    if (!metadataReceived) {
+                                        clearTimeout(timeout);
+                                        resolve(null);
+                                    }
                                 });
                             }
                         }, 500);
@@ -5351,39 +5389,44 @@
                 });
             });
 
-            // Fetch metadata for each station in parallel
-            stations.forEach(async (station, index) => {
-                const metadata = await fetchStationCurrentMetadata(station);
+            // Fetch metadata for each station with concurrency limit to avoid race conditions
+            // Limit to 2 concurrent metadata fetches to prevent AbortError from too many simultaneous streams
+            await limitConcurrency(stations, 2, async (station, index) => {
+                try {
+                    const metadata = await fetchStationCurrentMetadata(station);
 
-                // Update the station's metadata display
-                const stationElement = listContainer.querySelector(`[data-station-id="${station.id}"]`);
-                if (!stationElement) return;
+                    // Update the station's metadata display
+                    const stationElement = listContainer.querySelector(`[data-station-id="${station.id}"]`);
+                    if (!stationElement) return;
 
-                const contentDiv = stationElement.querySelector('.station-list-content');
-                if (!contentDiv) return;
+                    const contentDiv = stationElement.querySelector('.station-list-content');
+                    if (!contentDiv) return;
 
-                // Remove loading message
-                const loadingDiv = contentDiv.querySelector('.station-list-metadata-loading');
-                if (loadingDiv) {
-                    loadingDiv.remove();
-                }
+                    // Remove loading message
+                    const loadingDiv = contentDiv.querySelector('.station-list-metadata-loading');
+                    if (loadingDiv) {
+                        loadingDiv.remove();
+                    }
 
-                if (metadata && (metadata.title || metadata.artist)) {
-                    // Add metadata display
-                    const metadataDiv = document.createElement('div');
-                    metadataDiv.className = 'station-list-metadata';
-                    metadataDiv.innerHTML = `
-                        <div class="station-list-now-playing">
-                            ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
-                        </div>
-                    `;
-                    contentDiv.appendChild(metadataDiv);
-                } else {
-                    // No metadata available
-                    const emptyDiv = document.createElement('div');
-                    emptyDiv.className = 'station-list-metadata-empty';
-                    emptyDiv.textContent = 'No track info available';
-                    contentDiv.appendChild(emptyDiv);
+                    if (metadata && (metadata.title || metadata.artist)) {
+                        // Add metadata display
+                        const metadataDiv = document.createElement('div');
+                        metadataDiv.className = 'station-list-metadata';
+                        metadataDiv.innerHTML = `
+                            <div class="station-list-now-playing">
+                                ${metadata.artist ? `${escapeHtml(metadata.artist)} - ` : ''}${escapeHtml(metadata.title || 'Unknown')}
+                            </div>
+                        `;
+                        contentDiv.appendChild(metadataDiv);
+                    } else {
+                        // No metadata available
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.className = 'station-list-metadata-empty';
+                        emptyDiv.textContent = 'No track info available';
+                        contentDiv.appendChild(emptyDiv);
+                    }
+                } catch (error) {
+                    console.warn('Error fetching metadata for station:', station.name, error);
                 }
             });
         }
@@ -10058,6 +10101,30 @@
             }
 
             return frames;
+        }
+
+        // Helper function to limit concurrent async operations
+        async function limitConcurrency(items, limit, asyncFn) {
+            const results = [];
+            const executing = [];
+
+            for (const [index, item] of items.entries()) {
+                const promise = Promise.resolve().then(() => asyncFn(item, index));
+                results.push(promise);
+
+                if (limit <= items.length) {
+                    const executing_promise = promise.then(() =>
+                        executing.splice(executing.indexOf(executing_promise), 1)
+                    );
+                    executing.push(executing_promise);
+
+                    if (executing.length >= limit) {
+                        await Promise.race(executing);
+                    }
+                }
+            }
+
+            return Promise.all(results);
         }
 
         // Helper function to play HLS stream
