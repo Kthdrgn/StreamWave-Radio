@@ -4638,7 +4638,7 @@
                 const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
 
                 const playlistHTML = `
-                    <div class="playlist-grid-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="cursor: pointer; transition: transform 0.2s ease;">
+                    <div class="playlist-grid-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="cursor: pointer; transition: transform 0.2s ease; position: relative;">
                         ${isAdmin ? `
                         <button class="carousel-item-menu-btn" data-curated-playlist-id="${playlist.id}" onclick="event.stopPropagation()" style="position: absolute; top: 8px; right: 8px; z-index: 10;">⋮</button>
                         <div class="carousel-item-dropdown" style="position: absolute; top: 32px; right: 8px; z-index: 20;">
@@ -4650,7 +4650,7 @@
                             </div>
                         </div>
                         ` : ''}
-                        <div style="position: relative; width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div style="position: relative; width: 100%; aspect-ratio: 1; background: var(--card-bg); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                             ${imageContent}
                         </div>
                         <div style="margin-top: 12px;">
@@ -4667,15 +4667,12 @@
             grid.querySelectorAll('.playlist-grid-item').forEach((item) => {
                 item.addEventListener('click', async (e) => {
                     const playlistId = parseInt(item.dataset.playlistId);
-                    const playlist = allCuratedPlaylistsWithStations.find(p => p.id === playlistId);
 
-                    if (playlist) {
-                        // Close this modal
-                        modal.classList.remove('active');
+                    // Close this modal
+                    modal.classList.remove('active');
 
-                        // Open playlist modal
-                        openCuratedPlaylistModal(playlist);
-                    }
+                    // Open playlist modal using the existing function
+                    openCuratedPlaylist(playlistId);
                 });
 
                 // Add hover effect
