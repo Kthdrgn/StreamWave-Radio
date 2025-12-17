@@ -10125,11 +10125,7 @@
 
             // Artist biography
             if (artistInfo.strBiographyEN) {
-                const bio = artistInfo.strBiographyEN;
-                // Truncate bio if it's too long
-                const maxLength = 600;
-                const truncatedBio = bio.length > maxLength ? bio.substring(0, maxLength) + '...' : bio;
-                html += `<div class="artist-bio">${truncatedBio}</div>`;
+                html += `<div class="artist-bio">${artistInfo.strBiographyEN}</div>`;
             }
 
             // Artist links
