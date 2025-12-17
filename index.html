@@ -9991,9 +9991,9 @@
             const modal = document.getElementById('nowPlayingModal');
 
             // Update modal content
-            document.getElementById('modalSongTitle').textContent = currentTrack.title || '-';
-            document.getElementById('modalArtistName').textContent = currentTrack.artist || '-';
-            document.getElementById('modalAlbumName').textContent = currentTrack.album || '-';
+            document.getElementById('modalSongTitle').textContent = currentTrack.title || '';
+            document.getElementById('modalArtistName').textContent = currentTrack.artist || '';
+            document.getElementById('modalAlbumName').textContent = currentTrack.album || '';
 
             // Update like button state
             const modalLikeBtn = document.getElementById('modalLikeBtn');
