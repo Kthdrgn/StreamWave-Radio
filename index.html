@@ -10068,13 +10068,6 @@
                 </div>`;
             }
 
-            if (trackInfo.intMusicVidViews) {
-                html += `<div class="info-row">
-                    <span class="info-label">Year:</span>
-                    <span class="info-value">${trackInfo.intMusicVidViews}</span>
-                </div>`;
-            }
-
             if (trackInfo.strMood) {
                 html += `<div class="info-row">
                     <span class="info-label">Mood:</span>
@@ -10146,9 +10139,6 @@
             }
             if (artistInfo.strFacebook) {
                 links.push({ url: `https://${artistInfo.strFacebook}`, label: 'Facebook' });
-            }
-            if (artistInfo.strTwitter) {
-                links.push({ url: `https://${artistInfo.strTwitter}`, label: 'Twitter' });
             }
 
             if (links.length > 0) {
