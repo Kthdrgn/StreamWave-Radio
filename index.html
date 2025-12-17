@@ -1855,7 +1855,10 @@
                 alert('Failed to copy to clipboard');
             }
         }
-        
+
+        // Expose to global scope for onclick handlers
+        window.copySingleTrack = copySingleTrack;
+
         // Copy all liked tracks to clipboard
         async function copyAllLikedTracks() {
             const likedTracks = await window.loadLikedTracks();
@@ -2071,6 +2074,9 @@
                 await updateLikeButton();
             }
         }
+
+        // Expose to global scope for onclick handlers
+        window.unlikeTrack = unlikeTrack;
 
         // Clear all liked tracks
         async function clearAllLikedTracks() {
