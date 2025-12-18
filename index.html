@@ -1378,8 +1378,32 @@
                         <small style="color: var(--text-secondary); font-size: 12px;">Comma-separated tags</small>
                     </div>
                     <div class="form-group">
-                        <label for="presetSearchImageUrl">Image URL</label>
-                        <input type="url" id="presetSearchImageUrl" class="form-input" placeholder="https://example.com/image.jpg (optional)">
+                        <label class="form-label" for="presetSearchImageUpload">Preset Image</label>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div id="presetIconPreview" style="display: none; align-items: center; gap: 10px; padding: 10px; background: var(--input-bg); border-radius: 8px;">
+                                <img id="presetIconPreviewImg" src="" alt="Preview" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;">
+                                <div style="flex: 1;">
+                                    <div id="presetIconPreviewName" style="font-size: 14px; color: var(--text-primary); font-weight: 500;"></div>
+                                    <div id="presetIconPreviewSize" style="font-size: 12px; color: var(--text-secondary);"></div>
+                                </div>
+                                <button type="button" id="removePresetIcon" class="form-btn form-btn-secondary" style="padding: 6px 12px; font-size: 12px;">Remove</button>
+                            </div>
+                            <input
+                                type="file"
+                                id="presetSearchImageUpload"
+                                accept="image/*"
+                                style="display: none;"
+                            >
+                            <button type="button" id="uploadPresetIconBtn" class="form-btn form-btn-secondary" style="width: 100%;">
+                                📷 Choose Image
+                            </button>
+                            <input
+                                type="url"
+                                id="presetSearchImageUrl"
+                                class="form-input"
+                                placeholder="Or paste image URL"
+                            >
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="presetSearchDescription">Description</label>
@@ -5051,6 +5075,12 @@
             form.reset();
             currentEditingPresetId = presetId;
 
+            // Reset image upload preview
+            document.getElementById('presetSearchImageUpload').value = '';
+            document.getElementById('presetIconPreview').style.display = 'none';
+            document.getElementById('uploadPresetIconBtn').textContent = '📷 Choose Image';
+            document.getElementById('uploadPresetIconBtn').style.background = '';
+
             if (presetId) {
                 // Edit mode - load existing preset
                 formTitle.textContent = 'Edit Preset Search';
@@ -5088,13 +5118,55 @@
         async function savePresetSearch(event) {
             event.preventDefault();
 
+            let image_url = document.getElementById('presetSearchImageUrl').value.trim() || null;
+
+            // Check if there's an uploaded image file
+            const fileInput = document.getElementById('presetSearchImageUpload');
+            if (fileInput.files && fileInput.files[0]) {
+                try {
+                    // Upload image to Supabase Storage
+                    const file = fileInput.files[0];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                    const filePath = `preset-images/${fileName}`;
+
+                    console.log('Uploading preset image to Supabase Storage:', filePath);
+
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('station-images')
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (uploadError) {
+                        console.error('Upload error:', uploadError);
+                        alert('Failed to upload image: ' + uploadError.message);
+                        return;
+                    }
+
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('station-images')
+                        .getPublicUrl(filePath);
+
+                    image_url = urlData.publicUrl;
+                    console.log('Image uploaded successfully:', image_url);
+
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Failed to upload image: ' + error.message);
+                    return;
+                }
+            }
+
             const formData = {
                 name: document.getElementById('presetSearchName').value.trim(),
                 station_name: document.getElementById('presetSearchStationName').value.trim() || null,
                 country: document.getElementById('presetSearchCountry').value.trim() || null,
                 language: document.getElementById('presetSearchLanguage').value.trim() || null,
                 tags: document.getElementById('presetSearchTags').value.trim() || null,
-                image_url: document.getElementById('presetSearchImageUrl').value.trim() || null,
+                image_url: image_url,
                 description: document.getElementById('presetSearchDescription').value.trim() || null,
                 display_order: parseInt(document.getElementById('presetSearchDisplayOrder').value) || 0
             };
@@ -5124,6 +5196,12 @@
                     alert('Error saving preset search: ' + result.error.message);
                     return;
                 }
+
+                // Reset image upload preview
+                document.getElementById('presetSearchImageUpload').value = '';
+                document.getElementById('presetIconPreview').style.display = 'none';
+                document.getElementById('uploadPresetIconBtn').textContent = '📷 Choose Image';
+                document.getElementById('uploadPresetIconBtn').style.background = '';
 
                 // Close form and reload admin list
                 document.getElementById('presetSearchFormModal').classList.remove('active');
@@ -9242,15 +9320,69 @@
         // Close preset search form modal
         document.getElementById('closePresetSearchFormModal').addEventListener('click', () => {
             document.getElementById('presetSearchFormModal').classList.remove('active');
+            // Reset image upload preview
+            document.getElementById('presetSearchImageUpload').value = '';
+            document.getElementById('presetIconPreview').style.display = 'none';
+            document.getElementById('uploadPresetIconBtn').textContent = '📷 Choose Image';
+            document.getElementById('uploadPresetIconBtn').style.background = '';
         });
 
         // Cancel preset search form
         document.getElementById('cancelPresetSearchFormBtn').addEventListener('click', () => {
             document.getElementById('presetSearchFormModal').classList.remove('active');
+            // Reset image upload preview
+            document.getElementById('presetSearchImageUpload').value = '';
+            document.getElementById('presetIconPreview').style.display = 'none';
+            document.getElementById('uploadPresetIconBtn').textContent = '📷 Choose Image';
+            document.getElementById('uploadPresetIconBtn').style.background = '';
         });
 
         // Preset search form submission
         document.getElementById('presetSearchForm').addEventListener('submit', savePresetSearch);
+
+        // Preset search image upload handlers
+        const uploadPresetIconBtn = document.getElementById('uploadPresetIconBtn');
+        const presetSearchImageUpload = document.getElementById('presetSearchImageUpload');
+        const presetIconPreview = document.getElementById('presetIconPreview');
+        const presetIconPreviewImg = document.getElementById('presetIconPreviewImg');
+        const presetIconPreviewName = document.getElementById('presetIconPreviewName');
+        const presetIconPreviewSize = document.getElementById('presetIconPreviewSize');
+        const removePresetIconBtn = document.getElementById('removePresetIcon');
+
+        uploadPresetIconBtn.addEventListener('click', () => {
+            presetSearchImageUpload.click();
+        });
+
+        presetSearchImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image size must be less than 5MB');
+                    e.target.value = '';
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    presetIconPreviewImg.src = e.target.result;
+                    presetIconPreviewName.textContent = file.name;
+                    presetIconPreviewSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+                    presetIconPreview.style.display = 'flex';
+                    uploadPresetIconBtn.textContent = '✓ Image Selected';
+                    uploadPresetIconBtn.style.background = 'var(--success-color, #4caf50)';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        removePresetIconBtn.addEventListener('click', () => {
+            presetSearchImageUpload.value = '';
+            presetIconPreview.style.display = 'none';
+            uploadPresetIconBtn.textContent = '📷 Choose Image';
+            uploadPresetIconBtn.style.background = '';
+        });
 
         // Playlist form
         playlistForm.addEventListener('submit', async (e) => {
