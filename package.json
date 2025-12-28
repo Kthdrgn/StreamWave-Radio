@@ -1,0 +1,37 @@
+{
+  "name": "streamwave-radio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "radio-auth.js",
+  "scripts": {
+    "build": "npm run copy",
+    "copy": "cp -r *.html *.js manifest.json css icons www/",
+    "sync": "npm run copy && npx cap sync",
+    "sync:ios": "npm run copy && npx cap sync ios",
+    "sync:android": "npm run copy && npx cap sync android",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:16982/git/Kthdrgn/StreamWave-Radio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  },
+  "dependencies": {
+    "@capacitor-community/background-geolocation": "^1.2.26",
+    "@capacitor-community/media": "^8.0.1",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
+  }
+}

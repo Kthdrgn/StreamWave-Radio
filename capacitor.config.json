@@ -1,0 +1,8 @@
+{
+  "appId": "com.streamwave.radio",
+  "appName": "StreamWave Radio",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
