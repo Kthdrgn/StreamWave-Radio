@@ -1,7 +1,7 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v6'; // Fix Radio Browser API - User-Agent in service worker
+const CACHE_NAME = 'radio-player-v7'; // Fix Radio Browser API - bypass service worker completely
 const urlsToCache = [
     './',
     './index.html',
@@ -54,16 +54,9 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Don't cache Radio Browser API calls - add User-Agent header
+    // Don't intercept Radio Browser API calls - let them pass through normally
+    // The browser will send its default User-Agent header
     if (event.request.url.includes('radio-browser.info')) {
-        event.respondWith(
-            fetch(event.request, {
-                headers: {
-                    ...Object.fromEntries(event.request.headers.entries()),
-                    'User-Agent': 'StreamWave-Radio/1.0'
-                }
-            })
-        );
         return;
     }
 
