@@ -1,7 +1,7 @@
 // Service Worker for Radio Player PWA
 // This service worker adds cache clearing capability
 
-const CACHE_NAME = 'radio-player-v4'; // Incremented to force cache update
+const CACHE_NAME = 'radio-player-v5'; // Incremented to force cache update - fix Radio Browser API CORS
 const urlsToCache = [
     './',
     './index.html',
@@ -50,6 +50,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     // Don't cache Supabase API calls
     if (event.request.url.includes('supabase.co')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
+    // Don't cache Radio Browser API calls
+    if (event.request.url.includes('radio-browser.info')) {
         event.respondWith(fetch(event.request));
         return;
     }
