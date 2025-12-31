@@ -2204,11 +2204,6 @@
 
         const RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
 
-        // Radio Browser API requires a User-Agent header
-        const RADIO_BROWSER_HEADERS = {
-            'User-Agent': 'StreamWave-Radio/1.0'
-        };
-
         // Cache original filter data for dynamic filtering
         let originalLanguages = [];
         let originalTags = [];
@@ -2217,9 +2212,7 @@
         async function loadRadioBrowserFilters() {
             try {
                 // Load top countries
-                const countriesRes = await fetch(`${RADIO_BROWSER_API_BASE}/countries?order=stationcount&reverse=true&limit=50`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const countriesRes = await fetch(`${RADIO_BROWSER_API_BASE}/countries?order=stationcount&reverse=true&limit=50`);
                 const countries = await countriesRes.json();
 
                 countries.forEach(country => {
@@ -2232,9 +2225,7 @@
                 });
 
                 // Load top languages
-                const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`);
                 const languages = await languagesRes.json();
 
                 // Cache original languages
@@ -2248,9 +2239,7 @@
                 });
 
                 // Load top tags
-                const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`);
                 const tags = await tagsRes.json();
 
                 // Cache original tags
@@ -2282,9 +2271,7 @@
                 params.append('limit', '10000');
                 params.append('hidebroken', 'true');
 
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
                 const stations = await response.json();
 
                 // Extract unique languages and count stations
@@ -2339,9 +2326,7 @@
                 params.append('limit', '10000');
                 params.append('hidebroken', 'true');
 
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
                 const stations = await response.json();
 
                 // Extract unique tags and count stations
@@ -2481,9 +2466,7 @@
             // radioDatabaseResults.innerHTML = '';
 
             try {
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch stations');
@@ -4885,9 +4868,7 @@
 
             try {
                 // Fetch from Radio Browser API
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`, {
-                    headers: RADIO_BROWSER_HEADERS
-                });
+                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
                 const results = await response.json();
 
                 // Apply any advanced filters
