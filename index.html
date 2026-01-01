@@ -2202,7 +2202,37 @@
         // RADIO BROWSER API FUNCTIONS
         // ======================
 
-        const RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
+        // Dynamic server selection - will be set after discovering available servers
+        let RADIO_BROWSER_API_BASE = null;
+
+        // Discover and select a Radio Browser API server
+        async function getRadioBrowserServer() {
+            // Return cached server if already discovered
+            if (RADIO_BROWSER_API_BASE) {
+                return RADIO_BROWSER_API_BASE;
+            }
+
+            try {
+                // Fetch list of available servers from all.api.radio-browser.info
+                const response = await fetch('https://all.api.radio-browser.info/json/servers');
+                const servers = await response.json();
+
+                if (servers && servers.length > 0) {
+                    // Pick a random server from the list
+                    const randomServer = servers[Math.floor(Math.random() * servers.length)];
+                    RADIO_BROWSER_API_BASE = `https://${randomServer.name}/json`;
+                    console.log('🌐 Using Radio Browser server:', randomServer.name);
+                    return RADIO_BROWSER_API_BASE;
+                } else {
+                    throw new Error('No servers available');
+                }
+            } catch (error) {
+                // Fallback to de1 if server discovery fails
+                console.warn('Server discovery failed, using fallback:', error);
+                RADIO_BROWSER_API_BASE = 'https://de1.api.radio-browser.info/json';
+                return RADIO_BROWSER_API_BASE;
+            }
+        }
 
         // Cache original filter data for dynamic filtering
         let originalLanguages = [];
@@ -2211,8 +2241,11 @@
         // Load countries, languages, and tags for the dropdowns
         async function loadRadioBrowserFilters() {
             try {
+                // Discover available server first
+                const apiBase = await getRadioBrowserServer();
+
                 // Load top countries
-                const countriesRes = await fetch(`${RADIO_BROWSER_API_BASE}/countries?order=stationcount&reverse=true&limit=50`);
+                const countriesRes = await fetch(`${apiBase}/countries?order=stationcount&reverse=true&limit=50`);
                 const countries = await countriesRes.json();
 
                 countries.forEach(country => {
@@ -2225,7 +2258,7 @@
                 });
 
                 // Load top languages
-                const languagesRes = await fetch(`${RADIO_BROWSER_API_BASE}/languages?order=stationcount&reverse=true&limit=50`);
+                const languagesRes = await fetch(`${apiBase}/languages?order=stationcount&reverse=true&limit=50`);
                 const languages = await languagesRes.json();
 
                 // Cache original languages
@@ -2239,7 +2272,7 @@
                 });
 
                 // Load top tags
-                const tagsRes = await fetch(`${RADIO_BROWSER_API_BASE}/tags?order=stationcount&reverse=true&limit=100`);
+                const tagsRes = await fetch(`${apiBase}/tags?order=stationcount&reverse=true&limit=100`);
                 const tags = await tagsRes.json();
 
                 // Cache original tags
@@ -2265,13 +2298,16 @@
             }
 
             try {
+                // Get server
+                const apiBase = await getRadioBrowserServer();
+
                 // Fetch stations from selected country
                 const params = new URLSearchParams();
                 params.append('country', country);
                 params.append('limit', '10000');
                 params.append('hidebroken', 'true');
 
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const response = await fetch(`${apiBase}/stations/search?${params.toString()}`);
                 const stations = await response.json();
 
                 // Extract unique languages and count stations
@@ -2319,6 +2355,9 @@
             }
 
             try {
+                // Get server
+                const apiBase = await getRadioBrowserServer();
+
                 // Fetch stations with selected filters
                 const params = new URLSearchParams();
                 if (country) params.append('country', country);
@@ -2326,7 +2365,7 @@
                 params.append('limit', '10000');
                 params.append('hidebroken', 'true');
 
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const response = await fetch(`${apiBase}/stations/search?${params.toString()}`);
                 const stations = await response.json();
 
                 // Extract unique tags and count stations
@@ -2466,7 +2505,10 @@
             // radioDatabaseResults.innerHTML = '';
 
             try {
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                // Get server
+                const apiBase = await getRadioBrowserServer();
+
+                const response = await fetch(`${apiBase}/stations/search?${params.toString()}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch stations');
@@ -4867,8 +4909,11 @@
             params.append('hidebroken', 'true');
 
             try {
+                // Get server
+                const apiBase = await getRadioBrowserServer();
+
                 // Fetch from Radio Browser API
-                const response = await fetch(`${RADIO_BROWSER_API_BASE}/stations/search?${params.toString()}`);
+                const response = await fetch(`${apiBase}/stations/search?${params.toString()}`);
                 const results = await response.json();
 
                 // Apply any advanced filters
