@@ -11194,8 +11194,8 @@
                 // If playing, stop both audio and metadata players
                 if (isPlaying && simpleAudioPlayer && !simpleAudioPlayer.paused) {
                     simpleAudioPlayer.pause();
-                    simpleAudioPlayer.removeAttribute('src'); // Remove source to fully stop
-                    simpleAudioPlayer.load(); // Reset the media element
+                    simpleAudioPlayer.src = ''; // Clear source to fully stop
+                    simpleAudioPlayer = null; // Destroy player so a fresh one is created on restart
                     stopMetadataOnlyPlayer(); // Stop metadata player to keep in sync
                     isPlaying = false;
                     isPaused = false; // Not paused, fully stopped
@@ -11224,18 +11224,17 @@
                     updateStatus('Please select a station', 'error');
                     return;
                 }
-                
-                // Check if CORS proxy should be used
-                const useCorsProxy = document.getElementById('globalCorsProxy').checked;
 
-                // Force CORS proxy for HTTP URLs on HTTPS pages (mixed content fix)
+                // In Simple Mode, we already know the direct connection works
+                // (otherwise we wouldn't be in Simple Mode). Only use CORS proxy
+                // if absolutely necessary for mixed content security.
                 const needsCorsForMixedContent = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
-                const streamUrl = (useCorsProxy || needsCorsForMixedContent)
+                const streamUrl = needsCorsForMixedContent
                     ? `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
                     : rawUrl;
 
-                if (needsCorsForMixedContent && !useCorsProxy) {
+                if (needsCorsForMixedContent) {
                     console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
                 }
                 
@@ -11279,11 +11278,17 @@
                             console.log('Ignoring error during reload');
                             return;
                         }
-                        
+
+                        // Ignore errors if player was destroyed (simpleAudioPlayer = null)
+                        if (!simpleAudioPlayer) {
+                            console.log('Ignoring error from destroyed player');
+                            return;
+                        }
+
                         console.error('Simple player error:', e);
                         console.error('Audio element error code:', simpleAudioPlayer.error?.code);
                         console.error('Audio element error message:', simpleAudioPlayer.error?.message);
-                        
+
                         let errorMsg = 'Error: Unable to play stream';
                         if (simpleAudioPlayer.error) {
                             switch(simpleAudioPlayer.error.code) {
@@ -11374,8 +11379,8 @@
 
             // If paused (non-HLS only), resume
             if (isPaused) {
-                isPaused = false;
                 if (audioElement && audioElement.src) {
+                    isPaused = false;
                     audioElement.play();
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
@@ -11386,6 +11391,7 @@
                     }
                     return;
                 } else if (player && player.audioElement && player.audioElement.src) {
+                    isPaused = false;
                     player.audioElement.play();
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
@@ -11395,6 +11401,11 @@
                         navigator.mediaSession.playbackState = 'playing';
                     }
                     return;
+                } else {
+                    // No valid src to resume - reset pause state and start fresh
+                    console.log('No valid src to resume - restarting stream fresh');
+                    isPaused = false;
+                    // Fall through to "start fresh" logic below
                 }
             }
             
@@ -11597,6 +11608,22 @@
                                         console.log('Ignoring error during reload');
                                         return;
                                     }
+
+                                    // Ignore errors if player was destroyed (simpleAudioPlayer = null)
+                                    if (!simpleAudioPlayer) {
+                                        console.log('Ignoring error from destroyed player');
+                                        return;
+                                    }
+
+                                    // Ignore error if we intentionally cleared the src (stopping)
+                                    // Note: When src is set to '', the actual value becomes window.location.href
+                                    if (!simpleAudioPlayer.src ||
+                                        simpleAudioPlayer.src === '' ||
+                                        simpleAudioPlayer.src === window.location.href) {
+                                        console.log('Ignoring error from intentionally cleared src');
+                                        return;
+                                    }
+
                                     console.error('Simple player error:', e);
                                     updateStatus('Error: Unable to play stream', 'error');
                                     isPlaying = false;
