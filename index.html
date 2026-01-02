@@ -11279,11 +11279,17 @@
                             console.log('Ignoring error during reload');
                             return;
                         }
-                        
+
+                        // Ignore errors if player was destroyed (simpleAudioPlayer = null)
+                        if (!simpleAudioPlayer) {
+                            console.log('Ignoring error from destroyed player');
+                            return;
+                        }
+
                         console.error('Simple player error:', e);
                         console.error('Audio element error code:', simpleAudioPlayer.error?.code);
                         console.error('Audio element error message:', simpleAudioPlayer.error?.message);
-                        
+
                         let errorMsg = 'Error: Unable to play stream';
                         if (simpleAudioPlayer.error) {
                             switch(simpleAudioPlayer.error.code) {
@@ -11601,6 +11607,12 @@
                                 simpleAudioPlayer.addEventListener('error', (e) => {
                                     if (simplePlayerReloading) {
                                         console.log('Ignoring error during reload');
+                                        return;
+                                    }
+
+                                    // Ignore errors if player was destroyed (simpleAudioPlayer = null)
+                                    if (!simpleAudioPlayer) {
+                                        console.log('Ignoring error from destroyed player');
                                         return;
                                     }
 
