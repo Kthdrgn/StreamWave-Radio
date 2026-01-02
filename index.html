@@ -11194,8 +11194,8 @@
                 // If playing, stop both audio and metadata players
                 if (isPlaying && simpleAudioPlayer && !simpleAudioPlayer.paused) {
                     simpleAudioPlayer.pause();
-                    simpleAudioPlayer.removeAttribute('src'); // Remove source to fully stop
-                    simpleAudioPlayer.load(); // Reset the media element
+                    simpleAudioPlayer.src = ''; // Clear source to fully stop
+                    // Note: Don't call load() here - it's async and can interfere with restart
                     stopMetadataOnlyPlayer(); // Stop metadata player to keep in sync
                     isPlaying = false;
                     isPaused = false; // Not paused, fully stopped
