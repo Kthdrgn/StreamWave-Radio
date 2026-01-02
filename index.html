@@ -11374,8 +11374,8 @@
 
             // If paused (non-HLS only), resume
             if (isPaused) {
-                isPaused = false;
                 if (audioElement && audioElement.src) {
+                    isPaused = false;
                     audioElement.play();
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
@@ -11386,6 +11386,7 @@
                     }
                     return;
                 } else if (player && player.audioElement && player.audioElement.src) {
+                    isPaused = false;
                     player.audioElement.play();
                     isPlaying = true;
                     updateStatus('Playing', 'playing');
@@ -11395,6 +11396,11 @@
                         navigator.mediaSession.playbackState = 'playing';
                     }
                     return;
+                } else {
+                    // No valid src to resume - reset pause state and start fresh
+                    console.log('No valid src to resume - restarting stream fresh');
+                    isPaused = false;
+                    // Fall through to "start fresh" logic below
                 }
             }
             
