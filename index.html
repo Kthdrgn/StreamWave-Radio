@@ -11224,18 +11224,17 @@
                     updateStatus('Please select a station', 'error');
                     return;
                 }
-                
-                // Check if CORS proxy should be used
-                const useCorsProxy = document.getElementById('globalCorsProxy').checked;
 
-                // Force CORS proxy for HTTP URLs on HTTPS pages (mixed content fix)
+                // In Simple Mode, we already know the direct connection works
+                // (otherwise we wouldn't be in Simple Mode). Only use CORS proxy
+                // if absolutely necessary for mixed content security.
                 const needsCorsForMixedContent = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
-                const streamUrl = (useCorsProxy || needsCorsForMixedContent)
+                const streamUrl = needsCorsForMixedContent
                     ? `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
                     : rawUrl;
 
-                if (needsCorsForMixedContent && !useCorsProxy) {
+                if (needsCorsForMixedContent) {
                     console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
                 }
                 
