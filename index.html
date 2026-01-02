@@ -11603,6 +11603,16 @@
                                         console.log('Ignoring error during reload');
                                         return;
                                     }
+
+                                    // Ignore error if we intentionally cleared the src (stopping)
+                                    // Note: When src is set to '', the actual value becomes window.location.href
+                                    if (!simpleAudioPlayer.src ||
+                                        simpleAudioPlayer.src === '' ||
+                                        simpleAudioPlayer.src === window.location.href) {
+                                        console.log('Ignoring error from intentionally cleared src');
+                                        return;
+                                    }
+
                                     console.error('Simple player error:', e);
                                     updateStatus('Error: Unable to play stream', 'error');
                                     isPlaying = false;
