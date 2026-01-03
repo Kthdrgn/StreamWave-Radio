@@ -11231,11 +11231,11 @@
                 const needsCorsForMixedContent = window.location.protocol === 'https:' && rawUrl.startsWith('http://');
 
                 const streamUrl = needsCorsForMixedContent
-                    ? `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
+                    ? corsProxies[0].url(rawUrl)  // Use primary CORS proxy (custom Cloudflare worker)
                     : rawUrl;
 
                 if (needsCorsForMixedContent) {
-                    console.log('🔒 Mixed content detected: forcing CORS proxy for HTTP stream on HTTPS page');
+                    console.log(`🔒 Mixed content detected: using ${corsProxies[0].name} for HTTP stream on HTTPS page`);
                 }
                 
                 playPauseBtn.disabled = true;
