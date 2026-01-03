@@ -1495,7 +1495,7 @@
             { name: 'streamwave-render', url: (streamUrl) => `https://streamwave-radio.onrender.com/${streamUrl}` },
 
             // Public fallback proxies (may be unreliable or rate-limited)
-            { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?${encodeURIComponent(streamUrl)}` },
+            { name: 'corsproxy.io', url: (streamUrl) => `https://corsproxy.io/?key=f607f098&url=${encodeURIComponent(streamUrl)}` },
             { name: 'api.allorigins.win', url: (streamUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(streamUrl)}` },
             { name: 'cors-anywhere (public)', url: (streamUrl) => `https://cors-anywhere.herokuapp.com/${streamUrl}` }
         ];
