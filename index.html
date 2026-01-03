@@ -459,7 +459,7 @@
                 <button class="modal-close" id="closeAllCuratedPlaylistsModal">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="allCuratedPlaylistsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 10px;">
+                <div class="station-list" id="allCuratedPlaylistsList">
                     <!-- Playlists will be inserted here -->
                 </div>
             </div>
@@ -4667,13 +4667,13 @@
             }
         }
 
-        // Open All Curated Playlists modal and populate it with a grid of all playlists
+        // Open All Curated Playlists modal and populate it with a list of all playlists
         function openAllCuratedPlaylistsModal() {
             const modal = document.getElementById('allCuratedPlaylistsModal');
-            const grid = document.getElementById('allCuratedPlaylistsGrid');
+            const list = document.getElementById('allCuratedPlaylistsList');
 
             // Clear existing content
-            grid.innerHTML = '';
+            list.innerHTML = '';
 
             // Build all HTML at once
             const playlistsHTML = allCuratedPlaylistsWithStations.map((playlist) => {
@@ -4686,15 +4686,15 @@
                 let imageContent;
                 if (stationIcons.length === 0) {
                     // No stations with icons - show music note
-                    imageContent = `<span style="font-size: 48px;">${MUSIC_NOTE_ICON}</span>`;
+                    imageContent = `<span style="font-size: 30px;">${MUSIC_NOTE_ICON}</span>`;
                 } else if (stationIcons.length === 1 || isMultiChannelRadio) {
                     // Single station OR multi-channel radio - show first icon only
-                    imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">`;
+                    imageContent = `<img src="${escapeHtml(stationIcons[0].icon_url)}" alt="Playlist" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
                 } else {
                     // Multiple stations (curated playlist) - create collage
                     const collageHTML = stationIcons.map(s => `
-                        <div style="width: 50%; height: 50%; padding: 2px;">
-                            <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+                        <div style="width: 50%; height: 50%; padding: 1px;">
+                            <img src="${escapeHtml(s.icon_url)}" alt="${escapeHtml(s.name)}" onerror="this.onerror=null; this.src='${MUSIC_NOTE_DATA_URI}'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 3px;">
                         </div>
                     `).join('');
                     imageContent = `<div style="display: flex; flex-wrap: wrap; width: 100%; height: 100%;">${collageHTML}</div>`;
@@ -4704,10 +4704,17 @@
                 const isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon';
 
                 return `
-                    <div class="playlist-grid-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="cursor: pointer; transition: transform 0.2s ease; position: relative;">
+                    <div class="station-list-item" data-playlist-id="${playlist.id}" data-playlist-type="curated-playlist" style="position: relative;">
+                        <div class="station-list-icon" style="width: 60px; height: 60px;">
+                            ${imageContent}
+                        </div>
+                        <div class="station-list-content">
+                            <div class="station-list-name">${escapeHtml(playlist.name)}</div>
+                            ${playlist.description ? `<div class="station-list-now-playing">${escapeHtml(playlist.description)}</div>` : `<div class="station-list-metadata-empty">${stations.length} station${stations.length !== 1 ? 's' : ''}</div>`}
+                        </div>
                         ${isAdmin ? `
-                        <button class="carousel-item-menu-btn" data-curated-playlist-id="${playlist.id}" onclick="event.stopPropagation()" style="position: absolute; top: 8px; right: 8px; z-index: 10;">⋮</button>
-                        <div class="carousel-item-dropdown" style="position: absolute; top: 32px; right: 8px; z-index: 20;">
+                        <button class="carousel-item-menu-btn" data-curated-playlist-id="${playlist.id}" onclick="event.stopPropagation()" style="position: relative; margin-left: auto;">⋮</button>
+                        <div class="carousel-item-dropdown" style="position: absolute; top: 40px; right: 8px; z-index: 20;">
                             <div class="dropdown-item" data-action="edit-curated-playlist" data-curated-playlist-id="${playlist.id}">
                                 <span>✏️</span> Edit
                             </div>
@@ -4716,22 +4723,15 @@
                             </div>
                         </div>
                         ` : ''}
-                        <div style="position: relative; width: 100%; aspect-ratio: 1; background: var(--card-bg); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            ${imageContent}
-                        </div>
-                        <div style="margin-top: 12px;">
-                            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(playlist.name)}</div>
-                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHtml(playlist.description)}</div>` : ''}
-                        </div>
                     </div>
                 `;
             }).join('');
 
             // Set all HTML at once
-            grid.innerHTML = playlistsHTML;
+            list.innerHTML = playlistsHTML;
 
             // Add click handlers to playlist items
-            grid.querySelectorAll('.playlist-grid-item').forEach((item) => {
+            list.querySelectorAll('.station-list-item').forEach((item) => {
                 item.addEventListener('click', (e) => {
                     // Don't trigger if clicking on admin menu
                     if (e.target.closest('.carousel-item-menu-btn') || e.target.closest('.carousel-item-dropdown')) {
@@ -4742,19 +4742,11 @@
                     openCuratedPlaylist(playlistId);
                     modal.classList.remove('active');
                 });
-
-                // Add hover effect
-                item.addEventListener('mouseenter', () => {
-                    item.style.transform = 'scale(1.05)';
-                });
-                item.addEventListener('mouseleave', () => {
-                    item.style.transform = 'scale(1)';
-                });
             });
 
             // Handle admin menu buttons if present
             if (window.currentUser && window.currentUser.email && window.currentUser.email.split('@')[0] === 'keith.e.dragon') {
-                grid.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
+                list.querySelectorAll('.carousel-item-menu-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const dropdown = btn.nextElementSibling;
@@ -4767,7 +4759,7 @@
                 });
 
                 // Handle dropdown actions
-                grid.querySelectorAll('.dropdown-item').forEach(item => {
+                list.querySelectorAll('.dropdown-item').forEach(item => {
                     item.addEventListener('click', async (e) => {
                         e.stopPropagation();
                         const action = item.dataset.action;
