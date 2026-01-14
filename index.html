@@ -10506,6 +10506,7 @@
         // Update Media Session API
         function updateMediaSession(title, artist, album, artworkUrl) {
             if ('mediaSession' in navigator) {
+                // Always update metadata first
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: title || 'Unknown Track',
                     artist: artist || (currentStation ? currentStation.name : 'Radio Stream'),
@@ -10516,10 +10517,37 @@
                         { src: currentStation.icon_url, sizes: '512x512', type: 'image/png' }
                     ] : [])
                 });
-                // Set playback state to ensure notification updates work when backgrounded
+
+                // CRITICAL: Always explicitly set playback state when updating metadata
+                // This ensures notification shade updates even when app is backgrounded
+                // The browser needs both the metadata AND playback state to be set together
                 if (isPlaying && !isPaused) {
                     navigator.mediaSession.playbackState = 'playing';
+
+                    // For live radio streams, set position state to keep session active
+                    // Use a small duration to indicate live/continuous playback
+                    try {
+                        navigator.mediaSession.setPositionState({
+                            duration: Infinity,
+                            playbackRate: 1,
+                            position: 0
+                        });
+                    } catch (e) {
+                        // Ignore if position state isn't supported or if there's an error
+                        // (some browsers don't support Infinity for duration)
+                    }
+                } else if (isPaused) {
+                    navigator.mediaSession.playbackState = 'paused';
+                } else {
+                    navigator.mediaSession.playbackState = 'none';
                 }
+
+                console.log('📱 Media session updated:', {
+                    title: title || 'Unknown Track',
+                    artist: artist || (currentStation ? currentStation.name : 'Radio Stream'),
+                    playbackState: navigator.mediaSession.playbackState,
+                    backgrounded: document.hidden
+                });
             }
         }
         
