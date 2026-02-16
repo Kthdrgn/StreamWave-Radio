@@ -32,6 +32,16 @@ If you're experiencing issues with Radio Database station icons not displaying i
 
 **When to apply:** Required if Radio Database station icons display on the search page but not in playlists or recently played sections.
 
+### 3. fix_curated_playlists_rls.sql
+**Purpose:** Fixes Row Level Security (RLS) policies for the `curated_playlists` and `curated_playlist_items` tables.
+
+**What it does:**
+- Allows anonymous (guest) users to insert, update, and delete curated playlists
+- Allows anonymous (guest) users to insert, update, and delete curated playlist items
+- Fixes the "new row violates row-level security policy" error for guest users
+
+**When to apply:** Required if guest/anonymous users get RLS policy errors when adding stations to curated playlists.
+
 ## Other Migrations
 
 ### curated_playlists.sql
