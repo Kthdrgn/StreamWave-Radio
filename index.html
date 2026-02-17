@@ -591,6 +591,15 @@
                         <span>Manage Curated Playlists</span>
                     </button>
 
+                    <!-- Manage Multi-Channel Radio Button (Admin Only) -->
+                    <button class="menu-option-btn" id="manageMultiChannelRadioBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11L12 14L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Manage Multi-Channel Radio</span>
+                    </button>
+
                     <!-- Chromecast button temporarily disabled - needs styling work -->
                     <!-- <google-cast-launcher id="castButton" class="menu-option-btn cast-menu-btn" title="Cast to Chromecast">
                         <span>Chromecast</span>
@@ -1340,6 +1349,24 @@
                     </button>
                 </div>
                 <div id="curatedPlaylistsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Multi-Channel Radio Modal -->
+    <div id="adminMultiChannelRadioModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Multi-Channel Radio</h2>
+                <button class="modal-close" id="closeAdminMultiChannelRadioModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <button id="addNewMultiChannelRadioBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        + Add New Multi-Channel Radio
+                    </button>
+                </div>
+                <div id="multiChannelRadioList"></div>
             </div>
         </div>
     </div>
@@ -4138,7 +4165,7 @@
         }
 
         // Show curated playlist form for create/edit
-        async function showCuratedPlaylistForm(id = null) {
+        async function showCuratedPlaylistForm(id = null, defaultType = 'curated_playlist') {
             editingCuratedPlaylistId = id;
 
             if (id) {
@@ -4161,13 +4188,17 @@
             } else {
                 curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
                 curatedPlaylistName.value = '';
-                curatedPlaylistType.value = 'curated_playlist';
+                curatedPlaylistType.value = defaultType;
                 curatedPlaylistDescription.value = '';
             }
 
-            // Close admin modal if it's open
+            // Close whichever admin modal is open and track which one was last open
             if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
                 document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
+                lastAdminModal = 'curated';
+            } else if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+                lastAdminModal = 'multichannel';
             }
 
             curatedPlaylistFormModal.classList.add('active');
@@ -4226,12 +4257,20 @@
                         curatedPlaylistSelectorModal.classList.add('active');
                     }, 300);
                 } else {
-                    // If we came from the admin modal, reopen it
+                    // Reopen the appropriate admin modal based on the saved type
                     setTimeout(() => {
-                        const adminModal = document.getElementById('adminCuratedPlaylistsModal');
-                        if (adminModal && !pendingCuratedPlaylistStation) {
-                            adminModal.classList.add('active');
-                            loadAdminCuratedPlaylists();
+                        if (type === 'multi_channel_radio') {
+                            const adminModal = document.getElementById('adminMultiChannelRadioModal');
+                            if (adminModal) {
+                                adminModal.classList.add('active');
+                                loadAdminMultiChannelRadio();
+                            }
+                        } else {
+                            const adminModal = document.getElementById('adminCuratedPlaylistsModal');
+                            if (adminModal) {
+                                adminModal.classList.add('active');
+                                loadAdminCuratedPlaylists();
+                            }
                         }
                     }, 300);
                 }
@@ -4255,9 +4294,11 @@
                 updateStatus('Curated playlist deleted', 'success');
                 await loadCuratedPlaylists();
 
-                // Reload admin list if in admin mode
+                // Reload whichever admin modal is currently active
                 if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
                     await loadAdminCuratedPlaylists();
+                } else if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
                 }
 
             } catch (error) {
@@ -4268,14 +4309,18 @@
 
         // Admin: Load curated playlists list
         let adminCuratedPlaylists = []; // Store for drag and drop
+        let adminMultiChannelRadio = []; // Store for multi-channel radio drag and drop
+        let lastAdminModal = null; // Track which admin modal was last opened ('curated' or 'multichannel')
+
         async function loadAdminCuratedPlaylists() {
             const listContainer = document.getElementById('curatedPlaylistsList');
 
-            // Fetch curated playlists directly
+            // Fetch curated playlists (type = curated_playlist only)
             try {
                 const { data, error } = await supabase
                     .from('curated_playlists')
                     .select('*')
+                    .eq('type', 'curated_playlist')
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at', { ascending: false });
 
@@ -4313,8 +4358,7 @@
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
                             <div style="font-size: 13px; color: var(--text-secondary);">
-                                Type: ${playlist.type === 'multi_channel_radio' ? 'Multi-Channel Radio' : 'Curated Playlist'}
-                                • Stations: ${playlist.stationCount}
+                                Stations: ${playlist.stationCount}
                             </div>
                             ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
                             <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
@@ -4341,6 +4385,83 @@
             } catch (error) {
                 console.error('Error loading admin curated playlists:', error);
                 listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading playlists.</p>';
+            }
+        }
+
+        // Admin: Load multi-channel radio list
+        async function loadAdminMultiChannelRadio() {
+            const listContainer = document.getElementById('multiChannelRadioList');
+
+            // Fetch multi-channel radio playlists (type = multi_channel_radio only)
+            try {
+                const { data, error } = await supabase
+                    .from('curated_playlists')
+                    .select('*')
+                    .eq('type', 'multi_channel_radio')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const playlists = data || [];
+
+                if (playlists.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No multi-channel radio items yet. Click "Add New Multi-Channel Radio" to create one.</p>';
+                    return;
+                }
+
+                // Load station counts for each playlist
+                const playlistsWithCounts = await Promise.all(playlists.map(async (playlist) => {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('curated_playlist_items')
+                        .select('id')
+                        .eq('curated_playlist_id', playlist.id);
+
+                    return {
+                        ...playlist,
+                        stationCount: itemsError ? 0 : (itemsData?.length || 0)
+                    };
+                }));
+
+                // Store playlists for drag and drop
+                adminMultiChannelRadio = playlistsWithCounts;
+
+                listContainer.innerHTML = playlistsWithCounts.map((playlist, index) => `
+                    <div class="multi-channel-radio-item"
+                        draggable="true"
+                        data-playlist-id="${playlist.id}"
+                        data-playlist-index="${index}"
+                        style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; cursor: move;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                Stations: ${playlist.stationCount}
+                            </div>
+                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
+                            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Sort Order:</label>
+                                <input type="number"
+                                    id="sort-order-${playlist.id}"
+                                    value="${playlist.sort_order !== null ? playlist.sort_order : index}"
+                                    style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                    onclick="event.stopPropagation()"
+                                    onchange="updateCuratedPlaylistSortOrder('${playlist.id}', this.value)">
+                                <small style="font-size: 11px; color: var(--text-tertiary);">Drag to reorder or edit number</small>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="event.stopPropagation(); showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="event.stopPropagation(); confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Setup drag and drop
+                setupMultiChannelRadioDragAndDrop();
+
+            } catch (error) {
+                console.error('Error loading admin multi-channel radio:', error);
+                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading multi-channel radio items.</p>';
             }
         }
 
@@ -4417,6 +4538,88 @@
             });
         }
 
+        // Setup drag and drop for multi-channel radio reordering
+        function setupMultiChannelRadioDragAndDrop() {
+            const radioItems = document.querySelectorAll('.multi-channel-radio-item');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            radioItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = index;
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    document.querySelectorAll('.multi-channel-radio-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        const dropIndex = Array.from(radioItems).indexOf(item);
+
+                        const movedItem = adminMultiChannelRadio.splice(draggedIndex, 1)[0];
+                        adminMultiChannelRadio.splice(dropIndex, 0, movedItem);
+
+                        await updateMultiChannelRadioOrder();
+                        await loadAdminMultiChannelRadio();
+                    }
+                });
+            });
+        }
+
+        // Update multi-channel radio order in database
+        async function updateMultiChannelRadioOrder() {
+            try {
+                const updates = adminMultiChannelRadio.map((playlist, index) => {
+                    return supabase
+                        .from('curated_playlists')
+                        .update({
+                            sort_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', playlist.id);
+                });
+
+                await Promise.all(updates);
+                updateStatus('Order updated', 'success');
+
+                // Reload curated playlists to update Discover modal
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error updating multi-channel radio order:', error);
+                updateStatus('Error updating order', 'error');
+            }
+        }
+
         // Update curated playlist order in database
         async function updateCuratedPlaylistOrder() {
             try {
@@ -4463,15 +4666,23 @@
                 // Reload curated playlists to update Discover modal
                 await loadCuratedPlaylists();
 
-                // Reload admin list to reflect new order
-                await loadAdminCuratedPlaylists();
+                // Reload whichever admin modal is currently active
+                if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
+                } else {
+                    await loadAdminCuratedPlaylists();
+                }
 
             } catch (error) {
                 console.error('Error updating sort order:', error);
                 updateStatus('Error updating sort order', 'error');
 
-                // Reload admin list to restore original value
-                await loadAdminCuratedPlaylists();
+                // Reload whichever admin modal is currently active
+                if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
+                } else {
+                    await loadAdminCuratedPlaylists();
+                }
             }
         }
 
@@ -9340,6 +9551,7 @@
         // Manage Curated Playlists button (admin only)
         document.getElementById('manageCuratedPlaylistsBtn').addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
+            lastAdminModal = 'curated';
             document.getElementById('adminCuratedPlaylistsModal').classList.add('active');
             loadAdminCuratedPlaylists();
         });
@@ -9351,7 +9563,32 @@
 
         // Add new curated playlist button
         document.getElementById('addNewCuratedPlaylistBtn').addEventListener('click', () => {
-            showCuratedPlaylistForm();
+            showCuratedPlaylistForm(null, 'curated_playlist');
+        });
+
+        // Manage Multi-Channel Radio button (admin only)
+        document.getElementById('manageMultiChannelRadioBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            lastAdminModal = 'multichannel';
+            document.getElementById('adminMultiChannelRadioModal').classList.add('active');
+            loadAdminMultiChannelRadio();
+        });
+
+        // Close admin multi-channel radio modal
+        document.getElementById('closeAdminMultiChannelRadioModal').addEventListener('click', () => {
+            document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+        });
+
+        // Add new multi-channel radio button
+        document.getElementById('addNewMultiChannelRadioBtn').addEventListener('click', () => {
+            showCuratedPlaylistForm(null, 'multi_channel_radio');
+        });
+
+        // Close admin multi-channel radio modal when clicking outside
+        document.getElementById('adminMultiChannelRadioModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('adminMultiChannelRadioModal')) {
+                document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+            }
         });
 
         // Close preset search form modal
