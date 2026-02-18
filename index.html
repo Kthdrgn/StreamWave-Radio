@@ -4841,17 +4841,9 @@
 
         // Load discover modal with explore section
         async function loadDiscoverModal() {
-            // Load curated playlists if not already loaded
+            // Load curated playlists if not already loaded (fetches from both tables)
             if (curatedPlaylists.length === 0) {
-                const { data, error } = await supabase
-                    .from('curated_playlists')
-                    .select('*')
-                    .order('sort_order', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false });
-
-                if (!error) {
-                    curatedPlaylists = data || [];
-                }
+                await loadCuratedPlaylists();
             }
 
             // Render curated playlists in Discover modal
