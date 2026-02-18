@@ -397,6 +397,16 @@
                     </div>
                 </div>
 
+                <!-- Decades Carousel -->
+                <div class="carousel-section" id="discoverDecadesSection" style="display: none;">
+                    <h3 class="carousel-title">Discover by Decade</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverDecadesPrev">‹</button>
+                        <div class="carousel-track" id="discoverDecadesTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverDecadesNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Multi-Channel Radio Stations Carousel -->
                 <div class="carousel-section" id="discoverMultiChannelRadioSection" style="display: none;">
                     <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
@@ -589,6 +599,15 @@
                             <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span>Manage Curated Playlists</span>
+                    </button>
+
+                    <!-- Manage Multi-Channel Radio Button (Admin Only) -->
+                    <button class="menu-option-btn" id="manageMultiChannelRadioBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11L12 14L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Manage Multi-Channel Radio</span>
                     </button>
 
                     <!-- Chromecast button temporarily disabled - needs styling work -->
@@ -1316,9 +1335,24 @@
                 <button class="modal-close" id="closeAdminPresetSearchesModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Tabs -->
+                <div style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
+                    <button class="preset-admin-tab active" data-preset-tab="name"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); margin-bottom: -2px; transition: all 0.2s;">
+                        Name Searches
+                    </button>
+                    <button class="preset-admin-tab" data-preset-tab="tag"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                        Tag Searches
+                    </button>
+                    <button class="preset-admin-tab" data-preset-tab="decade"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                        Decades
+                    </button>
+                </div>
                 <div style="margin-bottom: 20px;">
                     <button id="addNewPresetSearchBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-                        + Add New Preset Search
+                        + Add New Name Search
                     </button>
                 </div>
                 <div id="presetSearchesList"></div>
@@ -1340,6 +1374,24 @@
                     </button>
                 </div>
                 <div id="curatedPlaylistsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Multi-Channel Radio Modal -->
+    <div id="adminMultiChannelRadioModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Multi-Channel Radio</h2>
+                <button class="modal-close" id="closeAdminMultiChannelRadioModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <button id="addNewMultiChannelRadioBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        + Add New Multi-Channel Radio
+                    </button>
+                </div>
+                <div id="multiChannelRadioList"></div>
             </div>
         </div>
     </div>
@@ -3957,18 +4009,45 @@
             }
         }
 
+        // Helper: returns the correct table names and foreign key column for a playlist type
+        function getPlaylistTableInfo(type) {
+            if (type === 'multi_channel_radio') {
+                return {
+                    table: 'multi_channel_radio',
+                    itemsTable: 'multi_channel_radio_items',
+                    idColumn: 'multi_channel_radio_id'
+                };
+            }
+            return {
+                table: 'curated_playlists',
+                itemsTable: 'curated_playlist_items',
+                idColumn: 'curated_playlist_id'
+            };
+        }
+
         // Load curated playlists (admin-curated collections)
         async function loadCuratedPlaylists() {
             try {
-                const { data, error } = await supabase
-                    .from('curated_playlists')
-                    .select('*')
-                    .order('sort_order', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false });
+                const [cpResult, mcrResult] = await Promise.all([
+                    supabase
+                        .from('curated_playlists')
+                        .select('*')
+                        .order('sort_order', { ascending: true, nullsFirst: false })
+                        .order('created_at', { ascending: false }),
+                    supabase
+                        .from('multi_channel_radio')
+                        .select('*')
+                        .order('sort_order', { ascending: true, nullsFirst: false })
+                        .order('created_at', { ascending: false })
+                ]);
 
-                if (error) throw error;
+                if (cpResult.error) throw cpResult.error;
+                if (mcrResult.error) throw mcrResult.error;
 
-                curatedPlaylists = data || [];
+                const cpItems = cpResult.data || [];
+                const mcrItems = (mcrResult.data || []).map(p => ({ ...p, type: 'multi_channel_radio' }));
+
+                curatedPlaylists = [...cpItems, ...mcrItems];
                 console.log('Loaded curated playlists:', curatedPlaylists.length);
 
                 // Load stations for curated playlists to show in carousels
@@ -3989,10 +4068,11 @@
         // Load stations for a curated playlist
         async function loadCuratedPlaylistStations(playlist) {
             try {
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist.type);
                 const { data, error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('*, radio_stations(*), external_stations(*)')
-                    .eq('curated_playlist_id', playlist.id)
+                    .eq(idColumn, playlist.id)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at')
                     .limit(12); // Load extra stations to ensure we find 4 with icons
@@ -4100,11 +4180,14 @@
                     stationId = station.id;
                 }
 
+                const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist?.type);
+
                 // Check if station is already in the playlist
                 const { data: existing, error: checkError } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('id')
-                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .eq(idColumn, curatedPlaylistId)
                     .eq(isExternal ? 'external_station_id' : 'station_id', isExternal ? externalStationId : stationId)
                     .single();
 
@@ -4114,11 +4197,11 @@
                     return;
                 }
 
-                // Add station to curated playlist
+                // Add station to playlist
                 const { error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .insert({
-                        curated_playlist_id: curatedPlaylistId,
+                        [idColumn]: curatedPlaylistId,
                         station_id: stationId,
                         external_station_id: externalStationId
                     });
@@ -4138,13 +4221,16 @@
         }
 
         // Show curated playlist form for create/edit
-        async function showCuratedPlaylistForm(id = null) {
+        async function showCuratedPlaylistForm(id = null, defaultType = 'curated_playlist') {
             editingCuratedPlaylistId = id;
 
             if (id) {
-                // Fetch the playlist from database to ensure we have the latest data
+                // Look up type from cached playlists to determine which table to query
+                const cached = curatedPlaylists.find(p => p.id === id);
+                const { table } = getPlaylistTableInfo(cached?.type);
+
                 const { data, error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .select('*')
                     .eq('id', id)
                     .single();
@@ -4154,20 +4240,30 @@
                     return;
                 }
 
-                curatedPlaylistFormTitle.textContent = 'Edit Curated Playlist';
+                curatedPlaylistFormTitle.textContent = cached?.type === 'multi_channel_radio'
+                    ? 'Edit Multi-Channel Radio'
+                    : 'Edit Curated Playlist';
                 curatedPlaylistName.value = data.name;
-                curatedPlaylistType.value = data.type;
+                curatedPlaylistType.value = cached?.type || 'curated_playlist';
+                curatedPlaylistType.disabled = true; // Lock type on edit
                 curatedPlaylistDescription.value = data.description || '';
             } else {
-                curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
+                curatedPlaylistFormTitle.textContent = defaultType === 'multi_channel_radio'
+                    ? 'Create Multi-Channel Radio'
+                    : 'Create Curated Playlist';
                 curatedPlaylistName.value = '';
-                curatedPlaylistType.value = 'curated_playlist';
+                curatedPlaylistType.value = defaultType;
+                curatedPlaylistType.disabled = false;
                 curatedPlaylistDescription.value = '';
             }
 
-            // Close admin modal if it's open
+            // Close whichever admin modal is open and track which one was last open
             if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
                 document.getElementById('adminCuratedPlaylistsModal').classList.remove('active');
+                lastAdminModal = 'curated';
+            } else if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+                lastAdminModal = 'multichannel';
             }
 
             curatedPlaylistFormModal.classList.add('active');
@@ -4189,32 +4285,33 @@
                 }
 
                 if (editingCuratedPlaylistId) {
-                    // Update existing playlist
+                    // For edit, derive the table from the original cached type (type field is locked)
+                    const original = curatedPlaylists.find(p => p.id === editingCuratedPlaylistId);
+                    const { table } = getPlaylistTableInfo(original?.type || type);
                     const { error } = await supabase
-                        .from('curated_playlists')
+                        .from(table)
                         .update({
                             name,
-                            type,
                             description,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', editingCuratedPlaylistId);
 
                     if (error) throw error;
-                    updateStatus('Curated playlist updated', 'success');
+                    updateStatus('Playlist updated', 'success');
                 } else {
-                    // Create new playlist
+                    // For create, route to correct table based on selected type
+                    const { table } = getPlaylistTableInfo(type);
                     const { error } = await supabase
-                        .from('curated_playlists')
-                        .insert({
-                            name,
-                            type,
-                            description
-                        });
+                        .from(table)
+                        .insert({ name, description });
 
                     if (error) throw error;
-                    updateStatus('Curated playlist created', 'success');
+                    updateStatus('Playlist created', 'success');
                 }
+
+                // Re-enable the type dropdown for future use
+                curatedPlaylistType.disabled = false;
 
                 curatedPlaylistFormModal.classList.remove('active');
                 await loadCuratedPlaylists();
@@ -4226,12 +4323,20 @@
                         curatedPlaylistSelectorModal.classList.add('active');
                     }, 300);
                 } else {
-                    // If we came from the admin modal, reopen it
+                    // Reopen the appropriate admin modal based on the saved type
                     setTimeout(() => {
-                        const adminModal = document.getElementById('adminCuratedPlaylistsModal');
-                        if (adminModal && !pendingCuratedPlaylistStation) {
-                            adminModal.classList.add('active');
-                            loadAdminCuratedPlaylists();
+                        if (type === 'multi_channel_radio') {
+                            const adminModal = document.getElementById('adminMultiChannelRadioModal');
+                            if (adminModal) {
+                                adminModal.classList.add('active');
+                                loadAdminMultiChannelRadio();
+                            }
+                        } else {
+                            const adminModal = document.getElementById('adminCuratedPlaylistsModal');
+                            if (adminModal) {
+                                adminModal.classList.add('active');
+                                loadAdminCuratedPlaylists();
+                            }
                         }
                     }, 300);
                 }
@@ -4245,8 +4350,10 @@
         // Delete curated playlist
         async function deleteCuratedPlaylist(id) {
             try {
+                const playlist = curatedPlaylists.find(p => p.id === id);
+                const { table } = getPlaylistTableInfo(playlist?.type);
                 const { error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .delete()
                     .eq('id', id);
 
@@ -4255,9 +4362,11 @@
                 updateStatus('Curated playlist deleted', 'success');
                 await loadCuratedPlaylists();
 
-                // Reload admin list if in admin mode
+                // Reload whichever admin modal is currently active
                 if (document.getElementById('adminCuratedPlaylistsModal').classList.contains('active')) {
                     await loadAdminCuratedPlaylists();
+                } else if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
                 }
 
             } catch (error) {
@@ -4268,14 +4377,18 @@
 
         // Admin: Load curated playlists list
         let adminCuratedPlaylists = []; // Store for drag and drop
+        let adminMultiChannelRadio = []; // Store for multi-channel radio drag and drop
+        let lastAdminModal = null; // Track which admin modal was last opened ('curated' or 'multichannel')
+
         async function loadAdminCuratedPlaylists() {
             const listContainer = document.getElementById('curatedPlaylistsList');
 
-            // Fetch curated playlists directly
+            // Fetch curated playlists (type = curated_playlist only)
             try {
                 const { data, error } = await supabase
                     .from('curated_playlists')
                     .select('*')
+                    .eq('type', 'curated_playlist')
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at', { ascending: false });
 
@@ -4313,8 +4426,7 @@
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
                             <div style="font-size: 13px; color: var(--text-secondary);">
-                                Type: ${playlist.type === 'multi_channel_radio' ? 'Multi-Channel Radio' : 'Curated Playlist'}
-                                • Stations: ${playlist.stationCount}
+                                Stations: ${playlist.stationCount}
                             </div>
                             ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
                             <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
@@ -4341,6 +4453,82 @@
             } catch (error) {
                 console.error('Error loading admin curated playlists:', error);
                 listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading playlists.</p>';
+            }
+        }
+
+        // Admin: Load multi-channel radio list
+        async function loadAdminMultiChannelRadio() {
+            const listContainer = document.getElementById('multiChannelRadioList');
+
+            // Fetch multi-channel radio entries from the dedicated table
+            try {
+                const { data, error } = await supabase
+                    .from('multi_channel_radio')
+                    .select('*')
+                    .order('sort_order', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const playlists = data || [];
+
+                if (playlists.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No multi-channel radio items yet. Click "Add New Multi-Channel Radio" to create one.</p>';
+                    return;
+                }
+
+                // Load station counts for each entry
+                const playlistsWithCounts = await Promise.all(playlists.map(async (playlist) => {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('multi_channel_radio_items')
+                        .select('id')
+                        .eq('multi_channel_radio_id', playlist.id);
+
+                    return {
+                        ...playlist,
+                        stationCount: itemsError ? 0 : (itemsData?.length || 0)
+                    };
+                }));
+
+                // Store playlists for drag and drop
+                adminMultiChannelRadio = playlistsWithCounts;
+
+                listContainer.innerHTML = playlistsWithCounts.map((playlist, index) => `
+                    <div class="multi-channel-radio-item"
+                        draggable="true"
+                        data-playlist-id="${playlist.id}"
+                        data-playlist-index="${index}"
+                        style="background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; cursor: move;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">${escapeHtml(playlist.name)}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                Stations: ${playlist.stationCount}
+                            </div>
+                            ${playlist.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">${escapeHtml(playlist.description)}</div>` : ''}
+                            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Sort Order:</label>
+                                <input type="number"
+                                    id="sort-order-${playlist.id}"
+                                    value="${playlist.sort_order !== null ? playlist.sort_order : index}"
+                                    style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px;"
+                                    onclick="event.stopPropagation()"
+                                    onchange="updateCuratedPlaylistSortOrder('${playlist.id}', this.value)">
+                                <small style="font-size: 11px; color: var(--text-tertiary);">Drag to reorder or edit number</small>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="event.stopPropagation(); showCuratedPlaylistForm('${playlist.id}')" style="padding: 8px 16px; font-size: 14px;">Edit</button>
+                            <button class="btn" onclick="event.stopPropagation(); confirmDeleteCuratedPlaylist('${playlist.id}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: var(--danger-color);">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Setup drag and drop
+                setupMultiChannelRadioDragAndDrop();
+
+            } catch (error) {
+                console.error('Error loading admin multi-channel radio:', error);
+                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading multi-channel radio items.</p>';
             }
         }
 
@@ -4417,6 +4605,88 @@
             });
         }
 
+        // Setup drag and drop for multi-channel radio reordering
+        function setupMultiChannelRadioDragAndDrop() {
+            const radioItems = document.querySelectorAll('.multi-channel-radio-item');
+            let draggedElement = null;
+            let draggedIndex = null;
+
+            radioItems.forEach((item, index) => {
+                // Drag start
+                item.addEventListener('dragstart', (e) => {
+                    draggedElement = item;
+                    draggedIndex = index;
+                    item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+
+                // Drag end
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    document.querySelectorAll('.multi-channel-radio-item').forEach(i => {
+                        i.style.borderTop = '';
+                    });
+                });
+
+                // Drag over
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    if (item !== draggedElement) {
+                        item.style.borderTop = '2px solid var(--accent-color)';
+                    }
+                });
+
+                // Drag leave
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+
+                // Drop
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+
+                    if (draggedElement !== item) {
+                        const dropIndex = Array.from(radioItems).indexOf(item);
+
+                        const movedItem = adminMultiChannelRadio.splice(draggedIndex, 1)[0];
+                        adminMultiChannelRadio.splice(dropIndex, 0, movedItem);
+
+                        await updateMultiChannelRadioOrder();
+                        await loadAdminMultiChannelRadio();
+                    }
+                });
+            });
+        }
+
+        // Update multi-channel radio order in database
+        async function updateMultiChannelRadioOrder() {
+            try {
+                const updates = adminMultiChannelRadio.map((playlist, index) => {
+                    return supabase
+                        .from('multi_channel_radio')
+                        .update({
+                            sort_order: index,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', playlist.id);
+                });
+
+                await Promise.all(updates);
+                updateStatus('Order updated', 'success');
+
+                // Reload curated playlists to update Discover modal
+                await loadCuratedPlaylists();
+
+            } catch (error) {
+                console.error('Error updating multi-channel radio order:', error);
+                updateStatus('Error updating order', 'error');
+            }
+        }
+
         // Update curated playlist order in database
         async function updateCuratedPlaylistOrder() {
             try {
@@ -4447,9 +4717,11 @@
         async function updateCuratedPlaylistSortOrder(playlistId, newOrder) {
             try {
                 const sortOrder = parseInt(newOrder);
+                const playlist = curatedPlaylists.find(p => p.id === playlistId);
+                const { table } = getPlaylistTableInfo(playlist?.type);
 
                 const { error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .update({
                         sort_order: sortOrder,
                         updated_at: new Date().toISOString()
@@ -4463,15 +4735,23 @@
                 // Reload curated playlists to update Discover modal
                 await loadCuratedPlaylists();
 
-                // Reload admin list to reflect new order
-                await loadAdminCuratedPlaylists();
+                // Reload whichever admin modal is currently active
+                if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
+                } else {
+                    await loadAdminCuratedPlaylists();
+                }
 
             } catch (error) {
                 console.error('Error updating sort order:', error);
                 updateStatus('Error updating sort order', 'error');
 
-                // Reload admin list to restore original value
-                await loadAdminCuratedPlaylists();
+                // Reload whichever admin modal is currently active
+                if (document.getElementById('adminMultiChannelRadioModal').classList.contains('active')) {
+                    await loadAdminMultiChannelRadio();
+                } else {
+                    await loadAdminCuratedPlaylists();
+                }
             }
         }
 
@@ -4586,17 +4866,9 @@
 
         // Load discover modal with explore section
         async function loadDiscoverModal() {
-            // Load curated playlists if not already loaded
+            // Load curated playlists if not already loaded (fetches from both tables)
             if (curatedPlaylists.length === 0) {
-                const { data, error } = await supabase
-                    .from('curated_playlists')
-                    .select('*')
-                    .order('sort_order', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false });
-
-                if (!error) {
-                    curatedPlaylists = data || [];
-                }
+                await loadCuratedPlaylists();
             }
 
             // Render curated playlists in Discover modal
@@ -4605,6 +4877,7 @@
             // Render preset searches carousels
             await renderTagPresetsCarousel();
             await renderPresetSearchesCarousel();
+            await renderDecadesCarousel();
 
             // Load recent stations
             const recentStations = await getMostRecentStations(10);
@@ -4791,11 +5064,18 @@
             pushToNavigationHistory('allCuratedPlaylistsModal');
         }
 
-        // Fetch preset searches from database
-        async function fetchPresetSearches() {
+        // Helper: resolve the correct table name for each preset type
+        function getPresetTableName(type) {
+            if (type === 'tag')    return 'tag_preset_searches';
+            if (type === 'decade') return 'decade_preset_searches';
+            return 'name_preset_searches';
+        }
+
+        // Generic fetcher — queries the correct table by type
+        async function fetchPresetSearchesByType(type) {
             try {
                 const { data, error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(type))
                     .select('*')
                     .order('display_order', { ascending: true });
 
@@ -4811,18 +5091,13 @@
             }
         }
 
-        // Render preset searches carousel in Discover modal (name-based searches only)
+        // Render name-based Quick Search presets carousel
         async function renderPresetSearchesCarousel() {
             const presetSearchesSection = document.getElementById('discoverPresetSearchesSection');
-            const allPresetSearches = await fetchPresetSearches();
+            const items = await fetchPresetSearchesByType('name');
 
-            // Filter for name-based searches (searches that have station_name and no tags)
-            const nameBasedSearches = allPresetSearches.filter(preset =>
-                preset.station_name && preset.station_name.trim() !== ''
-            );
-
-            if (nameBasedSearches.length > 0) {
-                renderCarousel('discoverPresetSearchesTrack', nameBasedSearches, 'preset-search');
+            if (items.length > 0) {
+                renderCarousel('discoverPresetSearchesTrack', items, 'preset-search');
                 setupCarouselNavigation('discoverPresetSearches', 'discoverPresetSearchesTrack', 'discoverPresetSearchesPrev', 'discoverPresetSearchesNext');
                 presetSearchesSection.style.display = 'block';
             } else {
@@ -4830,22 +5105,31 @@
             }
         }
 
-        // Render tag-based preset searches carousel in Discover modal
+        // Render tag-based preset searches carousel
         async function renderTagPresetsCarousel() {
             const tagPresetsSection = document.getElementById('discoverTagPresetsSection');
-            const allPresetSearches = await fetchPresetSearches();
+            const items = await fetchPresetSearchesByType('tag');
 
-            // Filter for tag-based searches (searches that have tags)
-            const tagBasedSearches = allPresetSearches.filter(preset =>
-                preset.tags && preset.tags.trim() !== ''
-            );
-
-            if (tagBasedSearches.length > 0) {
-                renderCarousel('discoverTagPresetsTrack', tagBasedSearches, 'preset-search');
+            if (items.length > 0) {
+                renderCarousel('discoverTagPresetsTrack', items, 'preset-search');
                 setupCarouselNavigation('discoverTagPresets', 'discoverTagPresetsTrack', 'discoverTagPresetsPrev', 'discoverTagPresetsNext');
                 tagPresetsSection.style.display = 'block';
             } else {
                 tagPresetsSection.style.display = 'none';
+            }
+        }
+
+        // Render decades preset carousel
+        async function renderDecadesCarousel() {
+            const decadesSection = document.getElementById('discoverDecadesSection');
+            const items = await fetchPresetSearchesByType('decade');
+
+            if (items.length > 0) {
+                renderCarousel('discoverDecadesTrack', items, 'preset-search');
+                setupCarouselNavigation('discoverDecades', 'discoverDecadesTrack', 'discoverDecadesPrev', 'discoverDecadesNext');
+                decadesSection.style.display = 'block';
+            } else {
+                decadesSection.style.display = 'none';
             }
         }
 
@@ -4919,18 +5203,32 @@
             }
         }
 
-        // Admin: Load preset searches list
-        let adminPresetSearches = []; // Store for drag and drop
-        async function loadAdminPresetSearches() {
+        // Admin: track active preset tab and list for drag-and-drop
+        let adminPresetSearches = [];
+        let currentPresetSearchType = 'name'; // 'name' | 'tag' | 'decade'
+
+        async function loadAdminPresetSearches(type = null) {
+            if (type !== null) currentPresetSearchType = type;
+
+            // Sync tab highlight and "Add New" button label
+            const tabLabels = { name: 'Name Search', tag: 'Tag Search', decade: 'Decade' };
+            document.querySelectorAll('.preset-admin-tab').forEach(btn => {
+                const isActive = btn.dataset.presetTab === currentPresetSearchType;
+                btn.style.color = isActive ? 'var(--accent-color)' : 'var(--text-secondary)';
+                btn.style.borderBottomColor = isActive ? 'var(--accent-color)' : 'transparent';
+                btn.style.fontWeight = isActive ? '600' : '400';
+            });
+            document.getElementById('addNewPresetSearchBtn').textContent =
+                `+ Add New ${tabLabels[currentPresetSearchType]}`;
+
             const listContainer = document.getElementById('presetSearchesList');
-            const presetSearches = await fetchPresetSearches();
+            const presetSearches = await fetchPresetSearchesByType(currentPresetSearchType);
 
             if (presetSearches.length === 0) {
-                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No preset searches yet. Click "Add New Preset Search" to create one.</p>';
+                listContainer.innerHTML = `<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No ${tabLabels[currentPresetSearchType].toLowerCase()} presets yet. Click the button above to create one.</p>`;
                 return;
             }
 
-            // Store preset searches for drag and drop
             adminPresetSearches = presetSearches;
 
             listContainer.innerHTML = presetSearches.map((preset, index) => `
@@ -4971,7 +5269,6 @@
                 </div>
             `).join('');
 
-            // Setup drag and drop
             setupPresetSearchDragAndDrop();
         }
 
@@ -5038,13 +5335,12 @@
             });
         }
 
-        // Update preset search order in database
+        // Update preset search order in database (uses current tab type)
         async function updatePresetSearchOrder() {
             try {
-                // Update each preset search with its new display_order
                 const updates = adminPresetSearches.map((preset, index) => {
                     return supabase
-                        .from('preset_searches')
+                        .from(getPresetTableName(currentPresetSearchType))
                         .update({
                             display_order: index,
                             updated_at: new Date().toISOString()
@@ -5053,11 +5349,11 @@
                 });
 
                 await Promise.all(updates);
-                updateStatus('Preset search order updated', 'success');
+                updateStatus('Order updated', 'success');
 
-                // Reload preset searches to update Discover modal
                 await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
+                await renderDecadesCarousel();
 
             } catch (error) {
                 console.error('Error updating preset search order:', error);
@@ -5065,13 +5361,13 @@
             }
         }
 
-        // Update preset search display order (manual input)
+        // Update preset search display order via manual input
         async function updatePresetSearchDisplayOrder(presetId, newOrder) {
             try {
                 const displayOrder = parseInt(newOrder);
 
                 const { error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .update({
                         display_order: displayOrder,
                         updated_at: new Date().toISOString()
@@ -5082,18 +5378,14 @@
 
                 updateStatus('Display order updated', 'success');
 
-                // Reload preset searches to update Discover modal
                 await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
-
-                // Reload admin list to reflect new order
+                await renderDecadesCarousel();
                 await loadAdminPresetSearches();
 
             } catch (error) {
                 console.error('Error updating display order:', error);
                 updateStatus('Error updating display order', 'error');
-
-                // Reload admin list to restore original value
                 await loadAdminPresetSearches();
             }
         }
@@ -5107,6 +5399,7 @@
             const formModal = document.getElementById('presetSearchFormModal');
             const formTitle = document.getElementById('presetSearchFormTitle');
             const form = document.getElementById('presetSearchForm');
+            const typeLabels = { name: 'Name Search', tag: 'Tag Search', decade: 'Decade' };
 
             // Reset form
             form.reset();
@@ -5119,10 +5412,10 @@
             document.getElementById('uploadPresetIconBtn').style.background = '';
 
             if (presetId) {
-                // Edit mode - load existing preset
-                formTitle.textContent = 'Edit Preset Search';
+                // Edit mode — fetch from the currently active tab's table
+                formTitle.textContent = `Edit ${typeLabels[currentPresetSearchType]}`;
                 const { data, error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .select('*')
                     .eq('id', presetId)
                     .single();
@@ -5139,7 +5432,7 @@
                 }
             } else {
                 // Create mode
-                formTitle.textContent = 'Create Preset Search';
+                formTitle.textContent = `Create ${typeLabels[currentPresetSearchType]}`;
                 document.getElementById('presetSearchDisplayOrder').value = 0;
             }
 
@@ -5214,17 +5507,16 @@
             }
 
             try {
+                const tableName = getPresetTableName(currentPresetSearchType);
                 let result;
                 if (currentEditingPresetId) {
-                    // Update existing preset
                     result = await supabase
-                        .from('preset_searches')
+                        .from(tableName)
                         .update(formData)
                         .eq('id', currentEditingPresetId);
                 } else {
-                    // Create new preset
                     result = await supabase
-                        .from('preset_searches')
+                        .from(tableName)
                         .insert([formData]);
                 }
 
@@ -5249,6 +5541,7 @@
                 if (document.getElementById('discoverModal').classList.contains('active')) {
                     await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
+                    await renderDecadesCarousel();
                 }
             } catch (error) {
                 console.error('Error saving preset search:', error);
@@ -5258,7 +5551,7 @@
 
         // Admin: Delete preset search
         async function deletePresetSearch(presetId) {
-            const presetSearches = await fetchPresetSearches();
+            const presetSearches = await fetchPresetSearchesByType(currentPresetSearchType);
             const preset = presetSearches.find(p => p.id === presetId);
 
             if (!preset) return;
@@ -5269,7 +5562,7 @@
 
             try {
                 const { error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .delete()
                     .eq('id', presetId);
 
@@ -5279,13 +5572,12 @@
                     return;
                 }
 
-                // Reload admin list
                 await loadAdminPresetSearches();
 
-                // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
                     await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
+                    await renderDecadesCarousel();
                 }
             } catch (error) {
                 console.error('Error deleting preset search:', error);
@@ -5975,10 +6267,20 @@
         // Remove station from playlist (supports both internal and external stations)
         async function removeStationFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             try {
-                // Check if this is a curated playlist
+                // Route to the correct items table based on playlist type
+                const isMultiChannel = currentPlaylist && currentPlaylist.type === 'multi_channel_radio';
                 const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
-                const tableName = isCuratedPlaylist ? 'curated_playlist_items' : 'playlist_items';
-                const playlistIdColumn = isCuratedPlaylist ? 'curated_playlist_id' : 'playlist_id';
+                let tableName, playlistIdColumn;
+                if (isMultiChannel) {
+                    tableName = 'multi_channel_radio_items';
+                    playlistIdColumn = 'multi_channel_radio_id';
+                } else if (isCuratedPlaylist) {
+                    tableName = 'curated_playlist_items';
+                    playlistIdColumn = 'curated_playlist_id';
+                } else {
+                    tableName = 'playlist_items';
+                    playlistIdColumn = 'playlist_id';
+                }
 
                 let deleteQuery = supabase
                     .from(tableName)
@@ -6805,6 +7107,9 @@
             if (!currentPlaylist || !currentPlaylist.is_curated) return;
 
             try {
+                const isMultiChannel = currentPlaylist.type === 'multi_channel_radio';
+                const itemsTable = isMultiChannel ? 'multi_channel_radio_items' : 'curated_playlist_items';
+
                 // Update each station with its new sort_order using the playlist_item_id
                 const updates = playlistStations.map(async (station, index) => {
                     if (!station.playlist_item_id) {
@@ -6813,7 +7118,7 @@
                     }
 
                     const { data, error } = await supabase
-                        .from('curated_playlist_items')
+                        .from(itemsTable)
                         .update({
                             sort_order: index
                         })
@@ -7153,10 +7458,12 @@
         // Load curated playlist stations for display in modal
         async function loadCuratedPlaylistStationsForModal(curatedPlaylistId) {
             try {
+                const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist?.type);
                 const { data, error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('*, radio_stations(*), external_stations(*)')
-                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .eq(idColumn, curatedPlaylistId)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at');
 
@@ -8127,12 +8434,14 @@
         closeCuratedPlaylistFormModal.addEventListener('click', () => {
             curatedPlaylistFormModal.classList.remove('active');
             editingCuratedPlaylistId = null;
+            curatedPlaylistType.disabled = false;
         });
 
         // Cancel Curated Playlist Form button
         cancelCuratedPlaylistFormBtn.addEventListener('click', () => {
             curatedPlaylistFormModal.classList.remove('active');
             editingCuratedPlaylistId = null;
+            curatedPlaylistType.disabled = false;
         });
 
         // Submit Curated Playlist Form
@@ -8162,6 +8471,7 @@
             if (e.target === curatedPlaylistFormModal) {
                 curatedPlaylistFormModal.classList.remove('active');
                 editingCuratedPlaylistId = null;
+                curatedPlaylistType.disabled = false;
             }
         });
 
@@ -9324,7 +9634,19 @@
         document.getElementById('managePresetSearchesBtn').addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
             document.getElementById('adminPresetSearchesModal').classList.add('active');
-            loadAdminPresetSearches();
+            loadAdminPresetSearches(currentPresetSearchType);
+        });
+
+        // Preset admin tab switching
+        document.querySelectorAll('.preset-admin-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loadAdminPresetSearches(btn.dataset.presetTab);
+            });
+        });
+
+        // Add New Preset Search button — opens form in create mode for active tab type
+        document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
+            showPresetSearchForm(null);
         });
 
         // Close admin preset searches modal
@@ -9332,14 +9654,10 @@
             document.getElementById('adminPresetSearchesModal').classList.remove('active');
         });
 
-        // Add new preset search button
-        document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
-            showPresetSearchForm();
-        });
-
         // Manage Curated Playlists button (admin only)
         document.getElementById('manageCuratedPlaylistsBtn').addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
+            lastAdminModal = 'curated';
             document.getElementById('adminCuratedPlaylistsModal').classList.add('active');
             loadAdminCuratedPlaylists();
         });
@@ -9351,7 +9669,32 @@
 
         // Add new curated playlist button
         document.getElementById('addNewCuratedPlaylistBtn').addEventListener('click', () => {
-            showCuratedPlaylistForm();
+            showCuratedPlaylistForm(null, 'curated_playlist');
+        });
+
+        // Manage Multi-Channel Radio button (admin only)
+        document.getElementById('manageMultiChannelRadioBtn').addEventListener('click', () => {
+            hamburgerMenuModal.classList.remove('active');
+            lastAdminModal = 'multichannel';
+            document.getElementById('adminMultiChannelRadioModal').classList.add('active');
+            loadAdminMultiChannelRadio();
+        });
+
+        // Close admin multi-channel radio modal
+        document.getElementById('closeAdminMultiChannelRadioModal').addEventListener('click', () => {
+            document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+        });
+
+        // Add new multi-channel radio button
+        document.getElementById('addNewMultiChannelRadioBtn').addEventListener('click', () => {
+            showCuratedPlaylistForm(null, 'multi_channel_radio');
+        });
+
+        // Close admin multi-channel radio modal when clicking outside
+        document.getElementById('adminMultiChannelRadioModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('adminMultiChannelRadioModal')) {
+                document.getElementById('adminMultiChannelRadioModal').classList.remove('active');
+            }
         });
 
         // Close preset search form modal

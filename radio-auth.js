@@ -78,6 +78,9 @@ function updateAuthUI() {
 
     // Show/hide Manage Curated Playlists button based on admin status
     updateManageCuratedPlaylistsButton();
+
+    // Show/hide Manage Multi-Channel Radio button based on admin status
+    updateManageMultiChannelRadioButton();
 }
 
 // Update auth button text
@@ -138,6 +141,22 @@ function updateManageCuratedPlaylistsButton() {
             manageCuratedPlaylistsBtn.style.display = '';
         } else {
             manageCuratedPlaylistsBtn.style.display = 'none';
+        }
+    }
+}
+
+// Update Manage Multi-Channel Radio button visibility based on admin status
+function updateManageMultiChannelRadioButton() {
+    const manageMultiChannelRadioBtn = document.getElementById('manageMultiChannelRadioBtn');
+    if (manageMultiChannelRadioBtn) {
+        // Check if current user is admin
+        const isAdmin = window.currentUser && window.currentUser.email === 'keith.e.dragon@gmail.com';
+
+        // Show button only if user is admin
+        if (isAdmin) {
+            manageMultiChannelRadioBtn.style.display = '';
+        } else {
+            manageMultiChannelRadioBtn.style.display = 'none';
         }
     }
 }
