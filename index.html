@@ -397,6 +397,16 @@
                     </div>
                 </div>
 
+                <!-- Decades Carousel -->
+                <div class="carousel-section" id="discoverDecadesSection" style="display: none;">
+                    <h3 class="carousel-title">Discover by Decade</h3>
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-prev" id="discoverDecadesPrev">‹</button>
+                        <div class="carousel-track" id="discoverDecadesTrack"></div>
+                        <button class="carousel-btn carousel-next" id="discoverDecadesNext">›</button>
+                    </div>
+                </div>
+
                 <!-- Multi-Channel Radio Stations Carousel -->
                 <div class="carousel-section" id="discoverMultiChannelRadioSection" style="display: none;">
                     <h3 class="carousel-title">Multi-Channel Internet Radio Stations</h3>
@@ -1325,9 +1335,24 @@
                 <button class="modal-close" id="closeAdminPresetSearchesModal">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Tabs -->
+                <div style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
+                    <button class="preset-admin-tab active" data-preset-tab="name"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); margin-bottom: -2px; transition: all 0.2s;">
+                        Name Searches
+                    </button>
+                    <button class="preset-admin-tab" data-preset-tab="tag"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                        Tag Searches
+                    </button>
+                    <button class="preset-admin-tab" data-preset-tab="decade"
+                        style="padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                        Decades
+                    </button>
+                </div>
                 <div style="margin-bottom: 20px;">
                     <button id="addNewPresetSearchBtn" class="btn" style="background: var(--accent-color); color: var(--accent-button-text); padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-                        + Add New Preset Search
+                        + Add New Name Search
                     </button>
                 </div>
                 <div id="presetSearchesList"></div>
@@ -4852,6 +4877,7 @@
             // Render preset searches carousels
             await renderTagPresetsCarousel();
             await renderPresetSearchesCarousel();
+            await renderDecadesCarousel();
 
             // Load recent stations
             const recentStations = await getMostRecentStations(10);
@@ -5038,11 +5064,18 @@
             pushToNavigationHistory('allCuratedPlaylistsModal');
         }
 
-        // Fetch preset searches from database
-        async function fetchPresetSearches() {
+        // Helper: resolve the correct table name for each preset type
+        function getPresetTableName(type) {
+            if (type === 'tag')    return 'tag_preset_searches';
+            if (type === 'decade') return 'decade_preset_searches';
+            return 'name_preset_searches';
+        }
+
+        // Generic fetcher — queries the correct table by type
+        async function fetchPresetSearchesByType(type) {
             try {
                 const { data, error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(type))
                     .select('*')
                     .order('display_order', { ascending: true });
 
@@ -5058,18 +5091,13 @@
             }
         }
 
-        // Render preset searches carousel in Discover modal (name-based searches only)
+        // Render name-based Quick Search presets carousel
         async function renderPresetSearchesCarousel() {
             const presetSearchesSection = document.getElementById('discoverPresetSearchesSection');
-            const allPresetSearches = await fetchPresetSearches();
+            const items = await fetchPresetSearchesByType('name');
 
-            // Filter for name-based searches (searches that have station_name and no tags)
-            const nameBasedSearches = allPresetSearches.filter(preset =>
-                preset.station_name && preset.station_name.trim() !== ''
-            );
-
-            if (nameBasedSearches.length > 0) {
-                renderCarousel('discoverPresetSearchesTrack', nameBasedSearches, 'preset-search');
+            if (items.length > 0) {
+                renderCarousel('discoverPresetSearchesTrack', items, 'preset-search');
                 setupCarouselNavigation('discoverPresetSearches', 'discoverPresetSearchesTrack', 'discoverPresetSearchesPrev', 'discoverPresetSearchesNext');
                 presetSearchesSection.style.display = 'block';
             } else {
@@ -5077,22 +5105,31 @@
             }
         }
 
-        // Render tag-based preset searches carousel in Discover modal
+        // Render tag-based preset searches carousel
         async function renderTagPresetsCarousel() {
             const tagPresetsSection = document.getElementById('discoverTagPresetsSection');
-            const allPresetSearches = await fetchPresetSearches();
+            const items = await fetchPresetSearchesByType('tag');
 
-            // Filter for tag-based searches (searches that have tags)
-            const tagBasedSearches = allPresetSearches.filter(preset =>
-                preset.tags && preset.tags.trim() !== ''
-            );
-
-            if (tagBasedSearches.length > 0) {
-                renderCarousel('discoverTagPresetsTrack', tagBasedSearches, 'preset-search');
+            if (items.length > 0) {
+                renderCarousel('discoverTagPresetsTrack', items, 'preset-search');
                 setupCarouselNavigation('discoverTagPresets', 'discoverTagPresetsTrack', 'discoverTagPresetsPrev', 'discoverTagPresetsNext');
                 tagPresetsSection.style.display = 'block';
             } else {
                 tagPresetsSection.style.display = 'none';
+            }
+        }
+
+        // Render decades preset carousel
+        async function renderDecadesCarousel() {
+            const decadesSection = document.getElementById('discoverDecadesSection');
+            const items = await fetchPresetSearchesByType('decade');
+
+            if (items.length > 0) {
+                renderCarousel('discoverDecadesTrack', items, 'preset-search');
+                setupCarouselNavigation('discoverDecades', 'discoverDecadesTrack', 'discoverDecadesPrev', 'discoverDecadesNext');
+                decadesSection.style.display = 'block';
+            } else {
+                decadesSection.style.display = 'none';
             }
         }
 
@@ -5166,18 +5203,32 @@
             }
         }
 
-        // Admin: Load preset searches list
-        let adminPresetSearches = []; // Store for drag and drop
-        async function loadAdminPresetSearches() {
+        // Admin: track active preset tab and list for drag-and-drop
+        let adminPresetSearches = [];
+        let currentPresetSearchType = 'name'; // 'name' | 'tag' | 'decade'
+
+        async function loadAdminPresetSearches(type = null) {
+            if (type !== null) currentPresetSearchType = type;
+
+            // Sync tab highlight and "Add New" button label
+            const tabLabels = { name: 'Name Search', tag: 'Tag Search', decade: 'Decade' };
+            document.querySelectorAll('.preset-admin-tab').forEach(btn => {
+                const isActive = btn.dataset.presetTab === currentPresetSearchType;
+                btn.style.color = isActive ? 'var(--accent-color)' : 'var(--text-secondary)';
+                btn.style.borderBottomColor = isActive ? 'var(--accent-color)' : 'transparent';
+                btn.style.fontWeight = isActive ? '600' : '400';
+            });
+            document.getElementById('addNewPresetSearchBtn').textContent =
+                `+ Add New ${tabLabels[currentPresetSearchType]}`;
+
             const listContainer = document.getElementById('presetSearchesList');
-            const presetSearches = await fetchPresetSearches();
+            const presetSearches = await fetchPresetSearchesByType(currentPresetSearchType);
 
             if (presetSearches.length === 0) {
-                listContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No preset searches yet. Click "Add New Preset Search" to create one.</p>';
+                listContainer.innerHTML = `<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No ${tabLabels[currentPresetSearchType].toLowerCase()} presets yet. Click the button above to create one.</p>`;
                 return;
             }
 
-            // Store preset searches for drag and drop
             adminPresetSearches = presetSearches;
 
             listContainer.innerHTML = presetSearches.map((preset, index) => `
@@ -5218,7 +5269,6 @@
                 </div>
             `).join('');
 
-            // Setup drag and drop
             setupPresetSearchDragAndDrop();
         }
 
@@ -5285,13 +5335,12 @@
             });
         }
 
-        // Update preset search order in database
+        // Update preset search order in database (uses current tab type)
         async function updatePresetSearchOrder() {
             try {
-                // Update each preset search with its new display_order
                 const updates = adminPresetSearches.map((preset, index) => {
                     return supabase
-                        .from('preset_searches')
+                        .from(getPresetTableName(currentPresetSearchType))
                         .update({
                             display_order: index,
                             updated_at: new Date().toISOString()
@@ -5300,11 +5349,11 @@
                 });
 
                 await Promise.all(updates);
-                updateStatus('Preset search order updated', 'success');
+                updateStatus('Order updated', 'success');
 
-                // Reload preset searches to update Discover modal
                 await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
+                await renderDecadesCarousel();
 
             } catch (error) {
                 console.error('Error updating preset search order:', error);
@@ -5312,13 +5361,13 @@
             }
         }
 
-        // Update preset search display order (manual input)
+        // Update preset search display order via manual input
         async function updatePresetSearchDisplayOrder(presetId, newOrder) {
             try {
                 const displayOrder = parseInt(newOrder);
 
                 const { error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .update({
                         display_order: displayOrder,
                         updated_at: new Date().toISOString()
@@ -5329,18 +5378,14 @@
 
                 updateStatus('Display order updated', 'success');
 
-                // Reload preset searches to update Discover modal
                 await renderTagPresetsCarousel();
                 await renderPresetSearchesCarousel();
-
-                // Reload admin list to reflect new order
+                await renderDecadesCarousel();
                 await loadAdminPresetSearches();
 
             } catch (error) {
                 console.error('Error updating display order:', error);
                 updateStatus('Error updating display order', 'error');
-
-                // Reload admin list to restore original value
                 await loadAdminPresetSearches();
             }
         }
@@ -5354,6 +5399,7 @@
             const formModal = document.getElementById('presetSearchFormModal');
             const formTitle = document.getElementById('presetSearchFormTitle');
             const form = document.getElementById('presetSearchForm');
+            const typeLabels = { name: 'Name Search', tag: 'Tag Search', decade: 'Decade' };
 
             // Reset form
             form.reset();
@@ -5366,10 +5412,10 @@
             document.getElementById('uploadPresetIconBtn').style.background = '';
 
             if (presetId) {
-                // Edit mode - load existing preset
-                formTitle.textContent = 'Edit Preset Search';
+                // Edit mode — fetch from the currently active tab's table
+                formTitle.textContent = `Edit ${typeLabels[currentPresetSearchType]}`;
                 const { data, error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .select('*')
                     .eq('id', presetId)
                     .single();
@@ -5386,7 +5432,7 @@
                 }
             } else {
                 // Create mode
-                formTitle.textContent = 'Create Preset Search';
+                formTitle.textContent = `Create ${typeLabels[currentPresetSearchType]}`;
                 document.getElementById('presetSearchDisplayOrder').value = 0;
             }
 
@@ -5461,17 +5507,16 @@
             }
 
             try {
+                const tableName = getPresetTableName(currentPresetSearchType);
                 let result;
                 if (currentEditingPresetId) {
-                    // Update existing preset
                     result = await supabase
-                        .from('preset_searches')
+                        .from(tableName)
                         .update(formData)
                         .eq('id', currentEditingPresetId);
                 } else {
-                    // Create new preset
                     result = await supabase
-                        .from('preset_searches')
+                        .from(tableName)
                         .insert([formData]);
                 }
 
@@ -5496,6 +5541,7 @@
                 if (document.getElementById('discoverModal').classList.contains('active')) {
                     await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
+                    await renderDecadesCarousel();
                 }
             } catch (error) {
                 console.error('Error saving preset search:', error);
@@ -5505,7 +5551,7 @@
 
         // Admin: Delete preset search
         async function deletePresetSearch(presetId) {
-            const presetSearches = await fetchPresetSearches();
+            const presetSearches = await fetchPresetSearchesByType(currentPresetSearchType);
             const preset = presetSearches.find(p => p.id === presetId);
 
             if (!preset) return;
@@ -5516,7 +5562,7 @@
 
             try {
                 const { error } = await supabase
-                    .from('preset_searches')
+                    .from(getPresetTableName(currentPresetSearchType))
                     .delete()
                     .eq('id', presetId);
 
@@ -5526,13 +5572,12 @@
                     return;
                 }
 
-                // Reload admin list
                 await loadAdminPresetSearches();
 
-                // Refresh the discover modal if it's open
                 if (document.getElementById('discoverModal').classList.contains('active')) {
                     await renderTagPresetsCarousel();
                     await renderPresetSearchesCarousel();
+                    await renderDecadesCarousel();
                 }
             } catch (error) {
                 console.error('Error deleting preset search:', error);
@@ -9589,17 +9634,24 @@
         document.getElementById('managePresetSearchesBtn').addEventListener('click', () => {
             hamburgerMenuModal.classList.remove('active');
             document.getElementById('adminPresetSearchesModal').classList.add('active');
-            loadAdminPresetSearches();
+            loadAdminPresetSearches(currentPresetSearchType);
+        });
+
+        // Preset admin tab switching
+        document.querySelectorAll('.preset-admin-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loadAdminPresetSearches(btn.dataset.presetTab);
+            });
+        });
+
+        // Add New Preset Search button — opens form in create mode for active tab type
+        document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
+            showPresetSearchForm(null);
         });
 
         // Close admin preset searches modal
         document.getElementById('closeAdminPresetSearchesModal').addEventListener('click', () => {
             document.getElementById('adminPresetSearchesModal').classList.remove('active');
-        });
-
-        // Add new preset search button
-        document.getElementById('addNewPresetSearchBtn').addEventListener('click', () => {
-            showPresetSearchForm();
         });
 
         // Manage Curated Playlists button (admin only)
