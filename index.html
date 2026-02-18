@@ -3984,18 +3984,45 @@
             }
         }
 
+        // Helper: returns the correct table names and foreign key column for a playlist type
+        function getPlaylistTableInfo(type) {
+            if (type === 'multi_channel_radio') {
+                return {
+                    table: 'multi_channel_radio',
+                    itemsTable: 'multi_channel_radio_items',
+                    idColumn: 'multi_channel_radio_id'
+                };
+            }
+            return {
+                table: 'curated_playlists',
+                itemsTable: 'curated_playlist_items',
+                idColumn: 'curated_playlist_id'
+            };
+        }
+
         // Load curated playlists (admin-curated collections)
         async function loadCuratedPlaylists() {
             try {
-                const { data, error } = await supabase
-                    .from('curated_playlists')
-                    .select('*')
-                    .order('sort_order', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false });
+                const [cpResult, mcrResult] = await Promise.all([
+                    supabase
+                        .from('curated_playlists')
+                        .select('*')
+                        .order('sort_order', { ascending: true, nullsFirst: false })
+                        .order('created_at', { ascending: false }),
+                    supabase
+                        .from('multi_channel_radio')
+                        .select('*')
+                        .order('sort_order', { ascending: true, nullsFirst: false })
+                        .order('created_at', { ascending: false })
+                ]);
 
-                if (error) throw error;
+                if (cpResult.error) throw cpResult.error;
+                if (mcrResult.error) throw mcrResult.error;
 
-                curatedPlaylists = data || [];
+                const cpItems = cpResult.data || [];
+                const mcrItems = (mcrResult.data || []).map(p => ({ ...p, type: 'multi_channel_radio' }));
+
+                curatedPlaylists = [...cpItems, ...mcrItems];
                 console.log('Loaded curated playlists:', curatedPlaylists.length);
 
                 // Load stations for curated playlists to show in carousels
@@ -4016,10 +4043,11 @@
         // Load stations for a curated playlist
         async function loadCuratedPlaylistStations(playlist) {
             try {
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist.type);
                 const { data, error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('*, radio_stations(*), external_stations(*)')
-                    .eq('curated_playlist_id', playlist.id)
+                    .eq(idColumn, playlist.id)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at')
                     .limit(12); // Load extra stations to ensure we find 4 with icons
@@ -4127,11 +4155,14 @@
                     stationId = station.id;
                 }
 
+                const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist?.type);
+
                 // Check if station is already in the playlist
                 const { data: existing, error: checkError } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('id')
-                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .eq(idColumn, curatedPlaylistId)
                     .eq(isExternal ? 'external_station_id' : 'station_id', isExternal ? externalStationId : stationId)
                     .single();
 
@@ -4141,11 +4172,11 @@
                     return;
                 }
 
-                // Add station to curated playlist
+                // Add station to playlist
                 const { error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .insert({
-                        curated_playlist_id: curatedPlaylistId,
+                        [idColumn]: curatedPlaylistId,
                         station_id: stationId,
                         external_station_id: externalStationId
                     });
@@ -4169,9 +4200,12 @@
             editingCuratedPlaylistId = id;
 
             if (id) {
-                // Fetch the playlist from database to ensure we have the latest data
+                // Look up type from cached playlists to determine which table to query
+                const cached = curatedPlaylists.find(p => p.id === id);
+                const { table } = getPlaylistTableInfo(cached?.type);
+
                 const { data, error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .select('*')
                     .eq('id', id)
                     .single();
@@ -4181,14 +4215,20 @@
                     return;
                 }
 
-                curatedPlaylistFormTitle.textContent = 'Edit Curated Playlist';
+                curatedPlaylistFormTitle.textContent = cached?.type === 'multi_channel_radio'
+                    ? 'Edit Multi-Channel Radio'
+                    : 'Edit Curated Playlist';
                 curatedPlaylistName.value = data.name;
-                curatedPlaylistType.value = data.type;
+                curatedPlaylistType.value = cached?.type || 'curated_playlist';
+                curatedPlaylistType.disabled = true; // Lock type on edit
                 curatedPlaylistDescription.value = data.description || '';
             } else {
-                curatedPlaylistFormTitle.textContent = 'Create Curated Playlist';
+                curatedPlaylistFormTitle.textContent = defaultType === 'multi_channel_radio'
+                    ? 'Create Multi-Channel Radio'
+                    : 'Create Curated Playlist';
                 curatedPlaylistName.value = '';
                 curatedPlaylistType.value = defaultType;
+                curatedPlaylistType.disabled = false;
                 curatedPlaylistDescription.value = '';
             }
 
@@ -4220,32 +4260,33 @@
                 }
 
                 if (editingCuratedPlaylistId) {
-                    // Update existing playlist
+                    // For edit, derive the table from the original cached type (type field is locked)
+                    const original = curatedPlaylists.find(p => p.id === editingCuratedPlaylistId);
+                    const { table } = getPlaylistTableInfo(original?.type || type);
                     const { error } = await supabase
-                        .from('curated_playlists')
+                        .from(table)
                         .update({
                             name,
-                            type,
                             description,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', editingCuratedPlaylistId);
 
                     if (error) throw error;
-                    updateStatus('Curated playlist updated', 'success');
+                    updateStatus('Playlist updated', 'success');
                 } else {
-                    // Create new playlist
+                    // For create, route to correct table based on selected type
+                    const { table } = getPlaylistTableInfo(type);
                     const { error } = await supabase
-                        .from('curated_playlists')
-                        .insert({
-                            name,
-                            type,
-                            description
-                        });
+                        .from(table)
+                        .insert({ name, description });
 
                     if (error) throw error;
-                    updateStatus('Curated playlist created', 'success');
+                    updateStatus('Playlist created', 'success');
                 }
+
+                // Re-enable the type dropdown for future use
+                curatedPlaylistType.disabled = false;
 
                 curatedPlaylistFormModal.classList.remove('active');
                 await loadCuratedPlaylists();
@@ -4284,8 +4325,10 @@
         // Delete curated playlist
         async function deleteCuratedPlaylist(id) {
             try {
+                const playlist = curatedPlaylists.find(p => p.id === id);
+                const { table } = getPlaylistTableInfo(playlist?.type);
                 const { error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .delete()
                     .eq('id', id);
 
@@ -4392,12 +4435,11 @@
         async function loadAdminMultiChannelRadio() {
             const listContainer = document.getElementById('multiChannelRadioList');
 
-            // Fetch multi-channel radio playlists (type = multi_channel_radio only)
+            // Fetch multi-channel radio entries from the dedicated table
             try {
                 const { data, error } = await supabase
-                    .from('curated_playlists')
+                    .from('multi_channel_radio')
                     .select('*')
-                    .eq('type', 'multi_channel_radio')
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at', { ascending: false });
 
@@ -4410,12 +4452,12 @@
                     return;
                 }
 
-                // Load station counts for each playlist
+                // Load station counts for each entry
                 const playlistsWithCounts = await Promise.all(playlists.map(async (playlist) => {
                     const { data: itemsData, error: itemsError } = await supabase
-                        .from('curated_playlist_items')
+                        .from('multi_channel_radio_items')
                         .select('id')
-                        .eq('curated_playlist_id', playlist.id);
+                        .eq('multi_channel_radio_id', playlist.id);
 
                     return {
                         ...playlist,
@@ -4600,7 +4642,7 @@
             try {
                 const updates = adminMultiChannelRadio.map((playlist, index) => {
                     return supabase
-                        .from('curated_playlists')
+                        .from('multi_channel_radio')
                         .update({
                             sort_order: index,
                             updated_at: new Date().toISOString()
@@ -4650,9 +4692,11 @@
         async function updateCuratedPlaylistSortOrder(playlistId, newOrder) {
             try {
                 const sortOrder = parseInt(newOrder);
+                const playlist = curatedPlaylists.find(p => p.id === playlistId);
+                const { table } = getPlaylistTableInfo(playlist?.type);
 
                 const { error } = await supabase
-                    .from('curated_playlists')
+                    .from(table)
                     .update({
                         sort_order: sortOrder,
                         updated_at: new Date().toISOString()
@@ -6186,10 +6230,20 @@
         // Remove station from playlist (supports both internal and external stations)
         async function removeStationFromPlaylist(playlistId, stationId, isExternal = false, externalId = null) {
             try {
-                // Check if this is a curated playlist
+                // Route to the correct items table based on playlist type
+                const isMultiChannel = currentPlaylist && currentPlaylist.type === 'multi_channel_radio';
                 const isCuratedPlaylist = currentPlaylist && currentPlaylist.is_curated;
-                const tableName = isCuratedPlaylist ? 'curated_playlist_items' : 'playlist_items';
-                const playlistIdColumn = isCuratedPlaylist ? 'curated_playlist_id' : 'playlist_id';
+                let tableName, playlistIdColumn;
+                if (isMultiChannel) {
+                    tableName = 'multi_channel_radio_items';
+                    playlistIdColumn = 'multi_channel_radio_id';
+                } else if (isCuratedPlaylist) {
+                    tableName = 'curated_playlist_items';
+                    playlistIdColumn = 'curated_playlist_id';
+                } else {
+                    tableName = 'playlist_items';
+                    playlistIdColumn = 'playlist_id';
+                }
 
                 let deleteQuery = supabase
                     .from(tableName)
@@ -7016,6 +7070,9 @@
             if (!currentPlaylist || !currentPlaylist.is_curated) return;
 
             try {
+                const isMultiChannel = currentPlaylist.type === 'multi_channel_radio';
+                const itemsTable = isMultiChannel ? 'multi_channel_radio_items' : 'curated_playlist_items';
+
                 // Update each station with its new sort_order using the playlist_item_id
                 const updates = playlistStations.map(async (station, index) => {
                     if (!station.playlist_item_id) {
@@ -7024,7 +7081,7 @@
                     }
 
                     const { data, error } = await supabase
-                        .from('curated_playlist_items')
+                        .from(itemsTable)
                         .update({
                             sort_order: index
                         })
@@ -7364,10 +7421,12 @@
         // Load curated playlist stations for display in modal
         async function loadCuratedPlaylistStationsForModal(curatedPlaylistId) {
             try {
+                const playlist = curatedPlaylists.find(p => p.id === curatedPlaylistId);
+                const { itemsTable, idColumn } = getPlaylistTableInfo(playlist?.type);
                 const { data, error } = await supabase
-                    .from('curated_playlist_items')
+                    .from(itemsTable)
                     .select('*, radio_stations(*), external_stations(*)')
-                    .eq('curated_playlist_id', curatedPlaylistId)
+                    .eq(idColumn, curatedPlaylistId)
                     .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('created_at');
 
@@ -8338,12 +8397,14 @@
         closeCuratedPlaylistFormModal.addEventListener('click', () => {
             curatedPlaylistFormModal.classList.remove('active');
             editingCuratedPlaylistId = null;
+            curatedPlaylistType.disabled = false;
         });
 
         // Cancel Curated Playlist Form button
         cancelCuratedPlaylistFormBtn.addEventListener('click', () => {
             curatedPlaylistFormModal.classList.remove('active');
             editingCuratedPlaylistId = null;
+            curatedPlaylistType.disabled = false;
         });
 
         // Submit Curated Playlist Form
@@ -8373,6 +8434,7 @@
             if (e.target === curatedPlaylistFormModal) {
                 curatedPlaylistFormModal.classList.remove('active');
                 editingCuratedPlaylistId = null;
+                curatedPlaylistType.disabled = false;
             }
         });
 
