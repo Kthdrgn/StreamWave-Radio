@@ -1,0 +1,31 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8E2DE2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A00E0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Gradient background with rounded corners -->
+  <rect width="200" height="200" rx="40" fill="url(#grad1)" />
+
+  <!-- Radio icon in white -->
+  <g fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Diagonal antenna from upper-left of body to upper-right of canvas -->
+    <line x1="58" y1="92" x2="178" y2="22" stroke-width="9" />
+
+    <!-- Radio body -->
+    <rect x="18" y="92" width="164" height="88" rx="14" stroke-width="7" />
+
+    <!-- Speaker grille lines (left portion of body) -->
+    <line x1="33" y1="112" x2="112" y2="112" stroke-width="7" />
+    <line x1="33" y1="126" x2="112" y2="126" stroke-width="7" />
+    <line x1="33" y1="140" x2="112" y2="140" stroke-width="7" />
+    <line x1="33" y1="154" x2="112" y2="154" stroke-width="7" />
+
+    <!-- Tuner dial circle (right portion of body) -->
+    <circle cx="150" cy="136" r="24" stroke-width="7" />
+
+  </g>
+</svg>
